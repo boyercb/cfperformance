@@ -1,7 +1,7 @@
 # cfperformance 0.1.0
 
-Initial release implementing counterfactual prediction model performance 
-estimation from Boyer, Dahabreh & Steingrimsson (2025).
+Initial release implementing methods from Boyer, Dahabreh & Steingrimsson (2025),
+"Estimating and evaluating counterfactual prediction models."
 
 ## Features
 

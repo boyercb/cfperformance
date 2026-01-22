@@ -43,6 +43,7 @@ Statistics in Medicine. \doi{10.1002/sim.70287}
 Useful links:
 \itemize{
   \item \url{https://github.com/boyercb/cfperformance}
+  \item \url{https://boyercb.github.io/cfperformance/}
   \item Report bugs at \url{https://github.com/boyercb/cfperformance/issues}
 }
 

@@ -20,7 +20,7 @@ model fit on observed data using age, bp, and chol as predictors.}
 }
 \source{
 Simulated data based on the framework in Boyer, Dahabreh &
-Steingrimsson (2025). "Counterfactual prediction model performance."
+Steingrimsson (2025). "Estimating and evaluating counterfactual prediction models."
 Statistics in Medicine, 44(23-24), e70287.
 \doi{10.1002/sim.70287}
 }
