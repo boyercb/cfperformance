@@ -12,9 +12,10 @@ interventions. These methods are essential when:
 - You need valid performance estimates even when the prediction model is
   misspecified
 
-Based on Boyer, Dahabreh & Steingrimsson (2025). “Counterfactual
-prediction model performance.” *Statistics in Medicine*, 44(23-24),
-e70287. [doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
+Based on Boyer, Dahabreh & Steingrimsson (2025). “Estimating and
+evaluating counterfactual prediction models.” *Statistics in Medicine*,
+44(23-24), e70287.
+[doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
 
 ## Installation
 
@@ -34,7 +35,6 @@ data(cvd_sim)
 
 # Estimate counterfactual MSE under no treatment
 result <- cf_mse(
-
   predictions = cvd_sim$risk_score,
   outcomes = cvd_sim$event,
   treatment = cvd_sim$treatment,
@@ -114,13 +114,14 @@ for a comprehensive introduction.
 
 If you use this package in your research, please cite:
 
-Boyer CB, Dahabreh IJ, Steingrimsson JA. Counterfactual prediction model
-performance. *Statistics in Medicine*. 2025; 44(23-24):e70287.
+Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating
+counterfactual prediction models. *Statistics in Medicine*. 2025;
+44(23-24):e70287.
 <doi:%5B10.1002/sim.70287>\](<https://doi.org/10.1002/sim.70287>)
 
 ``` bibtex
-@article{boyer2025counterfactual,
-  title={Counterfactual Prediction Model Performance},
+@article{boyer2025estimating,
+  title={Estimating and Evaluating Counterfactual Prediction Models},
   author={Boyer, Christopher B. and Dahabreh, Issa J. and Steingrimsson, Jon A.},
   journal={Statistics in Medicine},
   volume={44},

@@ -16,8 +16,8 @@ This is essential when:
     conflate model accuracy with treatment effects.
 
 The methods implemented here are based on Boyer, Dahabreh &
-Steingrimsson (2025), “Counterfactual prediction model performance,”
-*Statistics in Medicine*, 44(23-24), e70287.
+Steingrimsson (2025), “Estimating and evaluating counterfactual
+prediction models,” *Statistics in Medicine*, 44(23-24), e70287.
 [doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
 
 ## Installation

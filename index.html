@@ -66,7 +66,7 @@
 <li>Predictions are meant to support decisions about treatment initiation</li>
 <li>You need valid performance estimates even when the prediction model is misspecified</li>
 </ul>
-<p>Based on Boyer, Dahabreh &amp; Steingrimsson (2025). “Counterfactual prediction model performance.” <em>Statistics in Medicine</em>, 44(23-24), e70287. <a href="https://doi.org/10.1002/sim.70287" class="external-link">doi:10.1002/sim.70287</a></p>
+<p>Based on Boyer, Dahabreh &amp; Steingrimsson (2025). “Estimating and evaluating counterfactual prediction models.” <em>Statistics in Medicine</em>, 44(23-24), e70287. <a href="https://doi.org/10.1002/sim.70287" class="external-link">doi:10.1002/sim.70287</a></p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -87,7 +87,6 @@
 <span></span>
 <span><span class="co"># Estimate counterfactual MSE under no treatment</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
-<span></span>
 <span>  predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
 <span>  treatment <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
@@ -170,9 +169,9 @@
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
 <p>If you use this package in your research, please cite:</p>
-<p>Boyer CB, Dahabreh IJ, Steingrimsson JA. Counterfactual prediction model performance. <em>Statistics in Medicine</em>. 2025; 44(23-24):e70287. <a href="doi:%5B10.1002/sim.70287" class="uri">doi:[10.1002/sim.70287</a>](<a href="https://doi.org/10.1002/sim.70287" class="external-link uri">https://doi.org/10.1002/sim.70287</a>)</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">boyer2025counterfactual</span>,</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="dt">title</span>={Counterfactual Prediction Model Performance},</span>
+<p>Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating counterfactual prediction models. <em>Statistics in Medicine</em>. 2025; 44(23-24):e70287. <a href="doi:%5B10.1002/sim.70287" class="uri">doi:[10.1002/sim.70287</a>](<a href="https://doi.org/10.1002/sim.70287" class="external-link uri">https://doi.org/10.1002/sim.70287</a>)</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">boyer2025estimating</span>,</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="dt">title</span>={Estimating and Evaluating Counterfactual Prediction Models},</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="dt">author</span>={Boyer, Christopher B. and Dahabreh, Issa J. and Steingrimsson, Jon A.},</span>
 <span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="dt">journal</span>={Statistics in Medicine},</span>
 <span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="dt">volume</span>={44},</span>

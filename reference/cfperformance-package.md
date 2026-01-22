@@ -52,6 +52,8 @@ Useful links:
 
 - <https://github.com/boyercb/cfperformance>
 
+- <https://boyercb.github.io/cfperformance/>
+
 - Report bugs at <https://github.com/boyercb/cfperformance/issues>
 
 ## Author

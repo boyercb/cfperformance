@@ -46,8 +46,8 @@ A data frame with 1000 rows and 6 variables:
 ## Source
 
 Simulated data based on the framework in Boyer, Dahabreh & Steingrimsson
-(2025). "Counterfactual prediction model performance." Statistics in
-Medicine, 44(23-24), e70287.
+(2025). "Estimating and evaluating counterfactual prediction models."
+Statistics in Medicine, 44(23-24), e70287.
 [doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
 
 ## Details
