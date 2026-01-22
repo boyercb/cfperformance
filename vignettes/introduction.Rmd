@@ -187,23 +187,6 @@ comparison <- cf_compare(
 comparison
 ```
 
-## Formula Interface
-
-For convenience, you can also use a formula interface:
-
-```{r formula-example}
-# Using formula syntax
-mse_formula <- cf_mse(
-  formula = event ~ age + bp + chol,
-  data = cvd_sim,
-  treatment = "treatment",
-  treatment_level = 0,
-  estimator = "dr"
-)
-
-mse_formula
-```
-
 ## Key Concepts
 
 ### Why Counterfactual Performance?
