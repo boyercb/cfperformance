@@ -1,0 +1,41 @@
+Package: cfperformance
+Title: Counterfactual Prediction Model Performance Estimation
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Christopher", "Boyer", 
+           email = "cboyer@hsph.harvard.edu", 
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-0935-8722")),
+    person("Issa", "Dahabreh", 
+           role = "aut"),
+    person("Jon", "Steingrimsson", 
+           role = "aut")
+    )
+Description: Provides methods for estimating model performance measures 
+    (mean squared error, area under the ROC curve, calibration) under 
+    hypothetical/counterfactual interventions. Implements conditional loss, 
+    inverse probability weighting, and doubly robust estimators from 
+    Boyer, Dahabreh & Steingrimsson (2025) <doi:10.1002/sim.70287>. 
+    These methods are essential when prediction models will be deployed 
+    in settings where treatment policies differ from training, or when 
+    predictions support treatment decisions.
+License: MIT + file LICENSE
+URL: https://github.com/boyercb/cfperformance
+BugReports: https://github.com/boyercb/cfperformance/issues
+Depends:
+    R (>= 4.0.0)
+Imports:
+    stats,
+    graphics,
+    rlang (>= 1.0.0)
+Suggests:
+    MASS,
+    mgcv,
+    boot,
+    ggplot2,
+    progressr,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2

@@ -1,0 +1,23 @@
+citHeader("To cite cfperformance in publications use:")
+
+bibentry(
+  bibtype  = "Article",
+  title    = "Estimating and Evaluating Counterfactual Prediction Models",
+  author   = c(
+    person("Christopher B.", "Boyer"),
+    person("Issa J.", "Dahabreh"),
+    person("Jon A.", "Steingrimsson")
+  ),
+  journal  = "Statistics in Medicine",
+  year     = "2025",
+  volume   = "44",
+  number   = "23-24",
+  pages    = "e70287",
+  doi      = "10.1002/sim.70287",
+  textVersion = paste(
+    "Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).",
+    "Estimating and evaluating counterfactual prediction models.",
+    "Statistics in Medicine, 44(23-24), e70287.",
+    "DOI: 10.1002/sim.70287"
+  )
+)
