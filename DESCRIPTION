@@ -22,7 +22,8 @@ Description: Provides methods for estimating model performance measures
     in settings where treatment policies differ from training, or when 
     predictions support treatment decisions.
 License: MIT + file LICENSE
-URL: https://github.com/boyercb/cfperformance
+URL: https://github.com/boyercb/cfperformance,
+    https://boyercb.github.io/cfperformance/
 BugReports: https://github.com/boyercb/cfperformance/issues
 Depends:
     R (>= 4.0.0)

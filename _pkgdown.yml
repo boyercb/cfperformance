@@ -1,0 +1,71 @@
+url: https://boyercb.github.io/cfperformance/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+home:
+  title: cfperformance
+  description: Counterfactual Prediction Model Performance Estimation
+
+authors:
+  Christopher Boyer:
+    href: https://github.com/boyercb
+  Issa Dahabreh:
+    href: https://www.hsph.harvard.edu/issa-dahabreh/
+  Jon Steingrimsson:
+    href: https://vivo.brown.edu/display/jsteingr
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+        - text: Introduction to cfperformance
+          href: articles/introduction.html
+
+reference:
+  - title: Performance Estimation
+    desc: Functions for estimating counterfactual model performance
+    contents:
+      - cf_mse
+      - cf_auc
+      - cf_calibration
+
+  - title: Model Selection
+    desc: Cross-validation and model comparison
+    contents:
+      - cf_cv
+      - cf_compare
+
+  - title: Variance Estimation
+    desc: Standard error and confidence interval methods
+    contents:
+      - bootstrap_cf_mse
+      - bootstrap_cf_auc
+      - se_influence_mse
+      - se_influence_auc
+      - cross_fit_dr
+
+  - title: Data
+    desc: Example datasets
+    contents:
+      - cvd_sim
+
+  - title: Methods
+    desc: S3 methods for cfperformance objects
+    contents:
+      - print.cf_performance
+      - summary.cf_performance
+      - confint.cf_performance
+      - coef.cf_performance
+      - print.cf_calibration
+      - summary.cf_calibration
+      - plot.cf_calibration
+      - print.cf_cv
+      - summary.cf_cv
+      - print.cf_compare
+      - summary.cf_compare
