@@ -41,14 +41,15 @@ reference:
       - cf_cv
       - cf_compare
 
+  - title: Nuisance Models
+    desc: Fitting propensity and outcome models
+    contents:
+      - fit_nuisance
+
   - title: Variance Estimation
     desc: Standard error and confidence interval methods
     contents:
-      - bootstrap_cf_mse
-      - bootstrap_cf_auc
-      - se_influence_mse
-      - se_influence_auc
-      - cross_fit_dr
+      - variance
 
   - title: Data
     desc: Example datasets
@@ -58,14 +59,9 @@ reference:
   - title: Methods
     desc: S3 methods for cfperformance objects
     contents:
-      - print.cf_performance
-      - summary.cf_performance
-      - confint.cf_performance
-      - coef.cf_performance
-      - print.cf_calibration
-      - summary.cf_calibration
-      - plot.cf_calibration
-      - print.cf_cv
-      - summary.cf_cv
-      - print.cf_compare
+      - starts_with("print")
+      - starts_with("summary")
+      - starts_with("plot")
+      - starts_with("coef")
+      - starts_with("confint")
       - summary.cf_compare
