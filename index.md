@@ -1,4 +1,4 @@
-# cfperformance: Counterfactual Prediction Model Performance
+# cfperformance
 
 ## Overview
 
