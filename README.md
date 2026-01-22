@@ -1,4 +1,4 @@
-# cfperformance: Counterfactual Prediction Model Performance
+# cfperformance
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/boyercb/cfperformance/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/boyercb/cfperformance/actions/workflows/R-CMD-check.yaml)
