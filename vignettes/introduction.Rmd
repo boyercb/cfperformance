@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
   fig.width = 6,
   fig.height = 4
 )
+library(cfperformance)
 ```
 
 ## Overview
@@ -47,43 +48,30 @@ devtools::install_github("boyercb/cfperformance")
 
 ## Quick Start
 
-```{r}
-library(cfperformance)
-
-# Generate example data
-set.seed(123)
-n <- 500
-
-# Covariates
-x1 <- rnorm(n)
-x2 <- rnorm(n)
-
-# Treatment depends on covariates (confounding)
-prob_treat <- plogis(-0.5 + 0.5 * x1 + 0.3 * x2)
-treatment <- rbinom(n, 1, prob_treat)
-
-# Outcome depends on covariates and treatment
-prob_outcome <- plogis(-1 + 0.8 * x1 + 0.5 * x2 - 0.5 * treatment)
-outcome <- rbinom(n, 1, prob_outcome)
-
-# Create a prediction model (trained on observed data)
-data <- data.frame(x1 = x1, x2 = x2, treatment = treatment, outcome = outcome)
-pred_model <- glm(outcome ~ x1 + x2, data = data, family = binomial)
-predictions <- predict(pred_model, type = "response")
+```{r example-data}
+# Load the included example dataset
+data(cvd_sim)
+head(cvd_sim)
 ```
+
+The `cvd_sim` dataset contains simulated cardiovascular data with:
+- `age`, `bp`, `chol`: Patient covariates  
+- `treatment`: Binary treatment indicator (confounded by covariates)
+- `event`: Binary outcome (cardiovascular event)
+- `risk_score`: Pre-computed predictions from a logistic regression model
 
 ### Estimating Counterfactual MSE
 
 Now we can estimate how well the model would perform if everyone were untreated 
 (`treatment_level = 0`):
 
-```{r}
+```{r mse-example}
 # Estimate MSE under counterfactual "no treatment" policy
 mse_result <- cf_mse(
-  predictions = predictions,
-  outcomes = outcome,
-  treatment = treatment,
-  covariates = data.frame(x1, x2),
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
   treatment_level = 0,
   estimator = "dr"  # doubly robust estimator
 )
@@ -99,14 +87,14 @@ model is misspecified.
 
 Let's compare all available estimators:
 
-```{r}
+```{r compare-estimators}
 estimators <- c("naive", "cl", "ipw", "dr")
 results <- sapply(estimators, function(est) {
   cf_mse(
-    predictions = predictions,
-    outcomes = outcome,
-    treatment = treatment,
-    covariates = data.frame(x1, x2),
+    predictions = cvd_sim$risk_score,
+    outcomes = cvd_sim$event,
+    treatment = cvd_sim$treatment,
+    covariates = cvd_sim[, c("age", "bp", "chol")],
     treatment_level = 0,
     estimator = est
   )$estimate
@@ -128,12 +116,12 @@ round(results, 4)
 
 For discrimination (AUC), we can use similar methods:
 
-```{r}
+```{r auc-example}
 auc_result <- cf_auc(
-  predictions = predictions,
-  outcomes = outcome,
-  treatment = treatment,
-  covariates = data.frame(x1, x2),
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
   treatment_level = 0,
   estimator = "dr"
 )
@@ -180,16 +168,16 @@ plot(cal_result)
 
 When comparing multiple prediction models, use counterfactual cross-validation:
   
-```{r}
+```{r cv-example}
 # Compare two models using counterfactual CV
 models <- list(
-  "Simple" = outcome ~ x1,
-  "Full" = outcome ~ x1 + x2
+  "Simple" = event ~ age,
+  "Full" = event ~ age + bp + chol
 )
 
 comparison <- cf_compare(
   models = models,
-  data = data,
+  data = cvd_sim,
   treatment = "treatment",
   treatment_level = 0,
   metric = "mse",
@@ -203,11 +191,11 @@ comparison
 
 For convenience, you can also use a formula interface:
 
-```{r}
+```{r formula-example}
 # Using formula syntax
 mse_formula <- cf_mse(
-  formula = outcome ~ x1 + x2,
-  data = data,
+  formula = event ~ age + bp + chol,
+  data = cvd_sim,
   treatment = "treatment",
   treatment_level = 0,
   estimator = "dr"
