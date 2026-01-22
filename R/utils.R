@@ -41,13 +41,3 @@
 .format_ci <- function(lower, upper, digits = 3) {
   sprintf("[%.*f, %.*f]", digits, lower, digits, upper)
 }
-
-
-# Create progress bar (if progressr available)
-.make_progress <- function(n, ...) {
-  if (requireNamespace("progressr", quietly = TRUE)) {
-    progressr::progressor(steps = n, ...)
-  } else {
-    function(...) invisible(NULL)
-  }
-}

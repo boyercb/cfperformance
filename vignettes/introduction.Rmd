@@ -1,0 +1,268 @@
+---
+title: "Introduction to cfperformance"
+author: "Christopher Boyer, Issa Dahabreh, Jon Steingrimsson"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to cfperformance}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 6,
+  fig.height = 4
+)
+```
+
+## Overview
+
+The `cfperformance` package provides methods for estimating prediction model 
+performance under hypothetical (counterfactual) interventions. This is essential 
+when:
+  
+1. **Prediction models will be deployed in settings where treatment policies 
+   differ from training** - A model trained on patients who received a mixture 
+   of treatments may perform differently when deployed where everyone receives 
+   a specific treatment.
+
+2. **Predictions support treatment decisions** - When predictions inform who 
+   should receive treatment, naive performance estimates conflate model 
+   accuracy with treatment effects.
+
+The methods implemented here are based on Boyer, Dahabreh & Steingrimsson (2025),
+"Counterfactual prediction model performance," *Statistics in Medicine*, 
+44(23-24), e70287. [doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
+
+## Installation
+ 
+```{r eval=FALSE}
+# Install from GitHub
+# install.packages("devtools")
+devtools::install_github("boyercb/cfperformance")
+```
+
+## Quick Start
+
+```{r}
+library(cfperformance)
+
+# Generate example data
+set.seed(123)
+n <- 500
+
+# Covariates
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+
+# Treatment depends on covariates (confounding)
+prob_treat <- plogis(-0.5 + 0.5 * x1 + 0.3 * x2)
+treatment <- rbinom(n, 1, prob_treat)
+
+# Outcome depends on covariates and treatment
+prob_outcome <- plogis(-1 + 0.8 * x1 + 0.5 * x2 - 0.5 * treatment)
+outcome <- rbinom(n, 1, prob_outcome)
+
+# Create a prediction model (trained on observed data)
+data <- data.frame(x1 = x1, x2 = x2, treatment = treatment, outcome = outcome)
+pred_model <- glm(outcome ~ x1 + x2, data = data, family = binomial)
+predictions <- predict(pred_model, type = "response")
+```
+
+### Estimating Counterfactual MSE
+
+Now we can estimate how well the model would perform if everyone were untreated 
+(`treatment_level = 0`):
+
+```{r}
+# Estimate MSE under counterfactual "no treatment" policy
+mse_result <- cf_mse(
+  predictions = predictions,
+  outcomes = outcome,
+  treatment = treatment,
+  covariates = data.frame(x1, x2),
+  treatment_level = 0,
+  estimator = "dr"  # doubly robust estimator
+)
+
+mse_result
+```
+
+The doubly robust estimator adjusts for confounding using both a propensity 
+score model and an outcome model, providing consistent estimates even if one 
+model is misspecified.
+
+### Comparing Estimators
+
+Let's compare all available estimators:
+
+```{r}
+estimators <- c("naive", "cl", "ipw", "dr")
+results <- sapply(estimators, function(est) {
+  cf_mse(
+    predictions = predictions,
+    outcomes = outcome,
+    treatment = treatment,
+    covariates = data.frame(x1, x2),
+    treatment_level = 0,
+    estimator = est
+  )$estimate
+})
+names(results) <- estimators
+round(results, 4)
+```
+
+- **naive**: Simply computes MSE on the subset with the target treatment level.
+  Biased when treatment is confounded.
+- **cl** (Conditional Loss): Models the outcome and integrates over the 
+  covariate distribution.
+- **ipw** (Inverse Probability Weighting): Reweights observations to mimic the
+  counterfactual population.
+- **dr** (Doubly Robust): Combines outcome modeling and IPW; consistent if 
+  either model is correct.
+
+### Estimating Counterfactual AUC
+
+For discrimination (AUC), we can use similar methods:
+
+```{r}
+auc_result <- cf_auc(
+  predictions = predictions,
+  outcomes = outcome,
+  treatment = treatment,
+  covariates = data.frame(x1, x2),
+  treatment_level = 0,
+  estimator = "dr"
+)
+
+auc_result
+```
+
+### Bootstrap Standard Errors
+
+Both functions support bootstrap standard errors:
+
+```{r eval=FALSE}
+mse_with_se <- cf_mse(
+  predictions = predictions,
+  outcomes = outcome,
+  treatment = treatment,
+  covariates = data.frame(x1, x2),
+  treatment_level = 0,
+  estimator = "dr",
+  se_method = "bootstrap",
+  n_boot = 500
+)
+summary(mse_with_se)
+```
+
+## Calibration Curves
+
+The package also supports counterfactual calibration assessment:
+
+```{r eval=FALSE}
+cal_result <- cf_calibration(
+  predictions = predictions,
+  outcomes = outcome,
+  treatment = treatment,
+  covariates = data.frame(x1, x2),
+  treatment_level = 0
+)
+
+# Plot calibration curve
+plot(cal_result)
+```
+
+## Cross-Validation for Model Selection
+
+When comparing multiple prediction models, use counterfactual cross-validation:
+  
+```{r}
+# Compare two models using counterfactual CV
+models <- list(
+  "Simple" = outcome ~ x1,
+  "Full" = outcome ~ x1 + x2
+)
+
+comparison <- cf_compare(
+  models = models,
+  data = data,
+  treatment = "treatment",
+  treatment_level = 0,
+  metric = "mse",
+  K = 5
+)
+
+comparison
+```
+
+## Formula Interface
+
+For convenience, you can also use a formula interface:
+
+```{r}
+# Using formula syntax
+mse_formula <- cf_mse(
+  formula = outcome ~ x1 + x2,
+  data = data,
+  treatment = "treatment",
+  treatment_level = 0,
+  estimator = "dr"
+)
+
+mse_formula
+```
+
+## Key Concepts
+
+### Why Counterfactual Performance?
+
+Standard model performance evaluation computes metrics like MSE or AUC on a 
+test set. However, this answers: "How well does the model predict outcomes 
+*as they occurred*?" 
+
+When a model will be used to inform treatment decisions, we often need to 
+answer: "How well would the model predict outcomes *if everyone received 
+(or didn't receive) treatment*?"
+
+These can differ substantially when:
+
+1. Treatment is related to the outcome (treatment effects exist)
+2. Treatment is related to the covariates used for prediction (confounding)
+
+### Assumptions
+
+The methods in this package require:
+
+1. **Consistency**: Observed outcomes equal potential outcomes under the 
+   observed treatment.
+2. **Positivity**: All covariate patterns have positive probability of 
+   receiving each treatment level.
+3. **No unmeasured confounding**: Treatment is independent of potential 
+   outcomes given measured covariates.
+
+These are standard causal inference assumptions. The package provides warnings
+when positivity may be violated (extreme propensity scores).
+
+### Choosing an Estimator
+
+- Use **doubly robust (dr)** as the default - it's consistent if either the 
+  propensity or outcome model is correct.
+- Use **ipw** when you trust your propensity model but not your outcome model.
+- Use **cl** when you trust your outcome model but not your propensity model.
+- Use **naive** only as a baseline comparison.
+
+## Further Reading
+
+- Boyer CB, Dahabreh IJ, Steingrimsson JA. Counterfactual prediction model 
+  performance. *Statistics in Medicine*. 2025; 44(23-24):e70287. 
+  [doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
+
+- Dahabreh IJ, Robertson SE, Steingrimsson JA. Extending inferences from a 
+  randomized trial to a new target population. *Statistics in Medicine*. 2020.
+
+- Bang H, Robins JM. Doubly robust estimation in missing data and causal 
+  inference models. *Biometrics*. 2005.

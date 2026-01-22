@@ -52,8 +52,8 @@ Useful links:
 
 Authors:
 \itemize{
-  \item Issa Dahabreh
-  \item Jon Steingrimsson
+  \item Issa Dahabreh (\href{https://orcid.org/0000-0002-1195-1850}{ORCID})
+  \item Jon Steingrimsson (\href{https://orcid.org/0000-0002-8284-8877}{ORCID})
 }
 
 }

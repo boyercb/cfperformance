@@ -1,15 +1,17 @@
 Package: cfperformance
 Title: Counterfactual Prediction Model Performance Estimation
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: c(
     person("Christopher", "Boyer", 
            email = "cboyer@hsph.harvard.edu", 
            role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0935-8722")),
     person("Issa", "Dahabreh", 
-           role = "aut"),
+           role = "aut",
+           comment = c(ORCID = "0000-0002-1195-1850")),
     person("Jon", "Steingrimsson", 
-           role = "aut")
+           role = "aut",
+           comment = c(ORCID = "0000-0002-8284-8877"))
     )
 Description: Provides methods for estimating model performance measures 
     (mean squared error, area under the ROC curve, calibration) under 
@@ -33,9 +35,12 @@ Suggests:
     mgcv,
     boot,
     ggplot2,
-    progressr,
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Encoding: UTF-8
+LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
