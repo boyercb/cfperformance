@@ -26,4 +26,3 @@ navbar:
       menu:
         - text: Introduction to cfperformance
           href: articles/introduction.html
-      - summary.cf_compare
