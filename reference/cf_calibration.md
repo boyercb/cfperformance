@@ -1,0 +1,175 @@
+# Estimate Counterfactual Calibration Curve
+
+Estimates the calibration curve of a prediction model under a
+hypothetical intervention where treatment is set to a specific level.
+
+## Usage
+
+``` r
+cf_calibration(
+  predictions,
+  outcomes,
+  treatment,
+  covariates,
+  treatment_level = 0,
+  estimator = c("ipw", "cl"),
+  propensity_model = NULL,
+  outcome_model = NULL,
+  smoother = c("loess", "binned"),
+  n_bins = 10,
+  span = 0.75,
+  ...
+)
+```
+
+## Arguments
+
+- predictions:
+
+  Numeric vector of model predictions.
+
+- outcomes:
+
+  Numeric vector of observed outcomes.
+
+- treatment:
+
+  Numeric vector of treatment indicators (0/1).
+
+- covariates:
+
+  A matrix or data frame of baseline covariates (confounders).
+
+- treatment_level:
+
+  The counterfactual treatment level (default: 0).
+
+- estimator:
+
+  Character string specifying the estimator:
+
+  - `"naive"`: Naive estimator (biased)
+
+  - `"cl"`: Conditional loss estimator
+
+  - `"ipw"`: Inverse probability weighting estimator
+
+  - `"dr"`: Doubly robust estimator (default)
+
+- propensity_model:
+
+  Optional fitted propensity score model. If NULL, a logistic regression
+  model is fit using the covariates.
+
+- outcome_model:
+
+  Optional fitted outcome model. If NULL, a logistic regression model is
+  fit using the covariates among treated/untreated.
+
+- smoother:
+
+  Smoothing method for the calibration curve:
+
+  - `"loess"`: Local polynomial regression (default)
+
+  - `"binned"`: Binned calibration
+
+- n_bins:
+
+  Number of bins for binned calibration (default: 10).
+
+- span:
+
+  Span parameter for LOESS smoothing (default: 0.75).
+
+- ...:
+
+  Additional arguments passed to internal functions.
+
+## Value
+
+An object of class `c("cf_calibration", "cf_performance")` containing:
+
+- predicted:
+
+  Vector of predicted probabilities
+
+- observed:
+
+  Vector of smoothed observed probabilities
+
+- smoother:
+
+  Smoothing method used
+
+- ici:
+
+  Integrated calibration index
+
+- e50:
+
+  Median absolute calibration error
+
+- e90:
+
+  90th percentile absolute calibration error
+
+- emax:
+
+  Maximum absolute calibration error
+
+## Details
+
+The counterfactual calibration curve estimates the relationship between
+predicted risk and observed risk under the counterfactual intervention.
+This is done by applying inverse probability weights to the calibration
+curve estimation.
+
+## References
+
+Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
+"Estimating and evaluating counterfactual prediction models."
+*Statistics in Medicine*, 44(23-24), e70287.
+[doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
+
+## See also
+
+[`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md),
+[`cf_auc()`](https://boyercb.github.io/cfperformance/reference/cf_auc.md),
+[`plot.cf_calibration()`](https://boyercb.github.io/cfperformance/reference/plot.cf_calibration.md)
+
+## Examples
+
+``` r
+# Generate example data
+set.seed(123)
+n <- 500
+x <- rnorm(n)
+a <- rbinom(n, 1, plogis(-0.5 + 0.5 * x))
+y <- rbinom(n, 1, plogis(-1 + x - 0.5 * a))
+pred <- plogis(-1 + 0.8 * x)
+
+# Estimate counterfactual calibration curve
+result <- cf_calibration(
+  predictions = pred,
+  outcomes = y,
+  treatment = a,
+  covariates = data.frame(x = x),
+  treatment_level = 0
+)
+print(result)
+#> 
+#> Counterfactual CALIBRATION Estimation
+#> ---------------------------------------- 
+#> Estimator: ipw 
+#> Treatment level: 0 
+#> N observations: 306 
+#> 
+#> Calibration Metrics:
+#>   ICI (Integrated Calibration Index): 0.0344 
+#>   E50 (Median absolute error): 0.0185 
+#>   E90 (90th percentile error): 0.0721 
+#>   Emax (Maximum error): 0.3588 
+#> 
+# plot(result)  # If ggplot2 is available
+```
