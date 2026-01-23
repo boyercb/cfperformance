@@ -28,6 +28,8 @@ navbar:
           href: articles/introduction.html
         - text: Transportability Analysis
           href: articles/transportability.html
+        - text: Machine Learning Integration
+          href: articles/ml-integration.html
 
 reference:
   - title: Counterfactual Performance (Single Population)
@@ -47,6 +49,11 @@ reference:
     contents:
       - cf_cv
       - cf_compare
+  - title: Machine Learning
+    desc: ML learner specifications for nuisance models
+    contents:
+      - ml_learner
+      - print.ml_learner
   - title: Nuisance Models
     desc: Fit propensity and outcome models
     contents:

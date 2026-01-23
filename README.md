@@ -103,6 +103,35 @@ tr_calibration(
 
 See `vignette("transportability", package = "cfperformance")` for details.
 
+## Machine Learning Integration
+
+The package supports flexible ML methods for nuisance model estimation with automatic cross-fitting for valid inference:
+
+```r
+# Use random forest for propensity scores and outcome models
+cf_mse(
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
+  treatment_level = 0,
+  estimator = "dr",
+  propensity_model = ml_learner("ranger", num.trees = 500),
+  outcome_model = ml_learner("xgboost", nrounds = 100),
+  cross_fit = TRUE
+)
+```
+
+**Supported learners:**
+- `ranger` - Fast random forests
+- `xgboost` - Gradient boosting
+- `grf` - Generalized random forests (honest estimation)
+- `glmnet` - Elastic net with cross-validated λ
+- `superlearner` - Ensemble learning
+- `custom` - User-supplied fit/predict functions
+
+See `vignette("ml-integration", package = "cfperformance")` for details.
+
 ## Example
 
 ```r
