@@ -325,8 +325,14 @@ print(result_mse)
 
 ### AUC with ML Learners
 
+For AUC estimation, we recommend using **GRF (Generalized Random
+Forests)** rather than standard random forests. GRF’s “honesty” property
+produces well-calibrated probability estimates, which is critical for
+the doubly robust AUC estimator. Standard random forests can produce
+extreme probability predictions that destabilize the estimator.
+
 ``` r
-# AUC estimation with ML nuisance models
+# AUC estimation with GRF nuisance models (recommended)
 result_auc <- cf_auc(
   predictions = pred,
   outcomes = y,
@@ -334,8 +340,8 @@ result_auc <- cf_auc(
   covariates = df,
   treatment_level = 0,
   estimator = "dr",
-  propensity_model = ml_learner("ranger", num.trees = 100),
-  outcome_model = ml_learner("ranger", num.trees = 100),
+  propensity_model = ml_learner("grf", num.trees = 500),
+  outcome_model = ml_learner("grf", num.trees = 500),
   cross_fit = TRUE,
   n_folds = 5,
   se_method = "influence"
@@ -349,8 +355,8 @@ print(result_auc)
 #> Treatment level: 0 
 #> N observations: 1000 
 #> 
-#> Estimate: 0.6073 (SE: 0.0197 )
-#> 95% CI: [0.5687, 0.6458]
+#> Estimate: 0.5779 (SE: 0.0197 )
+#> 95% CI: [0.5393, 0.6165]
 #> 
 #> Naive estimate: 0.5994
 ```
@@ -373,8 +379,14 @@ print(result_auc)
     analysis.
 
 5.  **Check for extreme propensity scores**: ML methods can produce very
-    extreme propensity scores. The package truncates these at \[0.01,
-    0.99\] by default.
+    extreme propensity scores. The package truncates these at \[0.025,
+    0.975\] by default.
+
+6.  **Use GRF for AUC estimation**: The doubly robust AUC estimator is
+    sensitive to poorly calibrated probability estimates. GRF’s “honest”
+    estimation produces well-calibrated probabilities, while standard
+    random forests (ranger) can produce extreme predictions that
+    destabilize the estimator.
 
 ## References
 
