@@ -55,6 +55,51 @@ result
 - **Cross-validation:** Counterfactual-aware model selection with `cf_cv()` and `cf_compare()`
 - **Transportability:** Evaluate model performance when transporting from a source population (e.g., RCT) to a target population
 
+## Counterfactual Performance Estimation
+
+Estimate how a prediction model would perform under a hypothetical treatment policy (e.g., if everyone received or avoided treatment):
+
+```r
+library(cfperformance)
+data(cvd_sim)
+
+# Compare estimators for counterfactual MSE
+estimators <- c("naive", "cl", "ipw", "dr")
+sapply(estimators, function(est) {
+  cf_mse(
+    predictions = cvd_sim$risk_score,
+    outcomes = cvd_sim$event,
+    treatment = cvd_sim$treatment,
+    covariates = cvd_sim[, c("age", "bp", "chol")],
+    treatment_level = 0,
+    estimator = est
+  )$estimate
+})
+
+# Estimate counterfactual AUC
+cf_auc(
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
+  treatment_level = 0,
+  estimator = "dr"
+)
+
+# Cross-validation for model selection
+cf_compare(
+  models = list(
+    "Simple" = event ~ age,
+    "Full" = event ~ age + bp + chol
+  ),
+  data = cvd_sim,
+  treatment = "treatment",
+  treatment_level = 0,
+  metric = "mse",
+  K = 5
+)
+```
+
 ## Transportability Analysis
 
 The package also implements transportability estimators from Voter et al. (2025) for evaluating prediction model performance when transporting from a source population (typically an RCT) to a target population:
@@ -131,49 +176,6 @@ cf_mse(
 - `custom` - User-supplied fit/predict functions
 
 See `vignette("ml-integration", package = "cfperformance")` for details.
-
-## Example
-
-```r
-library(cfperformance)
-data(cvd_sim)
-
-# Compare estimators
-estimators <- c("naive", "cl", "ipw", "dr")
-sapply(estimators, function(est) {
-  cf_mse(
-    predictions = cvd_sim$risk_score,
-    outcomes = cvd_sim$event,
-    treatment = cvd_sim$treatment,
-    covariates = cvd_sim[, c("age", "bp", "chol")],
-    treatment_level = 0,
-    estimator = est
-  )$estimate
-})
-
-# Estimate counterfactual AUC
-cf_auc(
-  predictions = cvd_sim$risk_score,
-  outcomes = cvd_sim$event,
-  treatment = cvd_sim$treatment,
-  covariates = cvd_sim[, c("age", "bp", "chol")],
-  treatment_level = 0,
-  estimator = "dr"
-)
-
-# Cross-validation for model selection
-cf_compare(
-  models = list(
-    "Simple" = event ~ age,
-    "Full" = event ~ age + bp + chol
-  ),
-  data = cvd_sim,
-  treatment = "treatment",
-  treatment_level = 0,
-  metric = "mse",
-  K = 5
-)
-```
 
 ## Documentation
 
