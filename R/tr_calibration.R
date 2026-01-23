@@ -361,6 +361,7 @@ tr_calibration <- function(predictions,
   list(
     predicted = calib_result$predicted,
     observed = calib_result$observed,
+    predictions_raw = predictions,  # Raw predictions for histogram
     weights = calib_result$weights,
     smoother = smoother,
     ici = calib_result$ici,
@@ -782,26 +783,44 @@ tr_calibration <- function(predictions,
 #' @param x A `tr_calibration` object.
 #' @param add_reference Logical; add 45-degree reference line (default: TRUE).
 #' @param show_metrics Logical; show calibration metrics on plot (default: TRUE).
+#' @param add_histogram Logical; add histogram of predictions below the
+#'   calibration curve (default: TRUE).
 #' @param ... Additional arguments passed to plotting functions.
 #'
 #' @return A ggplot object (if ggplot2 available) or base R plot.
 #'
 #' @export
-plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE, ...) {
+plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE, 
+                                 add_histogram = TRUE, ...) {
 
   estimator_label <- toupper(x$estimator)
   
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    # Base R plot
+    # Base R plot - simple version without histogram
+    if (add_histogram && !is.null(x$predictions_raw)) {
+      old_par <- par(no.readonly = TRUE)
+      on.exit(par(old_par))
+      layout(matrix(c(1, 2), nrow = 2), heights = c(3, 1))
+      par(mar = c(0, 4, 3, 2))
+    }
+    
     plot(x$predicted, x$observed,
-         type = "l", lwd = 2,
-         xlab = "Predicted probability",
+         type = "l", lwd = 2, col = "#2E86AB",
+         xlab = if (add_histogram) "" else "Predicted probability",
          ylab = sprintf("Probability in Target Population (%s)", estimator_label),
          main = "Calibration Curve in the Target Population",
-         xlim = c(0, 1), ylim = c(0, 1))
+         xlim = c(0, 1), ylim = c(0, 1),
+         xaxt = if (add_histogram) "n" else "s")
     if (add_reference) {
       abline(0, 1, lty = 2, col = "gray")
     }
+    
+    if (add_histogram && !is.null(x$predictions_raw)) {
+      par(mar = c(4, 4, 0, 2))
+      hist(x$predictions_raw, breaks = 30, col = "#2E86AB", border = "white",
+           main = "", xlab = "Predicted probability", xlim = c(0, 1))
+    }
+    
     return(invisible(NULL))
   }
 
@@ -817,10 +836,9 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE, ..
                              x$ici, x$e50, x$emax)
   }
 
-  p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$predicted, y = .data$observed)) +
+  p_cal <- ggplot2::ggplot(df, ggplot2::aes(x = .data$predicted, y = .data$observed)) +
     ggplot2::geom_line(linewidth = 1.2, color = "#2E86AB") +
     ggplot2::labs(
-      x = "Predicted probability",
       y = sprintf("Probability in Target Population (%s)", estimator_label),
       title = "Calibration Curve in the Target Population",
       subtitle = subtitle_text
@@ -829,9 +847,40 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE, ..
     ggplot2::theme_bw()
 
   if (add_reference) {
-    p <- p + ggplot2::geom_abline(slope = 1, intercept = 0,
-                                   linetype = "dashed", color = "gray50")
+    p_cal <- p_cal + ggplot2::geom_abline(slope = 1, intercept = 0,
+                                           linetype = "dashed", color = "gray50")
   }
 
-  return(p)
+  # Add histogram subplot if requested
+  if (add_histogram && !is.null(x$predictions_raw)) {
+    if (!requireNamespace("patchwork", quietly = TRUE)) {
+      # Fall back to just the calibration plot
+      message("Install 'patchwork' package for histogram subplot.")
+      p_cal <- p_cal + ggplot2::labs(x = "Predicted probability")
+      return(p_cal)
+    }
+    
+    # Remove x-axis label from calibration plot
+    p_cal <- p_cal + 
+      ggplot2::theme(axis.title.x = ggplot2::element_blank(),
+                     axis.text.x = ggplot2::element_blank(),
+                     axis.ticks.x = ggplot2::element_blank())
+    
+    # Create histogram
+    df_raw <- data.frame(predictions_raw = x$predictions_raw)
+    p_hist <- ggplot2::ggplot(df_raw, ggplot2::aes(x = .data$predictions_raw)) +
+      ggplot2::geom_histogram(bins = 30, fill = "#2E86AB", color = "white", alpha = 0.8) +
+      ggplot2::labs(x = "Predicted probability", y = "Count") +
+      ggplot2::coord_cartesian(xlim = c(0, 1)) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(plot.margin = ggplot2::margin(t = 0, r = 5.5, b = 5.5, l = 5.5))
+    
+    # Combine plots
+    p_combined <- patchwork::wrap_plots(p_cal, p_hist, ncol = 1, heights = c(3, 1))
+    return(p_combined)
+  }
+  
+  # No histogram - add x-axis label
+  p_cal <- p_cal + ggplot2::labs(x = "Predicted probability")
+  return(p_cal)
 }

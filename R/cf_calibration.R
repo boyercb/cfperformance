@@ -185,6 +185,7 @@ cf_calibration <- function(predictions,
   result <- list(
     predicted = predicted,
     observed = observed,
+    predictions_raw = pred_use,  # Raw predictions for histogram
     weights = weights,
     smoother = smoother,
     estimator = estimator,
