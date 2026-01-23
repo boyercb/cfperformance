@@ -918,7 +918,7 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE,
     plot(x$predicted, x$observed,
          type = "l", lwd = 2, col = "#2E86AB",
          xlab = if (add_histogram) "" else "Predicted probability",
-         ylab = sprintf("Probability in Target Population (%s)", estimator_label),
+         ylab = sprintf("Probability in Target (%s)", estimator_label),
          main = "Calibration Curve in the Target Population",
          xlim = c(0, 1), ylim = c(0, 1),
          xaxt = if (add_histogram) "n" else "s")
@@ -971,7 +971,7 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE,
   p_cal <- p_cal +
     ggplot2::geom_line(linewidth = 1.2, color = "#2E86AB") +
     ggplot2::labs(
-      y = sprintf("Probability in Target Population (%s)", estimator_label),
+      y = sprintf("Probability in Target (%s)", estimator_label),
       title = "Calibration Curve in the Target Population",
       subtitle = subtitle_text
     ) +

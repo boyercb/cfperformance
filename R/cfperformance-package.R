@@ -5,7 +5,7 @@
 #' @importFrom stats predict coef confint glm binomial gaussian weighted.mean
 #' @importFrom stats model.matrix reformulate quantile sd var qnorm approx
 #' @importFrom stats loess median formula nobs plogis
-#' @importFrom graphics abline hist layout par polygon
+#' @importFrom graphics abline hist layout par polygon lines legend
 #' @importFrom grDevices rgb
 #' @importFrom rlang .data abort warn inform
 ## usethis namespace: end

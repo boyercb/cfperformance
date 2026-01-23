@@ -163,11 +163,36 @@ auc_result <- tr_auc(
 print(auc_result)
 ```
 
+### ROC Curve in the Target Population
+
+We can visualize the full ROC curve for the target population:
+
+```{r tr-roc, fig.width=6, fig.height=5}
+roc_result <- tr_roc(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "transport",
+  estimator = "dr",
+  include_naive = TRUE
+)
+
+# Plot the ROC curve
+plot(roc_result)
+```
+
+The comparison between the doubly robust and naive ROC curves shows how
+performance estimates change when properly accounting for the distribution
+shift between source and target populations.
+
 ### Calibration in the Target Population
 
 To assess calibration in the target population:
 
-```{r tr-calibration}
+```{r tr-calibration, fig.width=6, fig.height=5}
 calib_result <- tr_calibration(
   predictions = transport_sim$risk_score,
   outcomes = transport_sim$event,

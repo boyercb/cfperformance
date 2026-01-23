@@ -1,3 +1,42 @@
+# cfperformance 0.4.0
+
+Adds sensitivity, specificity, and ROC curve functions for both counterfactual
+and transportability settings.
+
+## New Features
+
+### Counterfactual Sensitivity/Specificity
+* `cf_sensitivity()` - Counterfactual sensitivity (true positive rate)
+* `cf_specificity()` - Counterfactual specificity (true negative rate)
+* `cf_fpr()` - Counterfactual false positive rate (1 - specificity)
+* `cf_tpr()` - Alias for `cf_sensitivity()`
+* `cf_tnr()` - Alias for `cf_specificity()`
+* Supports CL, IPW, DR, and naive estimators
+* Vectorized threshold parameter for efficient ROC curve computation
+
+### Transportable Sensitivity/Specificity
+* `tr_sensitivity()` - Transportable sensitivity for target population
+* `tr_specificity()` - Transportable specificity for target population
+* `tr_fpr()` - Transportable false positive rate
+* `tr_tpr()` - Alias for `tr_sensitivity()`
+* `tr_tnr()` - Alias for `tr_specificity()`
+* Supports OM, IPW, DR, and naive estimators
+* Works with both "transport" and "joint" analysis types
+
+### ROC Curves
+* `tr_roc()` - Compute transportable ROC curve in target population
+* `cf_roc()` - Compute counterfactual ROC curve
+* `plot.tr_roc()` / `plot.cf_roc()` - Plot ROC curves with AUC in legend
+* `as.data.frame.tr_roc()` / `as.data.frame.cf_roc()` - Convert to data frame for ggplot2
+* AUC computed via trapezoidal integration
+* Option to include naive ROC curve for comparison
+
+### Documentation
+* Updated introduction vignette with ROC curve examples
+* Updated transportability vignette with ROC curve examples
+
+---
+
 # cfperformance 0.3.0
 
 Adds machine learning integration for flexible nuisance model estimation with

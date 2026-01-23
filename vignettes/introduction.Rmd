@@ -130,6 +130,34 @@ auc_result <- cf_auc(
 auc_result
 ```
 
+### ROC Curve
+
+We can also visualize the full ROC curve, which shows the tradeoff between
+sensitivity (true positive rate) and 1-specificity (false positive rate)
+across all classification thresholds:
+
+```{r roc-example, fig.width=6, fig.height=5}
+roc_result <- cf_roc(
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
+  treatment_level = 0,
+  estimator = "dr",
+  include_naive = TRUE
+)
+
+# Plot the ROC curve
+plot(roc_result)
+```
+
+The ROC curve data can also be extracted as a data frame for custom plotting:
+
+```{r roc-dataframe}
+roc_df <- as.data.frame(roc_result)
+head(roc_df)
+```
+
 ### Bootstrap Standard Errors
 
 Both functions support bootstrap standard errors:
