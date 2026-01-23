@@ -1,6 +1,6 @@
 # Create transportability example dataset
 set.seed(2025)
-n <- 1500
+n <- 2500
 
 # Covariates
 age <- rnorm(n, mean = 60, sd = 10)
@@ -9,7 +9,7 @@ smoking <- rbinom(n, 1, 0.3)
 
 # Source indicator: RCT patients are younger, less smoking
 # S=1 for source/RCT, S=0 for target
-source_prob <- plogis(-0.3 + 0.025 * (age - 60) + 0.5 * smoking)
+source_prob <- plogis(-0.3 + 0.05 * (age - 60) + 0.8 * smoking)
 source <- rbinom(n, 1, 1 - source_prob)
 
 # Treatment assignment
@@ -17,7 +17,7 @@ source <- rbinom(n, 1, 1 - source_prob)
 treatment <- ifelse(
   source == 1,
   rbinom(n, 1, 0.5),
-  rbinom(n, 1, plogis(-0.3 + 0.015 * age + 0.2 * biomarker))
+  rbinom(n, 1, plogis(-0.5 + 0.03 * age + 0.5 * biomarker))
 )
 
 # Outcome

@@ -3,7 +3,7 @@
 
 set.seed(20250122)
 
-n <- 1000
+n <- 2500
 
 # Covariates: age (scaled), blood pressure, cholesterol
 age <- rnorm(n, mean = 0, sd = 1)

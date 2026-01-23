@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Machine Learning Integration</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Machine Learning Integration</h1>
+
+
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>The <code>cfperformance</code> package supports flexible machine
+learning methods for nuisance model estimation (propensity scores and
+outcome models). When using ML methods, cross-fitting is essential for
+valid inference—this is handled automatically when you use the
+<code>ml_learner()</code> specification.</p>
+<p>This vignette demonstrates how to use ML learners with the
+counterfactual performance estimators.</p>
+</div>
+<div id="why-use-ml-for-nuisance-models" class="section level2">
+<h2>Why Use ML for Nuisance Models?</h2>
+<p>The doubly robust (DR) estimator requires models for:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Propensity scores</strong>: <span class="math inline">\(P(A
+= a | X)\)</span> — the probability of treatment given covariates</li>
+<li><strong>Outcome model</strong>: <span class="math inline">\(E[Y | X,
+A = a]\)</span> — the expected outcome given covariates and
+treatment</li>
+</ol>
+<p>Traditional approaches use logistic regression, which may be
+misspecified when the true relationships are complex. Machine learning
+methods can capture nonlinear relationships and interactions without
+explicit specification.</p>
+<p>However, using flexible ML methods introduces a challenge: if the
+same data is used to both fit the nuisance models and compute the
+estimator, the resulting inference can be invalid.
+<strong>Cross-fitting</strong> (sample splitting) solves this by:</p>
+<ol style="list-style-type: decimal">
+<li>Splitting data into K folds</li>
+<li>For each fold, fitting nuisance models on the other K-1 folds</li>
+<li>Using the held-out fold for estimation</li>
+</ol>
+<p>This approach, known as “double/debiased machine learning”
+(Chernozhukov et al., 2018), maintains valid inference while leveraging
+flexible estimation.</p>
+</div>
+<div id="the-ml_learner-interface" class="section level2">
+<h2>The <code>ml_learner()</code> Interface</h2>
+<p>The <code>ml_learner()</code> function creates a learner
+specification that can be passed to the <code>propensity_model</code> or
+<code>outcome_model</code> arguments:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(cfperformance)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co"># Create a learner specification</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>ranger_learner <span class="ot">&lt;-</span> <span class="fu">ml_learner</span>(<span class="st">&quot;ranger&quot;</span>, <span class="at">num.trees =</span> <span class="dv">500</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="fu">print</span>(ranger_learner)</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co">#&gt; ML Learner Specification</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co">#&gt; ------------------------</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co">#&gt; Method: ranger </span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co">#&gt; Arguments:</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt;   num.trees: 500</span></span></code></pre></div>
+<div id="supported-learners" class="section level3">
+<h3>Supported Learners</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Package</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>&quot;ranger&quot;</code></td>
+<td>ranger</td>
+<td>Fast random forest implementation</td>
+</tr>
+<tr class="even">
+<td><code>&quot;xgboost&quot;</code></td>
+<td>xgboost</td>
+<td>Gradient boosting (XGBoost)</td>
+</tr>
+<tr class="odd">
+<td><code>&quot;grf&quot;</code></td>
+<td>grf</td>
+<td>Generalized random forests with honesty</td>
+</tr>
+<tr class="even">
+<td><code>&quot;glmnet&quot;</code></td>
+<td>glmnet</td>
+<td>Elastic net with cross-validated λ</td>
+</tr>
+<tr class="odd">
+<td><code>&quot;superlearner&quot;</code></td>
+<td>SuperLearner</td>
+<td>Ensemble of multiple learners</td>
+</tr>
+<tr class="even">
+<td><code>&quot;custom&quot;</code></td>
+<td>—</td>
+<td>User-supplied fit/predict functions</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="basic-usage" class="section level2">
+<h2>Basic Usage</h2>
+<p>Here’s a complete example using random forests for nuisance
+estimation:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Generate example data</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co"># Covariates with nonlinear relationships</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>x1 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>x2 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>x3 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># Treatment depends on covariates (nonlinearly)</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>ps_true <span class="ot">&lt;-</span> <span class="fu">plogis</span>(<span class="sc">-</span><span class="fl">0.5</span> <span class="sc">+</span> <span class="fl">0.8</span> <span class="sc">*</span> x1 <span class="sc">-</span> <span class="fl">0.5</span> <span class="sc">*</span> x2 <span class="sc">+</span> <span class="fl">0.3</span> <span class="sc">*</span> x1 <span class="sc">*</span> x2)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, ps_true)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co"># Outcome depends on covariates and treatment</span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>y_prob <span class="ot">&lt;-</span> <span class="fu">plogis</span>(<span class="sc">-</span><span class="dv">1</span> <span class="sc">+</span> <span class="fl">0.5</span> <span class="sc">*</span> x1 <span class="sc">+</span> <span class="fl">0.3</span> <span class="sc">*</span> x2<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fl">0.2</span> <span class="sc">*</span> x3 <span class="sc">-</span> <span class="fl">0.4</span> <span class="sc">*</span> a)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, y_prob)</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co"># Prediction model (intentionally simplified)</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>pred <span class="ot">&lt;-</span> <span class="fu">plogis</span>(<span class="sc">-</span><span class="dv">1</span> <span class="sc">+</span> <span class="fl">0.4</span> <span class="sc">*</span> x1 <span class="sc">+</span> <span class="fl">0.2</span> <span class="sc">*</span> x2)</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co"># Create data frame</span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x1 =</span> x1, <span class="at">x2 =</span> x2, <span class="at">x3 =</span> x3)</span></code></pre></div>
+<div id="using-glm-default" class="section level3">
+<h3>Using GLM (Default)</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Standard approach with GLM</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>result_glm <span class="ot">&lt;-</span> <span class="fu">cf_mse</span>(</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">predictions =</span> pred,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">outcomes =</span> y,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">treatment =</span> a,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">covariates =</span> df,</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">treatment_level =</span> <span class="dv">0</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">estimator =</span> <span class="st">&quot;dr&quot;</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="at">n_folds =</span> <span class="dv">5</span>,</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>  <span class="at">se_method =</span> <span class="st">&quot;influence&quot;</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>)</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="fu">print</span>(result_glm)</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; Counterfactual MSE Estimation</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------- </span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; Estimator: dr </span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; Treatment level: 0 </span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; N observations: 1000 </span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; Estimate: 0.2301 (SE: 0.0098 )</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; 95% CI: [0.211, 0.2492]</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; Naive estimate: 0.2081</span></span></code></pre></div>
+</div>
+<div id="using-random-forest" class="section level3">
+<h3>Using Random Forest</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># With random forest nuisance models</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>result_rf <span class="ot">&lt;-</span> <span class="fu">cf_mse</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">predictions =</span> pred,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">outcomes =</span> y,</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">treatment =</span> a,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">covariates =</span> df,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">treatment_level =</span> <span class="dv">0</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">estimator =</span> <span class="st">&quot;dr&quot;</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(<span class="st">&quot;ranger&quot;</span>, <span class="at">num.trees =</span> <span class="dv">200</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">outcome_model =</span> <span class="fu">ml_learner</span>(<span class="st">&quot;ranger&quot;</span>, <span class="at">num.trees =</span> <span class="dv">200</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">n_folds =</span> <span class="dv">5</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  <span class="at">se_method =</span> <span class="st">&quot;influence&quot;</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>)</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="fu">print</span>(result_rf)</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; Counterfactual MSE Estimation</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------- </span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt; Estimator: dr </span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt; Treatment level: 0 </span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt; N observations: 1000 </span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; Estimate: 0.2144 (SE: 0.0115 )</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; 95% CI: [0.1917, 0.237]</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt; Naive estimate: 0.2081</span></span></code></pre></div>
+</div>
+</div>
+<div id="learner-specific-examples" class="section level2">
+<h2>Learner-Specific Examples</h2>
+<div id="ranger-random-forest" class="section level3">
+<h3>ranger (Random Forest)</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">cf_mse</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  ...,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>    <span class="st">&quot;ranger&quot;</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>    <span class="at">num.trees =</span> <span class="dv">500</span>,      <span class="co"># Number of trees</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>    <span class="at">mtry =</span> <span class="dv">3</span>,             <span class="co"># Variables per split</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>    <span class="at">min.node.size =</span> <span class="dv">10</span>    <span class="co"># Minimum node size</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  ),</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="xgboost-gradient-boosting" class="section level3">
+<h3>xgboost (Gradient Boosting)</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">cf_mse</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  ...,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>    <span class="st">&quot;xgboost&quot;</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>    <span class="at">nrounds =</span> <span class="dv">100</span>,        <span class="co"># Boosting rounds</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>    <span class="at">max_depth =</span> <span class="dv">4</span>,        <span class="co"># Tree depth</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>    <span class="at">eta =</span> <span class="fl">0.1</span>             <span class="co"># Learning rate</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  ),</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="glmnet-elastic-net" class="section level3">
+<h3>glmnet (Elastic Net)</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">cf_mse</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  ...,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>    <span class="st">&quot;glmnet&quot;</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>    <span class="at">alpha =</span> <span class="fl">0.5</span>,          <span class="co"># 0=ridge, 1=lasso, 0.5=elastic net</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>    <span class="at">nfolds =</span> <span class="dv">10</span>           <span class="co"># CV folds for lambda selection</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  ),</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="grf-generalized-random-forest" class="section level3">
+<h3>grf (Generalized Random Forest)</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">cf_mse</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  ...,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>    <span class="st">&quot;grf&quot;</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>    <span class="at">num.trees =</span> <span class="dv">2000</span>,     <span class="co"># More trees for honesty</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>    <span class="at">honesty =</span> <span class="cn">TRUE</span>        <span class="co"># Honest estimation (default)</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  ),</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="superlearner-ensemble" class="section level3">
+<h3>SuperLearner (Ensemble)</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">cf_mse</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  ...,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>    <span class="st">&quot;superlearner&quot;</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>    <span class="at">SL.library =</span> <span class="fu">c</span>(<span class="st">&quot;SL.glm&quot;</span>, <span class="st">&quot;SL.ranger&quot;</span>, <span class="st">&quot;SL.xgboost&quot;</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  ),</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+</div>
+<div id="custom-learners" class="section level2">
+<h2>Custom Learners</h2>
+<p>You can define custom learners by providing <code>fit_fun</code> and
+<code>predict_fun</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Define a custom learner (e.g., GAM with specific settings)</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>custom_fit <span class="ot">&lt;-</span> <span class="cf">function</span>(formula, data, family, ...) {</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">requireNamespace</span>(<span class="st">&quot;mgcv&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>    <span class="fu">stop</span>(<span class="st">&quot;mgcv required for this custom learner&quot;</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  }</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>  mgcv<span class="sc">::</span><span class="fu">gam</span>(formula, <span class="at">data =</span> data, <span class="at">family =</span> <span class="fu">binomial</span>())</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>}</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>custom_predict <span class="ot">&lt;-</span> <span class="cf">function</span>(object, newdata, ...) {</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>  <span class="fu">predict</span>(object, <span class="at">newdata =</span> newdata, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>)</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>}</span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co"># Use in estimation</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>custom_learner <span class="ot">&lt;-</span> <span class="fu">ml_learner</span>(</span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a>  <span class="st">&quot;custom&quot;</span>,</span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a>  <span class="at">fit_fun =</span> custom_fit,</span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a>  <span class="at">predict_fun =</span> custom_predict</span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="mixing-learners" class="section level2">
+<h2>Mixing Learners</h2>
+<p>You can use different learners for propensity and outcome models:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Random forest for propensity, elastic net for outcome</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">cf_mse</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="at">predictions =</span> pred,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="at">outcomes =</span> y,</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="at">treatment =</span> a,</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  <span class="at">covariates =</span> df,</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  <span class="at">treatment_level =</span> <span class="dv">0</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="at">estimator =</span> <span class="st">&quot;dr&quot;</span>,</span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(<span class="st">&quot;ranger&quot;</span>, <span class="at">num.trees =</span> <span class="dv">500</span>),</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>  <span class="at">outcome_model =</span> <span class="fu">ml_learner</span>(<span class="st">&quot;glmnet&quot;</span>, <span class="at">alpha =</span> <span class="fl">0.5</span>),</span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span></span>
+<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="current-support" class="section level2">
+<h2>Current Support</h2>
+<p>ML learners with cross-fitting are currently fully supported in:</p>
+<ul>
+<li><code>cf_mse()</code> - Counterfactual mean squared error</li>
+<li><code>cf_auc()</code> - Counterfactual AUC (doubly robust estimator
+only)</li>
+</ul>
+<p>Support for <code>cf_calibration()</code> and the transportability
+variants is planned for a future release.</p>
+<div id="mse-with-ml-learners" class="section level3">
+<h3>MSE with ML Learners</h3>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># Full example with ML nuisance models</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>result_mse <span class="ot">&lt;-</span> <span class="fu">cf_mse</span>(</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="at">predictions =</span> pred,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">outcomes =</span> y,</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="at">treatment =</span> a,</span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="at">covariates =</span> df,</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="at">treatment_level =</span> <span class="dv">0</span>,</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>  <span class="at">estimator =</span> <span class="st">&quot;dr&quot;</span>,</span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(<span class="st">&quot;ranger&quot;</span>, <span class="at">num.trees =</span> <span class="dv">100</span>),</span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a>  <span class="at">outcome_model =</span> <span class="fu">ml_learner</span>(<span class="st">&quot;ranger&quot;</span>, <span class="at">num.trees =</span> <span class="dv">100</span>),</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a>  <span class="at">n_folds =</span> <span class="dv">5</span>,</span>
+<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a>  <span class="at">se_method =</span> <span class="st">&quot;influence&quot;</span></span>
+<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a>)</span>
+<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="fu">print</span>(result_mse)</span>
+<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt; Counterfactual MSE Estimation</span></span>
+<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------- </span></span>
+<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt; Estimator: dr </span></span>
+<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co">#&gt; Treatment level: 0 </span></span>
+<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a><span class="co">#&gt; N observations: 1000 </span></span>
+<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a><span class="co">#&gt; Estimate: 0.2203 (SE: 0.0112 )</span></span>
+<span id="cb12-25"><a href="#cb12-25" tabindex="-1"></a><span class="co">#&gt; 95% CI: [0.1984, 0.2421]</span></span>
+<span id="cb12-26"><a href="#cb12-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb12-27"><a href="#cb12-27" tabindex="-1"></a><span class="co">#&gt; Naive estimate: 0.2081</span></span></code></pre></div>
+</div>
+<div id="auc-with-ml-learners" class="section level3">
+<h3>AUC with ML Learners</h3>
+<p>For AUC estimation, we recommend using <strong>GRF (Generalized
+Random Forests)</strong> rather than standard random forests. GRF’s
+“honesty” property produces well-calibrated probability estimates, which
+is critical for the doubly robust AUC estimator. Standard random forests
+can produce extreme probability predictions that destabilize the
+estimator.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># AUC estimation with GRF nuisance models (recommended)</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>result_auc <span class="ot">&lt;-</span> <span class="fu">cf_auc</span>(</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  <span class="at">predictions =</span> pred,</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  <span class="at">outcomes =</span> y,</span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  <span class="at">treatment =</span> a,</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  <span class="at">covariates =</span> df,</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  <span class="at">treatment_level =</span> <span class="dv">0</span>,</span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>  <span class="at">estimator =</span> <span class="st">&quot;dr&quot;</span>,</span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>  <span class="at">propensity_model =</span> <span class="fu">ml_learner</span>(<span class="st">&quot;grf&quot;</span>, <span class="at">num.trees =</span> <span class="dv">500</span>),</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>  <span class="at">outcome_model =</span> <span class="fu">ml_learner</span>(<span class="st">&quot;grf&quot;</span>, <span class="at">num.trees =</span> <span class="dv">500</span>),</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>  <span class="at">cross_fit =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>  <span class="at">n_folds =</span> <span class="dv">5</span>,</span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>  <span class="at">se_method =</span> <span class="st">&quot;influence&quot;</span></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>)</span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a></span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="fu">print</span>(result_auc)</span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt; Counterfactual AUC Estimation</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt; ---------------------------------------- </span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt; Estimator: dr </span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt; Treatment level: 0 </span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; N observations: 1000 </span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a><span class="co">#&gt; Estimate: 0.5779 (SE: 0.0197 )</span></span>
+<span id="cb13-25"><a href="#cb13-25" tabindex="-1"></a><span class="co">#&gt; 95% CI: [0.5393, 0.6165]</span></span>
+<span id="cb13-26"><a href="#cb13-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-27"><a href="#cb13-27" tabindex="-1"></a><span class="co">#&gt; Naive estimate: 0.5994</span></span></code></pre></div>
+</div>
+</div>
+<div id="best-practices" class="section level2">
+<h2>Best Practices</h2>
+<ol style="list-style-type: decimal">
+<li><p><strong>Always use cross-fitting with ML</strong>: The package
+will warn you if you pass an <code>ml_learner</code> without
+<code>cross_fit = TRUE</code>.</p></li>
+<li><p><strong>Choose appropriate number of folds</strong>: 5-10 folds
+is typical. More folds = more data for training each nuisance model, but
+more computation.</p></li>
+<li><p><strong>Tune hyperparameters thoughtfully</strong>: Default
+values work reasonably well, but tuning can improve performance.
+Consider using external cross-validation for hyperparameter
+selection.</p></li>
+<li><p><strong>Consider computational cost</strong>: ML methods are
+slower than GLM. For initial exploration, use fewer trees/rounds, then
+increase for final analysis.</p></li>
+<li><p><strong>Check for extreme propensity scores</strong>: ML methods
+can produce very extreme propensity scores. The package truncates these
+at [0.025, 0.975] by default.</p></li>
+<li><p><strong>Use GRF for AUC estimation</strong>: The doubly robust
+AUC estimator is sensitive to poorly calibrated probability estimates.
+GRF’s “honest” estimation produces well-calibrated probabilities, while
+standard random forests (ranger) can produce extreme predictions that
+destabilize the estimator.</p></li>
+</ol>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Chernozhukov, V., Chetverikov, D., Demirer, M., Duflo, E., Hansen,
+C., Newey, W., &amp; Robins, J. (2018). Double/debiased machine learning
+for treatment and structural parameters. <em>The Econometrics
+Journal</em>, 21(1), C1-C68.</p>
+<p>Boyer, C. B., Dahabreh, I. J., &amp; Steingrimsson, J. A. (2025).
+Estimating and evaluating counterfactual prediction models.
+<em>Statistics in Medicine</em>, 44(23-24), e70287.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

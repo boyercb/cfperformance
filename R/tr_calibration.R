@@ -789,15 +789,15 @@ tr_calibration <- function(predictions,
 #' @export
 plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE, ...) {
 
+  estimator_label <- toupper(x$estimator)
+  
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     # Base R plot
     plot(x$predicted, x$observed,
          type = "l", lwd = 2,
          xlab = "Predicted probability",
-         ylab = "Observed probability (weighted)",
-         main = paste("Transportable Calibration -",
-                      ifelse(x$analysis == "transport", "Transport", "Joint"),
-                      "Analysis"),
+         ylab = sprintf("Probability in Target Population (%s)", estimator_label),
+         main = "Calibration Curve in the Target Population",
          xlim = c(0, 1), ylim = c(0, 1))
     if (add_reference) {
       abline(0, 1, lty = 2, col = "gray")
@@ -811,9 +811,6 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE, ..
     observed = x$observed
   )
 
-  analysis_label <- ifelse(x$analysis == "transport", "Transport", "Joint")
-  estimator_label <- toupper(x$estimator)
-
   subtitle_text <- NULL
   if (show_metrics) {
     subtitle_text <- sprintf("ICI = %.3f, E50 = %.3f, Emax = %.3f",
@@ -821,13 +818,12 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE, ..
   }
 
   p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$predicted, y = .data$observed)) +
-    ggplot2::geom_line(linewidth = 1.2, color = "#2171B5") +
+    ggplot2::geom_line(linewidth = 1.2, color = "#2E86AB") +
     ggplot2::labs(
       x = "Predicted probability",
-      y = "Observed probability (weighted)",
-      title = paste("Transportable Calibration -", analysis_label, "Analysis"),
-      subtitle = subtitle_text,
-      caption = paste("Estimator:", estimator_label)
+      y = sprintf("Probability in Target Population (%s)", estimator_label),
+      title = "Calibration Curve in the Target Population",
+      subtitle = subtitle_text
     ) +
     ggplot2::coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
     ggplot2::theme_bw()

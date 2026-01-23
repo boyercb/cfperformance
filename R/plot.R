@@ -13,12 +13,15 @@
 #' @export
 plot.cf_calibration <- function(x, add_histogram = TRUE, add_rug = TRUE, ...) {
 
+  estimator_label <- toupper(x$estimator)
+  treatment_label <- x$treatment_level
+  
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     # Base R plot
     plot(x$predicted, x$observed,
          type = "l", lwd = 2,
          xlab = "Predicted probability",
-         ylab = "Observed probability (weighted)",
+         ylab = sprintf("Probability under A = %s (%s)", treatment_label, estimator_label),
          main = "Counterfactual Calibration Curve",
          xlim = c(0, 1), ylim = c(0, 1))
     abline(0, 1, lty = 2, col = "gray")
@@ -32,12 +35,12 @@ plot.cf_calibration <- function(x, add_histogram = TRUE, add_rug = TRUE, ...) {
   )
 
   p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$predicted, y = .data$observed)) +
-    ggplot2::geom_line(linewidth = 1.2) +
+    ggplot2::geom_line(linewidth = 1.2, color = "#2E86AB") +
     ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
                          color = "gray50") +
     ggplot2::labs(
       x = "Predicted probability",
-      y = "Observed probability (weighted)",
+      y = sprintf("Probability under A = %s (%s)", treatment_label, estimator_label),
       title = "Counterfactual Calibration Curve",
       subtitle = sprintf("ICI = %.3f, Emax = %.3f", x$ici, x$emax)
     ) +

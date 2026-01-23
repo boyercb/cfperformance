@@ -92,7 +92,7 @@ performance in the target population. This is useful when:
 - Outcomes are only observed in the RCT
 - You want to leverage randomization in the source
 
-### Transportable MSE
+### MSE in the Target Population
 
 ```{r tr-mse}
 mse_result <- tr_mse(
@@ -143,7 +143,7 @@ data.frame(
 - **ipw**: Reweights source observations to match target population
 - **dr** (doubly robust): Combines outcome modeling and IPW
 
-### Transportable AUC
+### AUC in the Target Population
 
 For discrimination, we can estimate the transportable AUC:
 
@@ -163,7 +163,7 @@ auc_result <- tr_auc(
 print(auc_result)
 ```
 
-### Transportable Calibration
+### Calibration in the Target Population
 
 To assess calibration in the target population:
 
@@ -214,7 +214,7 @@ cat("Joint MSE:", round(mse_joint$estimate, 4), "\n")
 
 For inference, use bootstrap standard errors:
 
-```{r bootstrap-se, eval=FALSE}
+```{r bootstrap-se}
 mse_with_se <- tr_mse(
   predictions = transport_sim$risk_score,
   outcomes = transport_sim$event,
@@ -241,27 +241,35 @@ transportability analysis.
 
 The transportability estimators rely on several assumptions:
 
-### 1. Positivity of Selection
-$$P(S=0|X) > 0 \text{ and } P(S=1|X) > 0 \text{ for all } X$$
+### 1. Consistency in the Source and Target Populations. 
+For all individuals $i$, we have $Y_i^a = Y_i$ if $A_i = a$.
 
-Both populations must have positive probability for all covariate values.
+The observed outcome equals the potential outcome under the received treatment. 
+Implies no interference and well-defined treatments.
 
-### 2. Positivity of Treatment
+### 2. Conditional Exchangeability in the Source Population (Trial)
+$$(Y^a \perp A) | X, S=1$$
+
+Treatment is randomized in the source population, so there is no confounding
+between treatment and outcome given covariates.
+
+### 3. Positivity of Treatment in the Source Population (Trial)
 $$P(A=a|X, S=1) > 0 \text{ for the treatment level of interest}$$
 
-In the source population, the treatment level must have positive probability.
+In the source population, the treatment level must have positive probability (guaranteed by randomization).
 
-### 3. Conditional Exchangeability (Transportability)
+### 4. Conditional Exchangeability (Transportability)
 $$(Y^a \perp S) | X$$
 
 The potential outcome is independent of population membership given covariates. 
 This means the source population is "representative" of how the outcome model 
 would perform in the target, after conditioning on X.
 
-### 4. Consistency
-$$Y = Y^A$$
+### 5. Positivity of Selection
+$$P(S=0|X) > 0 \text{ and } P(S=1|X) > 0 \text{ for all } X$$
 
-The observed outcome equals the potential outcome under the received treatment.
+Both populations must have positive probability for all covariate values.
+
 
 ## When to Use Each Function
 
