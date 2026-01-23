@@ -257,20 +257,25 @@ print.ml_learner <- function(x, ...) {
   y <- model.response(mf)
   x <- model.matrix(formula, data = data)[, -1, drop = FALSE]  # Remove intercept
 
-  # Convert to DMatrix
-  dtrain <- xgboost::xgb.DMatrix(data = x, label = y)
-
-  # Set defaults based on family
-  objective <- if (family == "binomial") "binary:logistic" else "reg:squarederror"
+  # Set defaults based on family (xgboost 2.x/3.x API uses x, y directly)
+  # For binary classification, xgboost 3.x requires factor y
+  if (family == "binomial") {
+    objective <- "binary:logistic"
+    y <- factor(y, levels = c(0, 1))
+  } else {
+    objective <- "reg:squarederror"
+  }
 
   default_args <- list(
-    data = dtrain,
+    x = x,
+    y = y,
     nrounds = 100,
     objective = objective,
-    verbose = 0
+    verbosity = 0  # xgboost 2.x/3.x uses verbosity instead of verbose
   )
 
-  # Merge user args
+  # Merge user args, removing deprecated parameters if passed
+  args <- args[!names(args) %in% c("verbose", "data")]
   call_args <- modifyList(default_args, args)
 
   # Store formula info for prediction
