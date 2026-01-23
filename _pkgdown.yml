@@ -26,3 +26,32 @@ navbar:
       menu:
         - text: Introduction to cfperformance
           href: articles/introduction.html
+        - text: Transportability Analysis
+          href: articles/transportability.html
+
+reference:
+  - title: Counterfactual Performance (Single Population)
+    desc: Estimate prediction model performance under counterfactual interventions
+    contents:
+      - cf_mse
+      - cf_auc
+      - cf_calibration
+  - title: Transportability (Two Populations)
+    desc: Transport prediction model performance from source to target population
+    contents:
+      - tr_mse
+      - tr_auc
+      - tr_calibration
+  - title: Model Selection
+    desc: Cross-validation and model comparison
+    contents:
+      - cf_cv
+      - cf_compare
+  - title: Nuisance Models
+    desc: Fit propensity and outcome models
+    contents:
+      - fit_nuisance
+  - title: Example Data
+    contents:
+      - cvd_sim
+      - transport_sim
