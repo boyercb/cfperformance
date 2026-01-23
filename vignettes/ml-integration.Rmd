@@ -260,14 +260,15 @@ cf_mse(
 )
 ```
 
-## Works with All Estimators
+## Current Support
 
-ML learners work with `cf_mse()`, `cf_auc()`, `cf_calibration()`, and their 
-transportability variants (`tr_mse()`, `tr_auc()`, `tr_calibration()`):
+ML learners with cross-fitting are currently fully supported in `cf_mse()`. 
+Support for `cf_auc()`, `cf_calibration()`, and the transportability variants 
+is planned for a future release.
 
-```{r auc-example, eval=requireNamespace("ranger", quietly = TRUE)}
-# AUC with ML nuisance models
-result_auc <- cf_auc(
+```{r mse-final-example, eval=requireNamespace("ranger", quietly = TRUE)}
+# Full example with ML nuisance models
+result_ml <- cf_mse(
   predictions = pred,
   outcomes = y,
   treatment = a,
@@ -277,10 +278,11 @@ result_auc <- cf_auc(
   propensity_model = ml_learner("ranger", num.trees = 100),
   outcome_model = ml_learner("ranger", num.trees = 100),
   cross_fit = TRUE,
+  n_folds = 5,
   se_method = "influence"
 )
 
-print(result_auc)
+print(result_ml)
 ```
 
 ## Best Practices
