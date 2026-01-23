@@ -1,3 +1,45 @@
+# cfperformance 0.3.0
+
+Adds machine learning integration for flexible nuisance model estimation with
+automatic cross-fitting for valid inference.
+
+## New Features
+
+### ML Learner Interface
+* `ml_learner()` - Specify ML methods for propensity score and outcome models
+* Supports: `ranger`, `xgboost`, `grf`, `glmnet`, `superlearner`, and `custom`
+* Automatic cross-fitting when `ml_learner` specs are detected
+* Seamlessly integrates with existing `propensity_model`/`outcome_model` arguments
+
+### Supported Learners
+* **ranger** - Fast random forest implementation
+* **xgboost** - Gradient boosting (XGBoost)
+* **grf** - Generalized random forests with honest estimation
+* **glmnet** - Elastic net regularization with CV-selected λ
+* **superlearner** - Ensemble learning
+* **custom** - User-supplied fit/predict functions
+
+### Usage Example
+```r
+cf_mse(
+  predictions = pred, outcomes = y, treatment = a, covariates = df,
+  propensity_model = ml_learner("ranger", num.trees = 500),
+  outcome_model = ml_learner("xgboost", nrounds = 100),
+  cross_fit = TRUE
+)
+```
+
+### Documentation
+* New vignette: "Machine Learning Integration"
+* Updated README with ML integration examples
+
+## References
+
+Chernozhukov, V., et al. (2018). Double/debiased machine learning for treatment
+and structural parameters. *The Econometrics Journal*, 21(1), C1-C68.
+
+---
+
 # cfperformance 0.2.0
 
 Major release adding transportability estimators from Voter et al. (2025) for 
