@@ -34,13 +34,13 @@ devtools::install_github("boyercb/cfperformance")
 # Load the included example dataset
 data(cvd_sim)
 head(cvd_sim)
-#>          age          bp        chol treatment event risk_score
-#> 1 -0.2078913  0.92673619  0.51441033         1     0 0.16456973
-#> 2 -1.2517361 -0.07559820  1.85761302         1     0 0.06879905
-#> 3  1.7957878  0.16615295 -1.09269567         0     0 0.23461394
-#> 4 -1.2464064 -1.40349275  1.05642052         0     0 0.02765908
-#> 5 -0.5880067 -0.08772247  1.18161254         1     0 0.08778086
-#> 6 -0.9132198  0.16445812 -0.03630469         1     0 0.06799805
+#>          age          bp       chol treatment event risk_score
+#> 1 -0.2078913 -0.43879526 -0.5697974         0     0 0.07548152
+#> 2 -1.2517361  1.30171507  0.7798967         0     0 0.13491154
+#> 3  1.7957878 -0.39076092 -0.1731313         1     0 0.18333022
+#> 4 -1.2464064  0.08506276  0.0269594         1     0 0.07145644
+#> 5 -0.5880067  0.10358176  0.8346190         1     0 0.11730651
+#> 6 -0.9132198  0.88158838  0.6061392         0     0 0.12684642
 ```
 
 The `cvd_sim` dataset contains simulated cardiovascular data with:
@@ -73,12 +73,12 @@ mse_result
 #> ---------------------------------------- 
 #> Estimator: dr 
 #> Treatment level: 0 
-#> N observations: 1000 
+#> N observations: 2500 
 #> 
-#> Estimate: 0.1061 (SE: 0.0092 )
-#> 95% CI: [0.0891, 0.125]
+#> Estimate: 0.1186 (SE: 0.0062 )
+#> 95% CI: [0.1072, 0.1303]
 #> 
-#> Naive estimate: 0.1061
+#> Naive estimate: 0.1086
 ```
 
 The doubly robust estimator adjusts for confounding using both a
@@ -104,7 +104,7 @@ results <- sapply(estimators, function(est) {
 names(results) <- estimators
 round(results, 4)
 #>  naive     cl    ipw     dr 
-#> 0.1061 0.1055 0.1924 0.1061
+#> 0.1086 0.1190 0.2095 0.1186
 ```
 
 - **naive**: Simply computes MSE on the subset with the target treatment
@@ -136,12 +136,12 @@ auc_result
 #> ---------------------------------------- 
 #> Estimator: dr 
 #> Treatment level: 0 
-#> N observations: 1000 
+#> N observations: 2500 
 #> 
-#> Estimate: 0.6702 (SE: 0.0383 )
-#> 95% CI: [0.5911, 0.7472]
+#> Estimate: 0.682 (SE: 0.0209 )
+#> 95% CI: [0.6444, 0.725]
 #> 
-#> Naive estimate: 0.7201
+#> Naive estimate: 0.6729
 ```
 
 ### Bootstrap Standard Errors
@@ -150,16 +150,27 @@ Both functions support bootstrap standard errors:
 
 ``` r
 mse_with_se <- cf_mse(
-  predictions = predictions,
-  outcomes = outcome,
-  treatment = treatment,
-  covariates = data.frame(x1, x2),
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
   treatment_level = 0,
   estimator = "dr",
   se_method = "bootstrap",
-  n_boot = 500
+  n_boot = 200
 )
-summary(mse_with_se)
+mse_with_se
+#> 
+#> Counterfactual MSE Estimation
+#> ---------------------------------------- 
+#> Estimator: dr 
+#> Treatment level: 0 
+#> N observations: 2500 
+#> 
+#> Estimate: 0.1186 (SE: 0.0064 )
+#> 95% CI: [0.1068, 0.1317]
+#> 
+#> Naive estimate: 0.1086
 ```
 
 ## Calibration Curves
@@ -168,16 +179,18 @@ The package also supports counterfactual calibration assessment:
 
 ``` r
 cal_result <- cf_calibration(
-  predictions = predictions,
-  outcomes = outcome,
-  treatment = treatment,
-  covariates = data.frame(x1, x2),
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
   treatment_level = 0
 )
 
 # Plot calibration curve
 plot(cal_result)
 ```
+
+![](introduction_files/figure-html/calibration-example-1.png)
 
 ## Cross-Validation for Model Selection
 
@@ -208,8 +221,8 @@ comparison
 #> Estimator: dr 
 #> 
 #>   model mse_mean mse_se mse_naive_mean
-#>  Simple   0.1085 0.0088      0.1121394
-#>    Full   0.1070 0.0063      0.1072778
+#>  Simple   0.1236 0.0061      0.1122797
+#>    Full   0.1185 0.0017      0.1088334
 #> 
 #> Best model: Full
 ```

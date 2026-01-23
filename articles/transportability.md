@@ -55,19 +55,19 @@ The package includes a simulated transportability dataset:
 ``` r
 data(transport_sim)
 head(transport_sim)
-#>           age  biomarker smoking source treatment event risk_score
-#> 1  0.61691842 -0.5700952       0      0         1     0  0.2603127
-#> 2  0.04053456  0.3601832       0      1         1     1  0.2962904
-#> 3  0.76704199  0.4024288       1      1         0     1  0.3855963
-#> 4  1.25892520 -1.5801491       0      0         1     1  0.2253197
-#> 5  0.37086452  0.1336976       0      0         0     1  0.2972428
-#> 6 -0.15499910  0.5227082       0      1         0     0  0.2978064
+#>           age   biomarker smoking source treatment event risk_score
+#> 1  0.63916439 -0.06780891       1      1         0     0  0.3388230
+#> 2  0.06014812  0.81999552       0      1         0     0  0.3309058
+#> 3  0.78997359 -1.00222911       1      0         1     0  0.2773807
+#> 4  1.28410328  0.78155960       1      0         1     0  0.4481046
+#> 5  0.39198673  1.24382106       0      1         1     0  0.3841622
+#> 6 -0.13627856  0.61176294       1      1         1     0  0.3482827
 
 # Population sizes
 cat("Source (RCT) n =", sum(transport_sim$source == 1), "\n")
-#> Source (RCT) n = 802
+#> Source (RCT) n = 1276
 cat("Target n =", sum(transport_sim$source == 0), "\n")
-#> Target n = 698
+#> Target n = 1224
 ```
 
 The `transport_sim` dataset contains: - `age`, `biomarker`, `smoking`:
@@ -84,7 +84,7 @@ performance in the target population. This is useful when:
 - Outcomes are only observed in the RCT
 - You want to leverage randomization in the source
 
-### Transportable MSE
+### MSE in the Target Population
 
 ``` r
 mse_result <- tr_mse(
@@ -106,11 +106,11 @@ print(mse_result)
 #> Analysis: transport 
 #> Estimator: dr 
 #> Treatment level: 0 
-#> N target: 698  | N source: 802 
+#> N target: 1224  | N source: 1276 
 #> 
-#> Estimate: 0.2432
+#> Estimate: 0.2211
 #> 
-#> Naive estimate: 0.227
+#> Naive estimate: 0.2178
 ```
 
 ### Comparing Estimators
@@ -140,10 +140,10 @@ data.frame(
   MSE = round(mse_estimates, 4)
 )
 #>       Estimator    MSE
-#> naive     naive 0.2270
-#> om           om 0.2451
-#> ipw         ipw 0.2406
-#> dr           dr 0.2432
+#> naive     naive 0.2178
+#> om           om 0.2212
+#> ipw         ipw 0.2213
+#> dr           dr 0.2211
 ```
 
 - **naive**: Uses source data with A=0 only (ignores population
@@ -153,7 +153,7 @@ data.frame(
 - **ipw**: Reweights source observations to match target population
 - **dr** (doubly robust): Combines outcome modeling and IPW
 
-### Transportable AUC
+### AUC in the Target Population
 
 For discrimination, we can estimate the transportable AUC:
 
@@ -177,14 +177,14 @@ print(auc_result)
 #> Analysis: transport 
 #> Estimator: dr 
 #> Treatment level: 0 
-#> N target: 698  | N source: 802 
+#> N target: 1224  | N source: 1276 
 #> 
-#> Estimate: 0.7021
+#> Estimate: 0.6204
 #> 
-#> Naive estimate: 0.6915
+#> Naive estimate: 0.6249
 ```
 
-### Transportable Calibration
+### Calibration in the Target Population
 
 To assess calibration in the target population:
 
@@ -209,13 +209,13 @@ print(calib_result)
 #> Analysis: transport 
 #> Estimator: ipw 
 #> Treatment level: 0 
-#> N target: 698  | N source: 802 
+#> N target: 1224  | N source: 1276 
 #> 
 #> Calibration Metrics:
-#>   ICI (Integrated Calibration Index): 0.1117 
-#>   E50 (Median absolute error): 0.0956 
-#>   E90 (90th percentile error): 0.2335 
-#>   Emax (Maximum error): 0.2796
+#>   ICI (Integrated Calibration Index): 0.0546 
+#>   E50 (Median absolute error): 0.0558 
+#>   E90 (90th percentile error): 0.0852 
+#>   Emax (Maximum error): 0.1806
 ```
 
 ``` r
@@ -246,9 +246,9 @@ mse_joint <- tr_mse(
 )
 
 cat("Transport MSE:", round(mse_result$estimate, 4), "\n")
-#> Transport MSE: 0.2432
+#> Transport MSE: 0.2211
 cat("Joint MSE:", round(mse_joint$estimate, 4), "\n")
-#> Joint MSE: 0.242
+#> Joint MSE: 0.2222
 ```
 
 ## Bootstrap Standard Errors
@@ -271,7 +271,33 @@ mse_with_se <- tr_mse(
 )
 
 summary(mse_with_se)
+#> 
+#> Summary: Transportable MSE Estimation
+#> ======================================================= 
+#> 
+#> Call:
+#> tr_mse(predictions = transport_sim$risk_score, outcomes = transport_sim$event, 
+#>     treatment = transport_sim$treatment, source = transport_sim$source, 
+#>     covariates = transport_sim[, c("age", "biomarker", "smoking")], 
+#>     treatment_level = 0, analysis = "transport", estimator = "dr", 
+#>     se_method = "bootstrap", n_boot = 500, stratified_boot = TRUE)
+#> 
+#> Settings:
+#>   Analysis type: transport 
+#>   Estimator: dr 
+#>   Treatment level: 0 
+#>   Target sample size: 1224 
+#>   Source sample size: 1276 
+#> 
+#> Results:
+#>      Estimator Estimate       SE CI_lower CI_upper
+#>  Transportable   0.2211 0.008868   0.2043    0.239
+#>          Naive   0.2178       NA       NA       NA
+#> 
+#> Difference (Transportable - Naive): 0.0033
 confint(mse_with_se)
+#>             2.5%     97.5%
+#> tr_mse 0.2042813 0.2390305
 ```
 
 The `stratified_boot = TRUE` option (default) ensures that bootstrap
@@ -282,21 +308,28 @@ recommended for transportability analysis.
 
 The transportability estimators rely on several assumptions:
 
-### 1. Positivity of Selection
+### 1. Consistency in the Source and Target Populations.
 
-$$P\left( S = 0|X \right) > 0{\mspace{6mu}\text{and}\mspace{6mu}}P\left( S = 1|X \right) > 0{\mspace{6mu}\text{for all}\mspace{6mu}}X$$
+For all individuals $i$, we have $Y_{i}^{a} = Y_{i}$ if $A_{i} = a$.
 
-Both populations must have positive probability for all covariate
-values.
+The observed outcome equals the potential outcome under the received
+treatment. Implies no interference and well-defined treatments.
 
-### 2. Positivity of Treatment
+### 2. Conditional Exchangeability in the Source Population (Trial)
+
+$$\left( Y^{a}\bot A \right)|X,S = 1$$
+
+Treatment is randomized in the source population, so there is no
+confounding between treatment and outcome given covariates.
+
+### 3. Positivity of Treatment in the Source Population (Trial)
 
 $$P\left( A = a|X,S = 1 \right) > 0{\mspace{6mu}\text{for the treatment level of interest}}$$
 
 In the source population, the treatment level must have positive
-probability.
+probability (guaranteed by randomization).
 
-### 3. Conditional Exchangeability (Transportability)
+### 4. Conditional Exchangeability (Transportability)
 
 $$\left( Y^{a}\bot S \right)|X$$
 
@@ -304,12 +337,12 @@ The potential outcome is independent of population membership given
 covariates. This means the source population is “representative” of how
 the outcome model would perform in the target, after conditioning on X.
 
-### 4. Consistency
+### 5. Positivity of Selection
 
-$$Y = Y^{A}$$
+$$P\left( S = 0|X \right) > 0{\mspace{6mu}\text{and}\mspace{6mu}}P\left( S = 1|X \right) > 0{\mspace{6mu}\text{for all}\mspace{6mu}}X$$
 
-The observed outcome equals the potential outcome under the received
-treatment.
+Both populations must have positive probability for all covariate
+values.
 
 ## When to Use Each Function
 

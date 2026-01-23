@@ -135,19 +135,19 @@ received treatment level <code>a</code>?</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">)</span></span>
-<span><span class="co">#&gt;           age  biomarker smoking source treatment event risk_score</span></span>
-<span><span class="co">#&gt; 1  0.61691842 -0.5700952       0      0         1     0  0.2603127</span></span>
-<span><span class="co">#&gt; 2  0.04053456  0.3601832       0      1         1     1  0.2962904</span></span>
-<span><span class="co">#&gt; 3  0.76704199  0.4024288       1      1         0     1  0.3855963</span></span>
-<span><span class="co">#&gt; 4  1.25892520 -1.5801491       0      0         1     1  0.2253197</span></span>
-<span><span class="co">#&gt; 5  0.37086452  0.1336976       0      0         0     1  0.2972428</span></span>
-<span><span class="co">#&gt; 6 -0.15499910  0.5227082       0      1         0     0  0.2978064</span></span>
+<span><span class="co">#&gt;           age   biomarker smoking source treatment event risk_score</span></span>
+<span><span class="co">#&gt; 1  0.63916439 -0.06780891       1      1         0     0  0.3388230</span></span>
+<span><span class="co">#&gt; 2  0.06014812  0.81999552       0      1         0     0  0.3309058</span></span>
+<span><span class="co">#&gt; 3  0.78997359 -1.00222911       1      0         1     0  0.2773807</span></span>
+<span><span class="co">#&gt; 4  1.28410328  0.78155960       1      0         1     0  0.4481046</span></span>
+<span><span class="co">#&gt; 5  0.39198673  1.24382106       0      1         1     0  0.3841622</span></span>
+<span><span class="co">#&gt; 6 -0.13627856  0.61176294       1      1         1     0  0.3482827</span></span>
 <span></span>
 <span><span class="co"># Population sizes</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Source (RCT) n ="</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">$</span><span class="va">source</span> <span class="op">==</span> <span class="fl">1</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Source (RCT) n = 802</span></span>
+<span><span class="co">#&gt; Source (RCT) n = 1276</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Target n ="</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">$</span><span class="va">source</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Target n = 698</span></span></code></pre></div>
+<span><span class="co">#&gt; Target n = 1224</span></span></code></pre></div>
 <p>The <code>transport_sim</code> dataset contains: - <code>age</code>,
 <code>biomarker</code>, <code>smoking</code>: Patient covariates -
 <code>source</code>: Population indicator (1 = source/RCT, 0 = target) -
@@ -167,7 +167,7 @@ useful when:</p>
 <li>You want to leverage randomization in the source</li>
 </ul>
 <div class="section level3">
-<h3 id="transportable-mse">Transportable MSE<a class="anchor" aria-label="anchor" href="#transportable-mse"></a>
+<h3 id="mse-in-the-target-population">MSE in the Target Population<a class="anchor" aria-label="anchor" href="#mse-in-the-target-population"></a>
 </h3>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mse_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_mse.html">tr_mse</a></span><span class="op">(</span></span>
@@ -189,11 +189,11 @@ useful when:</p>
 <span><span class="co">#&gt; Analysis: transport </span></span>
 <span><span class="co">#&gt; Estimator: dr </span></span>
 <span><span class="co">#&gt; Treatment level: 0 </span></span>
-<span><span class="co">#&gt; N target: 698  | N source: 802 </span></span>
+<span><span class="co">#&gt; N target: 1224  | N source: 1276 </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Estimate: 0.2432</span></span>
+<span><span class="co">#&gt; Estimate: 0.2211</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Naive estimate: 0.227</span></span></code></pre></div>
+<span><span class="co">#&gt; Naive estimate: 0.2178</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="comparing-estimators">Comparing Estimators<a class="anchor" aria-label="anchor" href="#comparing-estimators"></a>
@@ -222,10 +222,10 @@ useful when:</p>
 <span>  MSE <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mse_estimates</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;       Estimator    MSE</span></span>
-<span><span class="co">#&gt; naive     naive 0.2270</span></span>
-<span><span class="co">#&gt; om           om 0.2451</span></span>
-<span><span class="co">#&gt; ipw         ipw 0.2406</span></span>
-<span><span class="co">#&gt; dr           dr 0.2432</span></span></code></pre></div>
+<span><span class="co">#&gt; naive     naive 0.2178</span></span>
+<span><span class="co">#&gt; om           om 0.2212</span></span>
+<span><span class="co">#&gt; ipw         ipw 0.2213</span></span>
+<span><span class="co">#&gt; dr           dr 0.2211</span></span></code></pre></div>
 <ul>
 <li>
 <strong>naive</strong>: Uses source data with A=0 only (ignores
@@ -242,7 +242,7 @@ IPW</li>
 </ul>
 </div>
 <div class="section level3">
-<h3 id="transportable-auc">Transportable AUC<a class="anchor" aria-label="anchor" href="#transportable-auc"></a>
+<h3 id="auc-in-the-target-population">AUC in the Target Population<a class="anchor" aria-label="anchor" href="#auc-in-the-target-population"></a>
 </h3>
 <p>For discrimination, we can estimate the transportable AUC:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
@@ -265,14 +265,14 @@ IPW</li>
 <span><span class="co">#&gt; Analysis: transport </span></span>
 <span><span class="co">#&gt; Estimator: dr </span></span>
 <span><span class="co">#&gt; Treatment level: 0 </span></span>
-<span><span class="co">#&gt; N target: 698  | N source: 802 </span></span>
+<span><span class="co">#&gt; N target: 1224  | N source: 1276 </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Estimate: 0.7021</span></span>
+<span><span class="co">#&gt; Estimate: 0.6204</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Naive estimate: 0.6915</span></span></code></pre></div>
+<span><span class="co">#&gt; Naive estimate: 0.6249</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="transportable-calibration">Transportable Calibration<a class="anchor" aria-label="anchor" href="#transportable-calibration"></a>
+<h3 id="calibration-in-the-target-population">Calibration in the Target Population<a class="anchor" aria-label="anchor" href="#calibration-in-the-target-population"></a>
 </h3>
 <p>To assess calibration in the target population:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
@@ -296,13 +296,13 @@ IPW</li>
 <span><span class="co">#&gt; Analysis: transport </span></span>
 <span><span class="co">#&gt; Estimator: ipw </span></span>
 <span><span class="co">#&gt; Treatment level: 0 </span></span>
-<span><span class="co">#&gt; N target: 698  | N source: 802 </span></span>
+<span><span class="co">#&gt; N target: 1224  | N source: 1276 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Calibration Metrics:</span></span>
-<span><span class="co">#&gt;   ICI (Integrated Calibration Index): 0.1117 </span></span>
-<span><span class="co">#&gt;   E50 (Median absolute error): 0.0956 </span></span>
-<span><span class="co">#&gt;   E90 (90th percentile error): 0.2335 </span></span>
-<span><span class="co">#&gt;   Emax (Maximum error): 0.2796</span></span></code></pre></div>
+<span><span class="co">#&gt;   ICI (Integrated Calibration Index): 0.0546 </span></span>
+<span><span class="co">#&gt;   E50 (Median absolute error): 0.0558 </span></span>
+<span><span class="co">#&gt;   E90 (90th percentile error): 0.0852 </span></span>
+<span><span class="co">#&gt;   Emax (Maximum error): 0.1806</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">calib_result</span><span class="op">)</span></span></code></pre></div>
 <div class="figure">
@@ -332,9 +332,9 @@ both populations.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Transport MSE:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mse_result</span><span class="op">$</span><span class="va">estimate</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Transport MSE: 0.2432</span></span>
+<span><span class="co">#&gt; Transport MSE: 0.2211</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Joint MSE:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mse_joint</span><span class="op">$</span><span class="va">estimate</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Joint MSE: 0.242</span></span></code></pre></div>
+<span><span class="co">#&gt; Joint MSE: 0.2222</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="bootstrap-standard-errors">Bootstrap Standard Errors<a class="anchor" aria-label="anchor" href="#bootstrap-standard-errors"></a>
@@ -356,7 +356,33 @@ both populations.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mse_with_se</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/confint.html" class="external-link">confint</a></span><span class="op">(</span><span class="va">mse_with_se</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Summary: Transportable MSE Estimation</span></span>
+<span><span class="co">#&gt; ======================================================= </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Call:</span></span>
+<span><span class="co">#&gt; tr_mse(predictions = transport_sim$risk_score, outcomes = transport_sim$event, </span></span>
+<span><span class="co">#&gt;     treatment = transport_sim$treatment, source = transport_sim$source, </span></span>
+<span><span class="co">#&gt;     covariates = transport_sim[, c("age", "biomarker", "smoking")], </span></span>
+<span><span class="co">#&gt;     treatment_level = 0, analysis = "transport", estimator = "dr", </span></span>
+<span><span class="co">#&gt;     se_method = "bootstrap", n_boot = 500, stratified_boot = TRUE)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Settings:</span></span>
+<span><span class="co">#&gt;   Analysis type: transport </span></span>
+<span><span class="co">#&gt;   Estimator: dr </span></span>
+<span><span class="co">#&gt;   Treatment level: 0 </span></span>
+<span><span class="co">#&gt;   Target sample size: 1224 </span></span>
+<span><span class="co">#&gt;   Source sample size: 1276 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Results:</span></span>
+<span><span class="co">#&gt;      Estimator Estimate       SE CI_lower CI_upper</span></span>
+<span><span class="co">#&gt;  Transportable   0.2211 0.008868   0.2043    0.239</span></span>
+<span><span class="co">#&gt;          Naive   0.2178       NA       NA       NA</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Difference (Transportable - Naive): 0.0033</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/confint.html" class="external-link">confint</a></span><span class="op">(</span><span class="va">mse_with_se</span><span class="op">)</span></span>
+<span><span class="co">#&gt;             2.5%     97.5%</span></span>
+<span><span class="co">#&gt; tr_mse 0.2042813 0.2390305</span></span></code></pre></div>
 <p>The <code>stratified_boot = TRUE</code> option (default) ensures that
 bootstrap samples preserve the ratio of source to target observations,
 which is recommended for transportability analysis.</p>
@@ -366,21 +392,33 @@ which is recommended for transportability analysis.</p>
 </h2>
 <p>The transportability estimators rely on several assumptions:</p>
 <div class="section level3">
-<h3 id="positivity-of-selection">1. Positivity of Selection<a class="anchor" aria-label="anchor" href="#positivity-of-selection"></a>
+<h3 id="consistency-in-the-source-and-target-populations-">1. Consistency in the Source and Target Populations.<a class="anchor" aria-label="anchor" href="#consistency-in-the-source-and-target-populations-"></a>
 </h3>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>S</mi><mo>=</mo><mn>0</mn><mo stretchy="false" form="prefix">|</mo><mi>X</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>&gt;</mo><mn>0</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> and </mtext><mspace width="0.333em"></mspace></mrow><mi>P</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>S</mi><mo>=</mo><mn>1</mn><mo stretchy="false" form="prefix">|</mo><mi>X</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>&gt;</mo><mn>0</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> for all </mtext><mspace width="0.333em"></mspace></mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">P(S=0|X) &gt; 0 \text{ and } P(S=1|X) &gt; 0 \text{ for all } X</annotation></semantics></math></p>
-<p>Both populations must have positive probability for all covariate
-values.</p>
+<p>For all individuals
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>,
+we have
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>Y</mi><mi>i</mi><mi>a</mi></msubsup><mo>=</mo><msub><mi>Y</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">Y_i^a = Y_i</annotation></semantics></math>
+if
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>i</mi></msub><mo>=</mo><mi>a</mi></mrow><annotation encoding="application/x-tex">A_i = a</annotation></semantics></math>.</p>
+<p>The observed outcome equals the potential outcome under the received
+treatment. Implies no interference and well-defined treatments.</p>
 </div>
 <div class="section level3">
-<h3 id="positivity-of-treatment">2. Positivity of Treatment<a class="anchor" aria-label="anchor" href="#positivity-of-treatment"></a>
+<h3 id="conditional-exchangeability-in-the-source-population-trial">2. Conditional Exchangeability in the Source Population (Trial)<a class="anchor" aria-label="anchor" href="#conditional-exchangeability-in-the-source-population-trial"></a>
+</h3>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>Y</mi><mi>a</mi></msup><mo>⊥</mo><mi>A</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo stretchy="false" form="prefix">|</mo><mi>X</mi><mo>,</mo><mi>S</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">(Y^a \perp A) | X, S=1</annotation></semantics></math></p>
+<p>Treatment is randomized in the source population, so there is no
+confounding between treatment and outcome given covariates.</p>
+</div>
+<div class="section level3">
+<h3 id="positivity-of-treatment-in-the-source-population-trial">3. Positivity of Treatment in the Source Population (Trial)<a class="anchor" aria-label="anchor" href="#positivity-of-treatment-in-the-source-population-trial"></a>
 </h3>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>A</mi><mo>=</mo><mi>a</mi><mo stretchy="false" form="prefix">|</mo><mi>X</mi><mo>,</mo><mi>S</mi><mo>=</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mo>&gt;</mo><mn>0</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> for the treatment level of interest</mtext></mrow></mrow><annotation encoding="application/x-tex">P(A=a|X, S=1) &gt; 0 \text{ for the treatment level of interest}</annotation></semantics></math></p>
 <p>In the source population, the treatment level must have positive
-probability.</p>
+probability (guaranteed by randomization).</p>
 </div>
 <div class="section level3">
-<h3 id="conditional-exchangeability-transportability">3. Conditional Exchangeability (Transportability)<a class="anchor" aria-label="anchor" href="#conditional-exchangeability-transportability"></a>
+<h3 id="conditional-exchangeability-transportability">4. Conditional Exchangeability (Transportability)<a class="anchor" aria-label="anchor" href="#conditional-exchangeability-transportability"></a>
 </h3>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>Y</mi><mi>a</mi></msup><mo>⊥</mo><mi>S</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo stretchy="false" form="prefix">|</mo><mi>X</mi></mrow><annotation encoding="application/x-tex">(Y^a \perp S) | X</annotation></semantics></math></p>
 <p>The potential outcome is independent of population membership given
@@ -389,11 +427,11 @@ the outcome model would perform in the target, after conditioning on
 X.</p>
 </div>
 <div class="section level3">
-<h3 id="consistency">4. Consistency<a class="anchor" aria-label="anchor" href="#consistency"></a>
+<h3 id="positivity-of-selection">5. Positivity of Selection<a class="anchor" aria-label="anchor" href="#positivity-of-selection"></a>
 </h3>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi><mo>=</mo><msup><mi>Y</mi><mi>A</mi></msup></mrow><annotation encoding="application/x-tex">Y = Y^A</annotation></semantics></math></p>
-<p>The observed outcome equals the potential outcome under the received
-treatment.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>S</mi><mo>=</mo><mn>0</mn><mo stretchy="false" form="prefix">|</mo><mi>X</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>&gt;</mo><mn>0</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> and </mtext><mspace width="0.333em"></mspace></mrow><mi>P</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>S</mi><mo>=</mo><mn>1</mn><mo stretchy="false" form="prefix">|</mo><mi>X</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>&gt;</mo><mn>0</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> for all </mtext><mspace width="0.333em"></mspace></mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">P(S=0|X) &gt; 0 \text{ and } P(S=1|X) &gt; 0 \text{ for all } X</annotation></semantics></math></p>
+<p>Both populations must have positive probability for all covariate
+values.</p>
 </div>
 </div>
 <div class="section level2">

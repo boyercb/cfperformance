@@ -104,13 +104,13 @@ likely to receive treatment, but treatment also affects outcomes.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cvd_sim</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">cvd_sim</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          age          bp        chol treatment event risk_score</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 -0.2078913  0.92673619  0.51441033         1     0 0.16456973</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 -1.2517361 -0.07559820  1.85761302         1     0 0.06879905</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1.7957878  0.16615295 -1.09269567         0     0 0.23461394</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4 -1.2464064 -1.40349275  1.05642052         0     0 0.02765908</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5 -0.5880067 -0.08772247  1.18161254         1     0 0.08778086</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6 -0.9132198  0.16445812 -0.03630469         1     0 0.06799805</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          age          bp       chol treatment event risk_score</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 -0.2078913 -0.43879526 -0.5697974         0     0 0.07548152</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 -1.2517361  1.30171507  0.7798967         0     0 0.13491154</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1.7957878 -0.39076092 -0.1731313         1     0 0.18333022</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 -1.2464064  0.08506276  0.0269594         1     0 0.07145644</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 -0.5880067  0.10358176  0.8346190         1     0 0.11730651</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 -0.9132198  0.88158838  0.6061392         0     0 0.12684642</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Estimate counterfactual MSE under no treatment</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="cf_mse.html">cf_mse</a></span><span class="op">(</span></span></span>
@@ -127,12 +127,12 @@ likely to receive treatment, but treatment also affects outcomes.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------------------------------------- </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Estimator: dr </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Treatment level: 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> N observations: 1000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> N observations: 2500 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimate: 0.1061 (SE: 0.0096 )</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 95% CI: [0.0877, 0.125]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimate: 0.1186 (SE: 0.0064 )</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 95% CI: [0.1059, 0.1322]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Naive estimate: 0.1061 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Naive estimate: 0.1086 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

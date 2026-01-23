@@ -110,19 +110,19 @@ will not generalize to the target population due to covariate shift.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           age  biomarker smoking source treatment event risk_score</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  0.61691842 -0.5700952       0      0         1     0  0.2603127</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  0.04053456  0.3601832       0      1         1     1  0.2962904</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  0.76704199  0.4024288       1      1         0     1  0.3855963</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  1.25892520 -1.5801491       0      0         1     1  0.2253197</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  0.37086452  0.1336976       0      0         0     1  0.2972428</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6 -0.15499910  0.5227082       0      1         0     0  0.2978064</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           age   biomarker smoking source treatment event risk_score</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  0.63916439 -0.06780891       1      1         0     0  0.3388230</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  0.06014812  0.81999552       0      1         0     0  0.3309058</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  0.78997359 -1.00222911       1      0         1     0  0.2773807</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  1.28410328  0.78155960       1      0         1     0  0.4481046</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  0.39198673  1.24382106       0      1         1     0  0.3841622</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 -0.13627856  0.61176294       1      1         1     0  0.3482827</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Population sizes</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">$</span><span class="va">source</span><span class="op">)</span>  <span class="co"># 0=target, 1=source</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   0   1 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 698 802 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    0    1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1224 1276 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Estimate transportable MSE under no treatment</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="tr_mse.html">tr_mse</a></span><span class="op">(</span></span></span>
@@ -142,12 +142,12 @@ will not generalize to the target population due to covariate shift.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Analysis: transport </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Estimator: dr </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Treatment level: 0 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> N target: 698  | N source: 802 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> N target: 1224  | N source: 1276 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Estimate: 0.2432 (SE: 0.0102 )</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 95% CI: [0.2232, 0.263]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Estimate: 0.2211 (SE: 0.0082 )</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 95% CI: [0.2048, 0.2375]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Naive estimate: 0.227 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Naive estimate: 0.2178 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

@@ -80,19 +80,19 @@ will not generalize to the target population due to covariate shift.
 ``` r
 data(transport_sim)
 head(transport_sim)
-#>           age  biomarker smoking source treatment event risk_score
-#> 1  0.61691842 -0.5700952       0      0         1     0  0.2603127
-#> 2  0.04053456  0.3601832       0      1         1     1  0.2962904
-#> 3  0.76704199  0.4024288       1      1         0     1  0.3855963
-#> 4  1.25892520 -1.5801491       0      0         1     1  0.2253197
-#> 5  0.37086452  0.1336976       0      0         0     1  0.2972428
-#> 6 -0.15499910  0.5227082       0      1         0     0  0.2978064
+#>           age   biomarker smoking source treatment event risk_score
+#> 1  0.63916439 -0.06780891       1      1         0     0  0.3388230
+#> 2  0.06014812  0.81999552       0      1         0     0  0.3309058
+#> 3  0.78997359 -1.00222911       1      0         1     0  0.2773807
+#> 4  1.28410328  0.78155960       1      0         1     0  0.4481046
+#> 5  0.39198673  1.24382106       0      1         1     0  0.3841622
+#> 6 -0.13627856  0.61176294       1      1         1     0  0.3482827
 
 # Population sizes
 table(transport_sim$source)  # 0=target, 1=source
 #> 
-#>   0   1 
-#> 698 802 
+#>    0    1 
+#> 1224 1276 
 
 # Estimate transportable MSE under no treatment
 result <- tr_mse(
@@ -112,11 +112,11 @@ result
 #> Analysis: transport 
 #> Estimator: dr 
 #> Treatment level: 0 
-#> N target: 698  | N source: 802 
+#> N target: 1224  | N source: 1276 
 #> 
-#> Estimate: 0.2432 (SE: 0.0102 )
-#> 95% CI: [0.2232, 0.263]
+#> Estimate: 0.2211 (SE: 0.0082 )
+#> 95% CI: [0.2048, 0.2375]
 #> 
-#> Naive estimate: 0.227 
+#> Naive estimate: 0.2178 
 #> 
 ```

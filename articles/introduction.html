@@ -104,13 +104,13 @@ prediction models,” <em>Statistics in Medicine</em>, 44(23-24), e70287.
 <code class="sourceCode R"><span><span class="co"># Load the included example dataset</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cvd_sim</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">cvd_sim</span><span class="op">)</span></span>
-<span><span class="co">#&gt;          age          bp        chol treatment event risk_score</span></span>
-<span><span class="co">#&gt; 1 -0.2078913  0.92673619  0.51441033         1     0 0.16456973</span></span>
-<span><span class="co">#&gt; 2 -1.2517361 -0.07559820  1.85761302         1     0 0.06879905</span></span>
-<span><span class="co">#&gt; 3  1.7957878  0.16615295 -1.09269567         0     0 0.23461394</span></span>
-<span><span class="co">#&gt; 4 -1.2464064 -1.40349275  1.05642052         0     0 0.02765908</span></span>
-<span><span class="co">#&gt; 5 -0.5880067 -0.08772247  1.18161254         1     0 0.08778086</span></span>
-<span><span class="co">#&gt; 6 -0.9132198  0.16445812 -0.03630469         1     0 0.06799805</span></span></code></pre></div>
+<span><span class="co">#&gt;          age          bp       chol treatment event risk_score</span></span>
+<span><span class="co">#&gt; 1 -0.2078913 -0.43879526 -0.5697974         0     0 0.07548152</span></span>
+<span><span class="co">#&gt; 2 -1.2517361  1.30171507  0.7798967         0     0 0.13491154</span></span>
+<span><span class="co">#&gt; 3  1.7957878 -0.39076092 -0.1731313         1     0 0.18333022</span></span>
+<span><span class="co">#&gt; 4 -1.2464064  0.08506276  0.0269594         1     0 0.07145644</span></span>
+<span><span class="co">#&gt; 5 -0.5880067  0.10358176  0.8346190         1     0 0.11730651</span></span>
+<span><span class="co">#&gt; 6 -0.9132198  0.88158838  0.6061392         0     0 0.12684642</span></span></code></pre></div>
 <p>The <code>cvd_sim</code> dataset contains simulated cardiovascular
 data with:</p>
 <ul>
@@ -149,12 +149,12 @@ untreated (<code>treatment_level = 0</code>):</p>
 <span><span class="co">#&gt; ---------------------------------------- </span></span>
 <span><span class="co">#&gt; Estimator: dr </span></span>
 <span><span class="co">#&gt; Treatment level: 0 </span></span>
-<span><span class="co">#&gt; N observations: 1000 </span></span>
+<span><span class="co">#&gt; N observations: 2500 </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Estimate: 0.1061 (SE: 0.0092 )</span></span>
-<span><span class="co">#&gt; 95% CI: [0.0891, 0.125]</span></span>
+<span><span class="co">#&gt; Estimate: 0.1186 (SE: 0.0062 )</span></span>
+<span><span class="co">#&gt; 95% CI: [0.1072, 0.1303]</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Naive estimate: 0.1061</span></span></code></pre></div>
+<span><span class="co">#&gt; Naive estimate: 0.1086</span></span></code></pre></div>
 <p>The doubly robust estimator adjusts for confounding using both a
 propensity score model and an outcome model, providing consistent
 estimates even if one model is misspecified.</p>
@@ -178,7 +178,7 @@ estimates even if one model is misspecified.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">estimators</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">results</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt;  naive     cl    ipw     dr </span></span>
-<span><span class="co">#&gt; 0.1061 0.1055 0.1924 0.1061</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.1086 0.1190 0.2095 0.1186</span></span></code></pre></div>
 <ul>
 <li>
 <strong>naive</strong>: Simply computes MSE on the subset with the
@@ -214,12 +214,12 @@ IPW; consistent if either model is correct.</li>
 <span><span class="co">#&gt; ---------------------------------------- </span></span>
 <span><span class="co">#&gt; Estimator: dr </span></span>
 <span><span class="co">#&gt; Treatment level: 0 </span></span>
-<span><span class="co">#&gt; N observations: 1000 </span></span>
+<span><span class="co">#&gt; N observations: 2500 </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Estimate: 0.6702 (SE: 0.0383 )</span></span>
-<span><span class="co">#&gt; 95% CI: [0.5911, 0.7472]</span></span>
+<span><span class="co">#&gt; Estimate: 0.682 (SE: 0.0209 )</span></span>
+<span><span class="co">#&gt; 95% CI: [0.6444, 0.725]</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Naive estimate: 0.7201</span></span></code></pre></div>
+<span><span class="co">#&gt; Naive estimate: 0.6729</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="bootstrap-standard-errors">Bootstrap Standard Errors<a class="anchor" aria-label="anchor" href="#bootstrap-standard-errors"></a>
@@ -227,16 +227,27 @@ IPW; consistent if either model is correct.</li>
 <p>Both functions support bootstrap standard errors:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mse_with_se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
-<span>  predictions <span class="op">=</span> <span class="va">predictions</span>,</span>
-<span>  outcomes <span class="op">=</span> <span class="va">outcome</span>,</span>
-<span>  treatment <span class="op">=</span> <span class="va">treatment</span>,</span>
-<span>  covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="va">x1</span>, <span class="va">x2</span><span class="op">)</span>,</span>
+<span>  predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"bp"</span>, <span class="st">"chol"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  estimator <span class="op">=</span> <span class="st">"dr"</span>,</span>
 <span>  se_method <span class="op">=</span> <span class="st">"bootstrap"</span>,</span>
-<span>  n_boot <span class="op">=</span> <span class="fl">500</span></span>
+<span>  n_boot <span class="op">=</span> <span class="fl">200</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mse_with_se</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">mse_with_se</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Counterfactual MSE Estimation</span></span>
+<span><span class="co">#&gt; ---------------------------------------- </span></span>
+<span><span class="co">#&gt; Estimator: dr </span></span>
+<span><span class="co">#&gt; Treatment level: 0 </span></span>
+<span><span class="co">#&gt; N observations: 2500 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Estimate: 0.1186 (SE: 0.0064 )</span></span>
+<span><span class="co">#&gt; 95% CI: [0.1068, 0.1317]</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Naive estimate: 0.1086</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -245,15 +256,16 @@ IPW; consistent if either model is correct.</li>
 <p>The package also supports counterfactual calibration assessment:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cal_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cf_calibration.html">cf_calibration</a></span><span class="op">(</span></span>
-<span>  predictions <span class="op">=</span> <span class="va">predictions</span>,</span>
-<span>  outcomes <span class="op">=</span> <span class="va">outcome</span>,</span>
-<span>  treatment <span class="op">=</span> <span class="va">treatment</span>,</span>
-<span>  covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="va">x1</span>, <span class="va">x2</span><span class="op">)</span>,</span>
+<span>  predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"bp"</span>, <span class="st">"chol"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  treatment_level <span class="op">=</span> <span class="fl">0</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Plot calibration curve</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">cal_result</span><span class="op">)</span></span></code></pre></div>
+<p><img src="introduction_files/figure-html/calibration-example-1.png" class="r-plt" alt="" width="576"></p>
 </div>
 <div class="section level2">
 <h2 id="cross-validation-for-model-selection">Cross-Validation for Model Selection<a class="anchor" aria-label="anchor" href="#cross-validation-for-model-selection"></a>
@@ -284,8 +296,8 @@ cross-validation:</p>
 <span><span class="co">#&gt; Estimator: dr </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   model mse_mean mse_se mse_naive_mean</span></span>
-<span><span class="co">#&gt;  Simple   0.1085 0.0088      0.1121394</span></span>
-<span><span class="co">#&gt;    Full   0.1070 0.0063      0.1072778</span></span>
+<span><span class="co">#&gt;  Simple   0.1236 0.0061      0.1122797</span></span>
+<span><span class="co">#&gt;    Full   0.1185 0.0017      0.1088334</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Best model: Full</span></span></code></pre></div>
 </div>
