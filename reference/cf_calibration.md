@@ -12,7 +12,7 @@ cf_calibration(
   treatment,
   covariates,
   treatment_level = 0,
-  estimator = c("ipw", "cl"),
+  estimator = c("dr", "ipw", "cl"),
   propensity_model = NULL,
   outcome_model = NULL,
   smoother = c("loess", "binned"),
@@ -122,8 +122,20 @@ An object of class `c("cf_calibration", "cf_performance")` containing:
 
 The counterfactual calibration curve estimates the relationship between
 predicted risk and observed risk under the counterfactual intervention.
-This is done by applying inverse probability weights to the calibration
-curve estimation.
+
+The function implements three estimators:
+
+**IPW Estimator**: Weights observations by the inverse probability of
+receiving the counterfactual treatment. Requires a correctly specified
+propensity score model.
+
+**Conditional Loss (CL) Estimator**: Uses the fitted outcome model
+EY\|X, A=a to estimate calibration over all observations. Requires a
+correctly specified outcome model.
+
+**Doubly Robust (DR) Estimator**: Combines CL and IPW approaches.
+Consistent if either the propensity or outcome model is correctly
+specified.
 
 ## References
 
@@ -131,6 +143,10 @@ Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
 "Estimating and evaluating counterfactual prediction models."
 *Statistics in Medicine*, 44(23-24), e70287.
 [doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
+
+Steingrimsson, J. A., Gatsonis, C., Li, B., & Dahabreh, I. J. (2023).
+"Transporting a prediction model for use in a new target population."
+*American Journal of Epidemiology*, 192(2), 296-304.
 
 ## See also
 
@@ -149,27 +165,37 @@ a <- rbinom(n, 1, plogis(-0.5 + 0.5 * x))
 y <- rbinom(n, 1, plogis(-1 + x - 0.5 * a))
 pred <- plogis(-1 + 0.8 * x)
 
-# Estimate counterfactual calibration curve
-result <- cf_calibration(
+# Estimate counterfactual calibration curve with different estimators
+result_ipw <- cf_calibration(
   predictions = pred,
   outcomes = y,
   treatment = a,
   covariates = data.frame(x = x),
-  treatment_level = 0
+  treatment_level = 0,
+  estimator = "ipw"
 )
-print(result)
+
+result_dr <- cf_calibration(
+  predictions = pred,
+  outcomes = y,
+  treatment = a,
+  covariates = data.frame(x = x),
+  treatment_level = 0,
+  estimator = "dr"
+)
+print(result_dr)
 #> 
 #> Counterfactual CALIBRATION Estimation
 #> ---------------------------------------- 
-#> Estimator: ipw 
+#> Estimator: dr 
 #> Treatment level: 0 
-#> N observations: 306 
+#> N observations: 500 
 #> 
 #> Calibration Metrics:
-#>   ICI (Integrated Calibration Index): 0.0344 
-#>   E50 (Median absolute error): 0.0185 
-#>   E90 (90th percentile error): 0.0721 
-#>   Emax (Maximum error): 0.3588 
+#>   ICI (Integrated Calibration Index): 0.0444 
+#>   E50 (Median absolute error): 0.0184 
+#>   E90 (90th percentile error): 0.0996 
+#>   Emax (Maximum error): 0.3784 
 #> 
-# plot(result)  # If ggplot2 is available
+# plot(result_dr)  # If ggplot2 is available
 ```
