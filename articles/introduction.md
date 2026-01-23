@@ -43,11 +43,13 @@ head(cvd_sim)
 #> 6 -0.9132198  0.16445812 -0.03630469         1     0 0.06799805
 ```
 
-The `cvd_sim` dataset contains simulated cardiovascular data with: -
-`age`, `bp`, `chol`: Patient covariates  
-- `treatment`: Binary treatment indicator (confounded by covariates) -
-`event`: Binary outcome (cardiovascular event) - `risk_score`:
-Pre-computed predictions from a logistic regression model
+The `cvd_sim` dataset contains simulated cardiovascular data with:
+
+- `age`, `bp`, `chol`: Patient covariates  
+- `treatment`: Binary treatment indicator (confounded by covariates)
+- `event`: Binary outcome (cardiovascular event)
+- `risk_score`: Pre-computed predictions from a logistic regression
+  model
 
 ### Estimating Counterfactual MSE
 

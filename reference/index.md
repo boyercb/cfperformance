@@ -16,11 +16,13 @@ Estimate prediction model performance under counterfactual interventions
 Transport prediction model performance from source to target population
 
 - [`tr_mse()`](https://boyercb.github.io/cfperformance/reference/tr_mse.md)
-  : Estimate Transportable Mean Squared Error
+  : Estimate (Counterfactual) Mean Squared Error in the Target
+  Population
 - [`tr_auc()`](https://boyercb.github.io/cfperformance/reference/tr_auc.md)
-  : Estimate Transportable Area Under the ROC Curve
+  : Estimate (Counterfactual) Area Under the ROC Curve in the Target
+  Population
 - [`tr_calibration()`](https://boyercb.github.io/cfperformance/reference/tr_calibration.md)
-  : Estimate Transportable Calibration
+  : Estimate (Counterfactual) Calibration in the Target Population
 
 ## Model Selection
 
@@ -30,6 +32,15 @@ Cross-validation and model comparison
   : Cross-Validation with Counterfactual Performance Metrics
 - [`cf_compare()`](https://boyercb.github.io/cfperformance/reference/cf_compare.md)
   : Compare Multiple Prediction Models
+
+## Machine Learning
+
+ML learner specifications for nuisance models
+
+- [`ml_learner()`](https://boyercb.github.io/cfperformance/reference/ml_learner.md)
+  : Specify a Machine Learning Learner for Nuisance Models
+- [`print(`*`<ml_learner>`*`)`](https://boyercb.github.io/cfperformance/reference/print.ml_learner.md)
+  : Print Method for ml_learner Objects
 
 ## Nuisance Models
 

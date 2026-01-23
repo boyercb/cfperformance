@@ -1,0 +1,350 @@
+# Machine Learning Integration
+
+## Overview
+
+The `cfperformance` package supports flexible machine learning methods
+for nuisance model estimation (propensity scores and outcome models).
+When using ML methods, cross-fitting is essential for valid
+inference—this is handled automatically when you use the
+[`ml_learner()`](https://boyercb.github.io/cfperformance/reference/ml_learner.md)
+specification.
+
+This vignette demonstrates how to use ML learners with the
+counterfactual performance estimators.
+
+## Why Use ML for Nuisance Models?
+
+The doubly robust (DR) estimator requires models for:
+
+1.  **Propensity scores**: $P\left( A = a|X \right)$ — the probability
+    of treatment given covariates
+2.  **Outcome model**: $E\left\lbrack Y|X,A = a \right\rbrack$ — the
+    expected outcome given covariates and treatment
+
+Traditional approaches use logistic regression, which may be
+misspecified when the true relationships are complex. Machine learning
+methods can capture nonlinear relationships and interactions without
+explicit specification.
+
+However, using flexible ML methods introduces a challenge: if the same
+data is used to both fit the nuisance models and compute the estimator,
+the resulting inference can be invalid. **Cross-fitting** (sample
+splitting) solves this by:
+
+1.  Splitting data into K folds
+2.  For each fold, fitting nuisance models on the other K-1 folds
+3.  Using the held-out fold for estimation
+
+This approach, known as “double/debiased machine learning” (Chernozhukov
+et al., 2018), maintains valid inference while leveraging flexible
+estimation.
+
+## The `ml_learner()` Interface
+
+The
+[`ml_learner()`](https://boyercb.github.io/cfperformance/reference/ml_learner.md)
+function creates a learner specification that can be passed to the
+`propensity_model` or `outcome_model` arguments:
+
+``` r
+library(cfperformance)
+
+# Create a learner specification
+ranger_learner <- ml_learner("ranger", num.trees = 500)
+print(ranger_learner)
+#> ML Learner Specification
+#> ------------------------
+#> Method: ranger 
+#> Arguments:
+#>   num.trees: 500
+```
+
+### Supported Learners
+
+| Method           | Package      | Description                             |
+|------------------|--------------|-----------------------------------------|
+| `"ranger"`       | ranger       | Fast random forest implementation       |
+| `"xgboost"`      | xgboost      | Gradient boosting (XGBoost)             |
+| `"grf"`          | grf          | Generalized random forests with honesty |
+| `"glmnet"`       | glmnet       | Elastic net with cross-validated λ      |
+| `"superlearner"` | SuperLearner | Ensemble of multiple learners           |
+| `"custom"`       | —            | User-supplied fit/predict functions     |
+
+## Basic Usage
+
+Here’s a complete example using random forests for nuisance estimation:
+
+``` r
+# Generate example data
+set.seed(123)
+n <- 1000
+
+# Covariates with nonlinear relationships
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+x3 <- rnorm(n)
+
+# Treatment depends on covariates (nonlinearly)
+ps_true <- plogis(-0.5 + 0.8 * x1 - 0.5 * x2 + 0.3 * x1 * x2)
+a <- rbinom(n, 1, ps_true)
+
+# Outcome depends on covariates and treatment
+y_prob <- plogis(-1 + 0.5 * x1 + 0.3 * x2^2 + 0.2 * x3 - 0.4 * a)
+y <- rbinom(n, 1, y_prob)
+
+# Prediction model (intentionally simplified)
+pred <- plogis(-1 + 0.4 * x1 + 0.2 * x2)
+
+# Create data frame
+df <- data.frame(x1 = x1, x2 = x2, x3 = x3)
+```
+
+### Using GLM (Default)
+
+``` r
+# Standard approach with GLM
+result_glm <- cf_mse(
+  predictions = pred,
+  outcomes = y,
+  treatment = a,
+  covariates = df,
+  treatment_level = 0,
+  estimator = "dr",
+  cross_fit = TRUE,
+  n_folds = 5,
+  se_method = "influence"
+)
+
+print(result_glm)
+#> 
+#> Counterfactual MSE Estimation
+#> ---------------------------------------- 
+#> Estimator: dr 
+#> Treatment level: 0 
+#> N observations: 1000 
+#> 
+#> Estimate: 0.2301 (SE: 0.0098 )
+#> 95% CI: [0.211, 0.2492]
+#> 
+#> Naive estimate: 0.2081
+```
+
+### Using Random Forest
+
+``` r
+# With random forest nuisance models
+result_rf <- cf_mse(
+  predictions = pred,
+  outcomes = y,
+  treatment = a,
+  covariates = df,
+  treatment_level = 0,
+  estimator = "dr",
+  propensity_model = ml_learner("ranger", num.trees = 200),
+  outcome_model = ml_learner("ranger", num.trees = 200),
+  cross_fit = TRUE,
+  n_folds = 5,
+  se_method = "influence"
+)
+
+print(result_rf)
+#> 
+#> Counterfactual MSE Estimation
+#> ---------------------------------------- 
+#> Estimator: dr 
+#> Treatment level: 0 
+#> N observations: 1000 
+#> 
+#> Estimate: 0.2154 (SE: 0.0114 )
+#> 95% CI: [0.193, 0.2378]
+#> 
+#> Naive estimate: 0.2081
+```
+
+## Learner-Specific Examples
+
+### ranger (Random Forest)
+
+``` r
+cf_mse(
+  ...,
+  propensity_model = ml_learner(
+    "ranger",
+    num.trees = 500,      # Number of trees
+    mtry = 3,             # Variables per split
+    min.node.size = 10    # Minimum node size
+  ),
+  cross_fit = TRUE
+)
+```
+
+### xgboost (Gradient Boosting)
+
+``` r
+cf_mse(
+  ...,
+  propensity_model = ml_learner(
+    "xgboost",
+    nrounds = 100,        # Boosting rounds
+    max_depth = 4,        # Tree depth
+    eta = 0.1             # Learning rate
+  ),
+  cross_fit = TRUE
+)
+```
+
+### glmnet (Elastic Net)
+
+``` r
+cf_mse(
+  ...,
+  propensity_model = ml_learner(
+    "glmnet",
+    alpha = 0.5,          # 0=ridge, 1=lasso, 0.5=elastic net
+    nfolds = 10           # CV folds for lambda selection
+  ),
+  cross_fit = TRUE
+)
+```
+
+### grf (Generalized Random Forest)
+
+``` r
+cf_mse(
+  ...,
+  propensity_model = ml_learner(
+    "grf",
+    num.trees = 2000,     # More trees for honesty
+    honesty = TRUE        # Honest estimation (default)
+  ),
+  cross_fit = TRUE
+)
+```
+
+### SuperLearner (Ensemble)
+
+``` r
+cf_mse(
+  ...,
+  propensity_model = ml_learner(
+    "superlearner",
+    SL.library = c("SL.glm", "SL.ranger", "SL.xgboost")
+  ),
+  cross_fit = TRUE
+)
+```
+
+## Custom Learners
+
+You can define custom learners by providing `fit_fun` and `predict_fun`:
+
+``` r
+# Define a custom learner (e.g., GAM with specific settings)
+custom_fit <- function(formula, data, family, ...) {
+  if (!requireNamespace("mgcv", quietly = TRUE)) {
+    stop("mgcv required for this custom learner")
+  }
+  mgcv::gam(formula, data = data, family = binomial())
+}
+
+custom_predict <- function(object, newdata, ...) {
+  predict(object, newdata = newdata, type = "response")
+}
+
+# Use in estimation
+custom_learner <- ml_learner(
+  "custom",
+  fit_fun = custom_fit,
+  predict_fun = custom_predict
+)
+```
+
+## Mixing Learners
+
+You can use different learners for propensity and outcome models:
+
+``` r
+# Random forest for propensity, elastic net for outcome
+cf_mse(
+  predictions = pred,
+  outcomes = y,
+  treatment = a,
+  covariates = df,
+  treatment_level = 0,
+  estimator = "dr",
+  propensity_model = ml_learner("ranger", num.trees = 500),
+  outcome_model = ml_learner("glmnet", alpha = 0.5),
+  cross_fit = TRUE
+)
+```
+
+## Current Support
+
+ML learners with cross-fitting are currently fully supported in
+[`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md).
+Support for
+[`cf_auc()`](https://boyercb.github.io/cfperformance/reference/cf_auc.md),
+[`cf_calibration()`](https://boyercb.github.io/cfperformance/reference/cf_calibration.md),
+and the transportability variants is planned for a future release.
+
+``` r
+# Full example with ML nuisance models
+result_ml <- cf_mse(
+  predictions = pred,
+  outcomes = y,
+  treatment = a,
+  covariates = df,
+  treatment_level = 0,
+  estimator = "dr",
+  propensity_model = ml_learner("ranger", num.trees = 100),
+  outcome_model = ml_learner("ranger", num.trees = 100),
+  cross_fit = TRUE,
+  n_folds = 5,
+  se_method = "influence"
+)
+
+print(result_ml)
+#> 
+#> Counterfactual MSE Estimation
+#> ---------------------------------------- 
+#> Estimator: dr 
+#> Treatment level: 0 
+#> N observations: 1000 
+#> 
+#> Estimate: 0.2246 (SE: 0.0115 )
+#> 95% CI: [0.2021, 0.2471]
+#> 
+#> Naive estimate: 0.2081
+```
+
+## Best Practices
+
+1.  **Always use cross-fitting with ML**: The package will warn you if
+    you pass an `ml_learner` without `cross_fit = TRUE`.
+
+2.  **Choose appropriate number of folds**: 5-10 folds is typical. More
+    folds = more data for training each nuisance model, but more
+    computation.
+
+3.  **Tune hyperparameters thoughtfully**: Default values work
+    reasonably well, but tuning can improve performance. Consider using
+    external cross-validation for hyperparameter selection.
+
+4.  **Consider computational cost**: ML methods are slower than GLM. For
+    initial exploration, use fewer trees/rounds, then increase for final
+    analysis.
+
+5.  **Check for extreme propensity scores**: ML methods can produce very
+    extreme propensity scores. The package truncates these at \[0.01,
+    0.99\] by default.
+
+## References
+
+Chernozhukov, V., Chetverikov, D., Demirer, M., Duflo, E., Hansen, C.,
+Newey, W., & Robins, J. (2018). Double/debiased machine learning for
+treatment and structural parameters. *The Econometrics Journal*, 21(1),
+C1-C68.
+
+Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025). Estimating
+and evaluating counterfactual prediction models. *Statistics in
+Medicine*, 44(23-24), e70287.

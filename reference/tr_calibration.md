@@ -1,4 +1,4 @@
-# Estimate Transportable Calibration
+# Estimate (Counterfactual) Calibration in the Target Population
 
 Estimates the calibration of a prediction model in a target population
 using data transported from a source population (typically an RCT).

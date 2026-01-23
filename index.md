@@ -9,8 +9,8 @@ interventions. These methods are essential when:
 - A prediction model will be deployed in settings where treatment
   policies differ from the training setting
 - Predictions are meant to support decisions about treatment initiation
-- You need valid performance estimates even when the prediction model is
-  misspecified
+- You want to assess model performance after transporting from a source
+  (e.g., RCT) to a target population
 
 Based on Boyer, Dahabreh & Steingrimsson (2025). “Estimating and
 evaluating counterfactual prediction models.” *Statistics in Medicine*,
@@ -63,11 +63,58 @@ result
 - **Transportability:** Evaluate model performance when transporting
   from a source population (e.g., RCT) to a target population
 
+## Counterfactual Performance Estimation
+
+Estimate how a prediction model would perform under a hypothetical
+treatment policy (e.g., if everyone received or avoided treatment):
+
+``` r
+library(cfperformance)
+data(cvd_sim)
+
+# Compare estimators for counterfactual MSE
+estimators <- c("naive", "cl", "ipw", "dr")
+sapply(estimators, function(est) {
+  cf_mse(
+    predictions = cvd_sim$risk_score,
+    outcomes = cvd_sim$event,
+    treatment = cvd_sim$treatment,
+    covariates = cvd_sim[, c("age", "bp", "chol")],
+    treatment_level = 0,
+    estimator = est
+  )$estimate
+})
+
+# Estimate counterfactual AUC
+cf_auc(
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
+  treatment_level = 0,
+  estimator = "dr"
+)
+
+# Cross-validation for model selection
+cf_compare(
+  models = list(
+    "Simple" = event ~ age,
+    "Full" = event ~ age + bp + chol
+  ),
+  data = cvd_sim,
+  treatment = "treatment",
+  treatment_level = 0,
+  metric = "mse",
+  K = 5
+)
+```
+
 ## Transportability Analysis
 
-The package also implements transportability estimators from Voter et
-al. (2025) for evaluating prediction model performance when transporting
-from a source population (typically an RCT) to a target population:
+The package also implements transportability estimators from
+Steingrimsson et al. (2022) and Voter et al. (2025) for evaluating
+prediction model performance when transporting from a source population
+(typically an RCT) to a target population:
 
 ``` r
 # Load transportability example data
@@ -115,48 +162,35 @@ See
 [`vignette("transportability", package = "cfperformance")`](https://boyercb.github.io/cfperformance/articles/transportability.md)
 for details.
 
-## Example
+## Machine Learning Integration
+
+The package supports flexible ML methods for nuisance model estimation
+with automatic cross-fitting for valid inference:
 
 ``` r
-library(cfperformance)
-data(cvd_sim)
-
-# Compare estimators
-estimators <- c("naive", "cl", "ipw", "dr")
-sapply(estimators, function(est) {
-  cf_mse(
-    predictions = cvd_sim$risk_score,
-    outcomes = cvd_sim$event,
-    treatment = cvd_sim$treatment,
-    covariates = cvd_sim[, c("age", "bp", "chol")],
-    treatment_level = 0,
-    estimator = est
-  )$estimate
-})
-
-# Estimate counterfactual AUC
-cf_auc(
+# Use random forest for propensity scores and outcome models
+cf_mse(
   predictions = cvd_sim$risk_score,
   outcomes = cvd_sim$event,
   treatment = cvd_sim$treatment,
   covariates = cvd_sim[, c("age", "bp", "chol")],
   treatment_level = 0,
-  estimator = "dr"
-)
-
-# Cross-validation for model selection
-cf_compare(
-  models = list(
-    "Simple" = event ~ age,
-    "Full" = event ~ age + bp + chol
-  ),
-  data = cvd_sim,
-  treatment = "treatment",
-  treatment_level = 0,
-  metric = "mse",
-  K = 5
+  estimator = "dr",
+  propensity_model = ml_learner("ranger", num.trees = 500),
+  outcome_model = ml_learner("xgboost", nrounds = 100),
+  cross_fit = TRUE
 )
 ```
+
+**Supported learners:** - `ranger` - Fast random forests - `xgboost` -
+Gradient boosting - `grf` - Generalized random forests (honest
+estimation) - `glmnet` - Elastic net with cross-validated λ -
+`superlearner` - Ensemble learning - `custom` - User-supplied
+fit/predict functions
+
+See
+[`vignette("ml-integration", package = "cfperformance")`](https://boyercb.github.io/cfperformance/articles/ml-integration.md)
+for details.
 
 ## Documentation
 
@@ -175,6 +209,11 @@ counterfactual prediction models. *Statistics in Medicine*. 2025;
 
 For transportability methods, also cite:
 
+Steingrimsson JA, Gatsonis C, Li B, Dahabreh IJ. Transporting a
+Prediction Model for Use in a New Target Population. *American Journal
+of Epidemiology*. 2022; 192(2):296-304.
+<doi:%5B10.1093/aje/kwac128>\](<https://doi.org/10.1093/aje/kwac128>)
+
 Voter SR, et al. Transportability of machine learning-based
 counterfactual prediction models with application to CASS. *Diagnostic
 and Prognostic Research*. 2025; 9(4).
@@ -192,9 +231,20 @@ and Prognostic Research*. 2025; 9(4).
   doi={10.1002/sim.70287}
 }
 
+@article{10.1093/aje/kwac128,
+    title = {Transporting a Prediction Model for Use in a New Target Population},
+    author = {Steingrimsson, Jon A. and Gatsonis, Constantine and Li, Bing and Dahabreh, Issa J.},
+    journal = {American Journal of Epidemiology},
+    volume = {192},
+    number = {2},
+    pages = {296-304},
+    year = {2022},
+    doi = {10.1093/aje/kwac128}
+}
+
 @article{voter2025transportability,
   title={Transportability of machine learning-based counterfactual prediction models with application to CASS},
-  author={Voter, Sarah R. and others},
+  author = {Voter, Sarah C. and Dahabreh, Issa J. and Boyer, Christopher B. and Rahbar, Habib and Kontos, Despina and Steingrimsson, Jon A.},
   journal={Diagnostic and Prognostic Research},
   volume={9},
   number={4},

@@ -13,6 +13,9 @@ functions.
   covariates,
   treatment_level,
   K = 5,
+  propensity_learner = NULL,
+  outcome_learner = NULL,
+  parallel = FALSE,
   ...
 )
 ```
@@ -42,6 +45,11 @@ functions.
 - K:
 
   Number of folds for cross-fitting.
+
+- parallel:
+
+  Logical indicating whether to use parallel processing for bootstrap
+  (default: FALSE).
 
 - ...:
 

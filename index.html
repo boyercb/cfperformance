@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="articles/introduction.html">Introduction to cfperformance</a></li>
     <li><a class="dropdown-item" href="articles/transportability.html">Transportability Analysis</a></li>
+    <li><a class="dropdown-item" href="articles/ml-integration.html">Machine Learning Integration</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -65,7 +66,7 @@
 <ul>
 <li>A prediction model will be deployed in settings where treatment policies differ from the training setting</li>
 <li>Predictions are meant to support decisions about treatment initiation</li>
-<li>You need valid performance estimates even when the prediction model is misspecified</li>
+<li>You want to assess model performance after transporting from a source (e.g., RCT) to a target population</li>
 </ul>
 <p>Based on Boyer, Dahabreh &amp; Steingrimsson (2025). “Estimating and evaluating counterfactual prediction models.” <em>Statistics in Medicine</em>, 44(23-24), e70287. <a href="https://doi.org/10.1002/sim.70287" class="external-link">doi:10.1002/sim.70287</a></p>
 </div>
@@ -121,10 +122,54 @@
 </ul>
 </div>
 <div class="section level2">
+<h2 id="counterfactual-performance-estimation">Counterfactual Performance Estimation<a class="anchor" aria-label="anchor" href="#counterfactual-performance-estimation"></a>
+</h2>
+<p>Estimate how a prediction model would perform under a hypothetical treatment policy (e.g., if everyone received or avoided treatment):</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/boyercb/cfperformance" class="external-link">cfperformance</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cvd_sim</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Compare estimators for counterfactual MSE</span></span>
+<span><span class="va">estimators</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"naive"</span>, <span class="st">"cl"</span>, <span class="st">"ipw"</span>, <span class="st">"dr"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">estimators</span>, <span class="kw">function</span><span class="op">(</span><span class="va">est</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
+<span>    predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>    outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>    treatment <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
+<span>    covariates <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"bp"</span>, <span class="st">"chol"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>    treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>    estimator <span class="op">=</span> <span class="va">est</span></span>
+<span>  <span class="op">)</span><span class="op">$</span><span class="va">estimate</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Estimate counterfactual AUC</span></span>
+<span><span class="fu"><a href="reference/cf_auc.html">cf_auc</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"bp"</span>, <span class="st">"chol"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  estimator <span class="op">=</span> <span class="st">"dr"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Cross-validation for model selection</span></span>
+<span><span class="fu"><a href="reference/cf_compare.html">cf_compare</a></span><span class="op">(</span></span>
+<span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Simple"</span> <span class="op">=</span> <span class="va">event</span> <span class="op">~</span> <span class="va">age</span>,</span>
+<span>    <span class="st">"Full"</span> <span class="op">=</span> <span class="va">event</span> <span class="op">~</span> <span class="va">age</span> <span class="op">+</span> <span class="va">bp</span> <span class="op">+</span> <span class="va">chol</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">cvd_sim</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="st">"treatment"</span>,</span>
+<span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  metric <span class="op">=</span> <span class="st">"mse"</span>,</span>
+<span>  K <span class="op">=</span> <span class="fl">5</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
 <h2 id="transportability-analysis">Transportability Analysis<a class="anchor" aria-label="anchor" href="#transportability-analysis"></a>
 </h2>
-<p>The package also implements transportability estimators from Voter et al. (2025) for evaluating prediction model performance when transporting from a source population (typically an RCT) to a target population:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<p>The package also implements transportability estimators from Steingrimsson et al. (2022) and Voter et al. (2025) for evaluating prediction model performance when transporting from a source population (typically an RCT) to a target population:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Load transportability example data</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">)</span></span>
 <span></span>
@@ -167,47 +212,24 @@
 <p>See <code><a href="articles/transportability.html">vignette("transportability", package = "cfperformance")</a></code> for details.</p>
 </div>
 <div class="section level2">
-<h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
+<h2 id="machine-learning-integration">Machine Learning Integration<a class="anchor" aria-label="anchor" href="#machine-learning-integration"></a>
 </h2>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/boyercb/cfperformance" class="external-link">cfperformance</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">cvd_sim</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Compare estimators</span></span>
-<span><span class="va">estimators</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"naive"</span>, <span class="st">"cl"</span>, <span class="st">"ipw"</span>, <span class="st">"dr"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">estimators</span>, <span class="kw">function</span><span class="op">(</span><span class="va">est</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
-<span>    predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
-<span>    outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
-<span>    treatment <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
-<span>    covariates <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"bp"</span>, <span class="st">"chol"</span><span class="op">)</span><span class="op">]</span>,</span>
-<span>    treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>    estimator <span class="op">=</span> <span class="va">est</span></span>
-<span>  <span class="op">)</span><span class="op">$</span><span class="va">estimate</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Estimate counterfactual AUC</span></span>
-<span><span class="fu"><a href="reference/cf_auc.html">cf_auc</a></span><span class="op">(</span></span>
+<p>The package supports flexible ML methods for nuisance model estimation with automatic cross-fitting for valid inference:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Use random forest for propensity scores and outcome models</span></span>
+<span><span class="fu"><a href="reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
 <span>  treatment <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
 <span>  covariates <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"bp"</span>, <span class="st">"chol"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  estimator <span class="op">=</span> <span class="st">"dr"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Cross-validation for model selection</span></span>
-<span><span class="fu"><a href="reference/cf_compare.html">cf_compare</a></span><span class="op">(</span></span>
-<span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Simple"</span> <span class="op">=</span> <span class="va">event</span> <span class="op">~</span> <span class="va">age</span>,</span>
-<span>    <span class="st">"Full"</span> <span class="op">=</span> <span class="va">event</span> <span class="op">~</span> <span class="va">age</span> <span class="op">+</span> <span class="va">bp</span> <span class="op">+</span> <span class="va">chol</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">cvd_sim</span>,</span>
-<span>  treatment <span class="op">=</span> <span class="st">"treatment"</span>,</span>
-<span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  metric <span class="op">=</span> <span class="st">"mse"</span>,</span>
-<span>  K <span class="op">=</span> <span class="fl">5</span></span>
+<span>  estimator <span class="op">=</span> <span class="st">"dr"</span>,</span>
+<span>  propensity_model <span class="op">=</span> <span class="fu"><a href="reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"ranger"</span>, num.trees <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
+<span>  outcome_model <span class="op">=</span> <span class="fu"><a href="reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"xgboost"</span>, nrounds <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
+<span>  cross_fit <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p><strong>Supported learners:</strong> - <code>ranger</code> - Fast random forests - <code>xgboost</code> - Gradient boosting - <code>grf</code> - Generalized random forests (honest estimation) - <code>glmnet</code> - Elastic net with cross-validated λ - <code>superlearner</code> - Ensemble learning - <code>custom</code> - User-supplied fit/predict functions</p>
+<p>See <code><a href="articles/ml-integration.html">vignette("ml-integration", package = "cfperformance")</a></code> for details.</p>
 </div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
@@ -220,27 +242,39 @@
 <p>If you use this package in your research, please cite:</p>
 <p>Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating counterfactual prediction models. <em>Statistics in Medicine</em>. 2025; 44(23-24):e70287. <a href="doi:%5B10.1002/sim.70287" class="uri">doi:[10.1002/sim.70287</a>](<a href="https://doi.org/10.1002/sim.70287" class="external-link uri">https://doi.org/10.1002/sim.70287</a>)</p>
 <p>For transportability methods, also cite:</p>
+<p>Steingrimsson JA, Gatsonis C, Li B, Dahabreh IJ. Transporting a Prediction Model for Use in a New Target Population. <em>American Journal of Epidemiology</em>. 2022; 192(2):296-304. <a href="doi:%5B10.1093/aje/kwac128" class="uri">doi:[10.1093/aje/kwac128</a>](<a href="https://doi.org/10.1093/aje/kwac128" class="external-link uri">https://doi.org/10.1093/aje/kwac128</a>)</p>
 <p>Voter SR, et al. Transportability of machine learning-based counterfactual prediction models with application to CASS. <em>Diagnostic and Prognostic Research</em>. 2025; 9(4). <a href="doi:%5B10.1186/s41512-025-00201-y" class="uri">doi:[10.1186/s41512-025-00201-y</a>](<a href="https://doi.org/10.1186/s41512-025-00201-y" class="external-link uri">https://doi.org/10.1186/s41512-025-00201-y</a>)</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">boyer2025estimating</span>,</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="dt">title</span>={Estimating and Evaluating Counterfactual Prediction Models},</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="dt">author</span>={Boyer, Christopher B. and Dahabreh, Issa J. and Steingrimsson, Jon A.},</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="dt">journal</span>={Statistics in Medicine},</span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="dt">volume</span>={44},</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="dt">number</span>={23-24},</span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="dt">pages</span>={e70287},</span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="dt">year</span>={2025},</span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="dt">doi</span>={10.1002/sim.70287}</span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>}</span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a></span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">voter2025transportability</span>,</span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="dt">title</span>={Transportability of machine learning-based counterfactual prediction models with application to CASS},</span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>  <span class="dt">author</span>={Voter, Sarah R. and others},</span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>  <span class="dt">journal</span>={Diagnostic and Prognostic Research},</span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>  <span class="dt">volume</span>={9},</span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>  <span class="dt">number</span>={4},</span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>  <span class="dt">year</span>={2025},</span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>  <span class="dt">doi</span>={10.1186/s41512-025-00201-y}</span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">boyer2025estimating</span>,</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="dt">title</span>={Estimating and Evaluating Counterfactual Prediction Models},</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="dt">author</span>={Boyer, Christopher B. and Dahabreh, Issa J. and Steingrimsson, Jon A.},</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="dt">journal</span>={Statistics in Medicine},</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="dt">volume</span>={44},</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="dt">number</span>={23-24},</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="dt">pages</span>={e70287},</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="dt">year</span>={2025},</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="dt">doi</span>={10.1002/sim.70287}</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>}</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">10</span>.<span class="ot">1093</span>/<span class="ot">aje</span>/<span class="ot">kwac128</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>    <span class="dt">title</span> = {Transporting a Prediction Model for Use in a New Target Population},</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>    <span class="dt">author</span> = {Steingrimsson, Jon A. and Gatsonis, Constantine and Li, Bing and Dahabreh, Issa J.},</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>    <span class="dt">journal</span> = {American Journal of Epidemiology},</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>    <span class="dt">volume</span> = {192},</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>    <span class="dt">number</span> = {2},</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>    <span class="dt">pages</span> = {296-304},</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>    <span class="dt">year</span> = {2022},</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>    <span class="dt">doi</span> = {10.1093/aje/kwac128}</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>}</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">voter2025transportability</span>,</span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>  <span class="dt">title</span>={Transportability of machine learning-based counterfactual prediction models with application to CASS},</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a>  <span class="dt">author</span> = {Voter, Sarah C. and Dahabreh, Issa J. and Boyer, Christopher B. and Rahbar, Habib and Kontos, Despina and Steingrimsson, Jon A.},</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>  <span class="dt">journal</span>={Diagnostic and Prognostic Research},</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>  <span class="dt">volume</span>={9},</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>  <span class="dt">number</span>={4},</span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a>  <span class="dt">year</span>={2025},</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>  <span class="dt">doi</span>={10.1186/s41512-025-00201-y}</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>}</span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>

@@ -15,6 +15,9 @@ valid inference with flexible machine learning estimators.
   K = 5,
   propensity_formula = NULL,
   outcome_formula = NULL,
+  propensity_learner = NULL,
+  outcome_learner = NULL,
+  parallel = FALSE,
   ...
 )
 ```
@@ -79,6 +82,10 @@ Cross-fitting (sample splitting) allows the use of flexible machine
 learning methods for nuisance function estimation while maintaining
 valid inference. Each observation's nuisance function predictions are
 made using models trained on data excluding that observation's fold.
+
+When `propensity_learner` or `outcome_learner` is provided as an
+`ml_learner` object, the corresponding ML method is used for
+cross-fitted estimation.
 
 ## References
 

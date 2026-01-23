@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -20,6 +20,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/introduction.html">Introduction to cfperformance</a></li>
     <li><a class="dropdown-item" href="../articles/transportability.html">Transportability Analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/ml-integration.html">Machine Learning Integration</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -37,6 +38,56 @@
       <small>Source: <a href="https://github.com/boyercb/cfperformance/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3.0" id="cfperformance-030">cfperformance 0.3.0<a class="anchor" aria-label="anchor" href="#cfperformance-030"></a></h2>
+<p>Adds machine learning integration for flexible nuisance model estimation with automatic cross-fitting for valid inference.</p>
+<div class="section level3">
+<h3 id="new-features-0-3-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-0-3-0"></a></h3>
+<div class="section level4">
+<h4 id="ml-learner-interface-0-3-0">ML Learner Interface<a class="anchor" aria-label="anchor" href="#ml-learner-interface-0-3-0"></a></h4>
+<ul><li>
+<code><a href="../reference/ml_learner.html">ml_learner()</a></code> - Specify ML methods for propensity score and outcome models</li>
+<li>Supports: <code>ranger</code>, <code>xgboost</code>, <code>grf</code>, <code>glmnet</code>, <code>superlearner</code>, and <code>custom</code>
+</li>
+<li>Automatic cross-fitting when <code>ml_learner</code> specs are detected</li>
+<li>Seamlessly integrates with existing <code>propensity_model</code>/<code>outcome_model</code> arguments</li>
+</ul></div>
+<div class="section level4">
+<h4 id="supported-learners-0-3-0">Supported Learners<a class="anchor" aria-label="anchor" href="#supported-learners-0-3-0"></a></h4>
+<ul><li>
+<strong>ranger</strong> - Fast random forest implementation</li>
+<li>
+<strong>xgboost</strong> - Gradient boosting (XGBoost)</li>
+<li>
+<strong>grf</strong> - Generalized random forests with honest estimation</li>
+<li>
+<strong>glmnet</strong> - Elastic net regularization with CV-selected λ</li>
+<li>
+<strong>superlearner</strong> - Ensemble learning</li>
+<li>
+<strong>custom</strong> - User-supplied fit/predict functions</li>
+</ul></div>
+<div class="section level4">
+<h4 id="usage-example-0-3-0">Usage Example<a class="anchor" aria-label="anchor" href="#usage-example-0-3-0"></a></h4>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">pred</span>, outcomes <span class="op">=</span> <span class="va">y</span>, treatment <span class="op">=</span> <span class="va">a</span>, covariates <span class="op">=</span> <span class="va">df</span>,</span>
+<span>  propensity_model <span class="op">=</span> <span class="fu"><a href="../reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"ranger"</span>, num.trees <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
+<span>  outcome_model <span class="op">=</span> <span class="fu"><a href="../reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"xgboost"</span>, nrounds <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
+<span>  cross_fit <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="documentation-0-3-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-3-0"></a></h4>
+<ul><li>New vignette: “Machine Learning Integration”</li>
+<li>Updated README with ML integration examples</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="references-0-3-0">References<a class="anchor" aria-label="anchor" href="#references-0-3-0"></a></h3>
+<p>Chernozhukov, V., et al. (2018). Double/debiased machine learning for treatment and structural parameters. <em>The Econometrics Journal</em>, 21(1), C1-C68.</p>
+<hr></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="cfperformance-020">cfperformance 0.2.0<a class="anchor" aria-label="anchor" href="#cfperformance-020"></a></h2>
 <p>Major release adding transportability estimators from Voter et al. (2025) for evaluating prediction model performance when transporting from a source population (e.g., RCT) to a target population.</p>
