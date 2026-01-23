@@ -553,7 +553,10 @@ NULL
     if (treatment_level == 0) {
       ps_pred <- 1 - ps_pred
     }
-    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.99), 0.01)
+
+    # Truncate propensity scores for stability
+    # Use 0.025-0.975 bounds to avoid extreme weights while allowing flexibility
+    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
 
     # Fit outcome model on training fold (among treated)
     subset_train <- train_idx[treatment[train_idx] == treatment_level]
@@ -577,7 +580,8 @@ NULL
     }
 
     # Store outcome probability (q_hat) for AUC
-    q_cf[val_idx] <- pY
+    # Truncate to avoid extreme values that cause instability in DR estimator
+    q_cf[val_idx] <- pmax(pmin(pY, 0.99), 0.01)
 
     # Compute conditional loss: E[(Y - pred)^2 | X, A=a] = p(1-p) + (p - pred)^2
     # For binary Y: E[Y^2] = p, so E[(Y - pred)^2] = p - 2*p*pred + pred^2
@@ -700,8 +704,18 @@ NULL
   # Treatment indicator
   I_a <- as.numeric(treatment == treatment_level)
 
-  # Truncate propensity scores for stability
-  ps <- pmax(pmin(ps, 0.99), 0.01)
+  # Note: propensity scores are already truncated in .cross_fit_nuisance()
+  # Additional truncation here is defensive
+
+  # Check for extreme propensity scores and warn
+  ps_extreme <- sum(ps <= 0.025 | ps >= 0.975)
+  if (ps_extreme > 0.1 * n) {
+    warning(sprintf(
+      "%.0f%% of propensity scores are at truncation bounds. ",
+      100 * ps_extreme / n
+    ), "Consider using a simpler propensity model or more regularization.",
+    call. = FALSE)
+  }
 
   # Concordance indicator matrix (f_i > f_j)
   ind_f <- outer(predictions, predictions, ">")

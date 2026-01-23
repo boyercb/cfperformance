@@ -330,8 +330,17 @@ print.ml_learner <- function(x, ...) {
 }
 
 .predict_grf <- function(fit, newdata) {
-  formula <- attr(fit, "formula")
-  x <- model.matrix(formula, data = newdata)[, -1, drop = FALSE]
+  # GRF stores the training data columns - use those names
+  # For probability_forest and regression_forest, the X matrix column names are stored
+  train_cols <- colnames(fit$X.orig)
+
+  if (is.null(train_cols)) {
+    # Fallback: use all columns from newdata
+    x <- as.matrix(newdata)
+  } else {
+    # Use the same columns as training
+    x <- as.matrix(newdata[, train_cols, drop = FALSE])
+  }
 
   pred <- predict(fit, newdata = x)
 
