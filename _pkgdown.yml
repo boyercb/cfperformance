@@ -51,6 +51,25 @@ reference:
     desc: Fit propensity and outcome models
     contents:
       - fit_nuisance
+  - title: S3 Methods
+    desc: Methods for result objects
+    contents:
+      - coef.cf_performance
+      - coef.tr_performance
+      - confint.cf_performance
+      - confint.tr_performance
+      - plot.cf_auc
+      - plot.cf_calibration
+      - plot.tr_calibration
+      - print.cf_compare
+      - print.cf_cv
+      - print.cf_nuisance
+      - print.cf_performance
+      - print.tr_performance
+      - summary.cf_compare
+      - summary.cf_cv
+      - summary.cf_performance
+      - summary.tr_performance
   - title: Example Data
     contents:
       - cvd_sim
