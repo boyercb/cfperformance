@@ -50,9 +50,58 @@ result
 - **MSE/Brier Score:** Loss-based performance under counterfactual intervention
 - **AUC:** Discrimination ability under counterfactual intervention  
 - **Calibration:** Reliability of risk predictions under counterfactual intervention
-- **Multiple Estimators:** Naive, Conditional Loss, IPW, and Doubly Robust
+- **Multiple Estimators:** Naive, Conditional Loss/Outcome Model, IPW, and Doubly Robust
 - **Inference:** Bootstrap and influence function-based standard errors
 - **Cross-validation:** Counterfactual-aware model selection with `cf_cv()` and `cf_compare()`
+- **Transportability:** Evaluate model performance when transporting from a source population (e.g., RCT) to a target population
+
+## Transportability Analysis
+
+The package also implements transportability estimators from Voter et al. (2025) for evaluating prediction model performance when transporting from a source population (typically an RCT) to a target population:
+
+```r
+# Load transportability example data
+data(transport_sim)
+
+# Estimate transportable MSE in target population
+tr_mse(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,  # 1=source/RCT, 0=target
+
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "transport",
+  estimator = "dr"
+)
+
+# Transportable AUC
+tr_auc(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "transport",
+  estimator = "dr"
+)
+
+# Transportable calibration
+tr_calibration(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "transport",
+  estimator = "ipw"
+)
+```
+
+See `vignette("transportability", package = "cfperformance")` for details.
 
 ## Example
 
@@ -104,8 +153,12 @@ See `vignette("introduction", package = "cfperformance")` for a comprehensive in
 ## Citation
 
 If you use this package in your research, please cite:
-
+ 
 Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating counterfactual prediction models. *Statistics in Medicine*. 2025; 44(23-24):e70287. doi:[10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
+
+For transportability methods, also cite:
+
+Voter SR, et al. Transportability of machine learning-based counterfactual prediction models with application to CASS. *Diagnostic and Prognostic Research*. 2025; 9(4). doi:[10.1186/s41512-025-00201-y](https://doi.org/10.1186/s41512-025-00201-y)
 
 ```bibtex
 @article{boyer2025estimating,
@@ -117,6 +170,16 @@ Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating counterfactua
   pages={e70287},
   year={2025},
   doi={10.1002/sim.70287}
+}
+
+@article{voter2025transportability,
+  title={Transportability of machine learning-based counterfactual prediction models with application to CASS},
+  author={Voter, Sarah R. and others},
+  journal={Diagnostic and Prognostic Research},
+  volume={9},
+  number={4},
+  year={2025},
+  doi={10.1186/s41512-025-00201-y}
 }
 ```
 
