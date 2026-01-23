@@ -493,6 +493,9 @@ NULL
 #' Each observation's nuisance function predictions are made using models
 #' trained on data excluding that observation's fold.
 #'
+#' When `propensity_learner` or `outcome_learner` is provided as an `ml_learner`
+#' object, the corresponding ML method is used for cross-fitted estimation.
+#'
 #' @references
 #' Chernozhukov, V., Chetverikov, D., Demirer, M., et al. (2018).
 #' "Double/debiased machine learning for treatment and structural parameters."
@@ -502,7 +505,11 @@ NULL
 .cross_fit_nuisance <- function(treatment, outcomes, covariates,
                                  treatment_level, predictions,
                                  K = 5, propensity_formula = NULL,
-                                 outcome_formula = NULL, ...) {
+                                 outcome_formula = NULL,
+                                 propensity_learner = NULL,
+                                 outcome_learner = NULL,
+                                 parallel = FALSE,
+                                 ...) {
 
   n <- length(outcomes)
 
@@ -526,15 +533,22 @@ NULL
     # Fit propensity model on training fold
     ps_data <- cbind(A = treatment[train_idx], covariates[train_idx, , drop = FALSE])
 
-    if (is.null(propensity_formula)) {
+    if (!is.null(propensity_learner) && is_ml_learner(propensity_learner)) {
+      # Use ML learner
+      ps_formula <- if (!is.null(propensity_formula)) propensity_formula else A ~ .
+      ps_model <- .fit_ml_learner(propensity_learner, ps_formula,
+                                   data = ps_data, family = "binomial")
+      ps_pred <- .predict_ml_learner(ps_model, covariates[val_idx, , drop = FALSE])
+    } else if (is.null(propensity_formula)) {
       ps_model <- glm(A ~ ., data = ps_data, family = binomial())
+      ps_pred <- predict(ps_model, newdata = covariates[val_idx, , drop = FALSE],
+                         type = "response")
     } else {
       ps_model <- glm(propensity_formula, data = ps_data, family = binomial())
+      ps_pred <- predict(ps_model, newdata = covariates[val_idx, , drop = FALSE],
+                         type = "response")
     }
 
-    # Predict propensity on validation fold
-    ps_pred <- predict(ps_model, newdata = covariates[val_idx, , drop = FALSE],
-                       type = "response")
     if (treatment_level == 0) {
       ps_pred <- 1 - ps_pred
     }
@@ -545,15 +559,21 @@ NULL
     outcome_data <- cbind(Y = outcomes[subset_train],
                           covariates[subset_train, , drop = FALSE])
 
-    if (is.null(outcome_formula)) {
+    if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
+      # Use ML learner
+      out_formula <- if (!is.null(outcome_formula)) outcome_formula else Y ~ .
+      outcome_model <- .fit_ml_learner(outcome_learner, out_formula,
+                                        data = outcome_data, family = "binomial")
+      pY <- .predict_ml_learner(outcome_model, covariates[val_idx, , drop = FALSE])
+    } else if (is.null(outcome_formula)) {
       outcome_model <- glm(Y ~ ., data = outcome_data, family = binomial())
+      pY <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
+                    type = "response")
     } else {
       outcome_model <- glm(outcome_formula, data = outcome_data, family = binomial())
+      pY <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
+                    type = "response")
     }
-
-    # Predict conditional outcome on validation fold
-    pY <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
-                  type = "response")
 
     # Compute conditional loss: E[(Y - pred)^2 | X, A=a] = p(1-p) + (p - pred)^2
     # For binary Y: E[Y^2] = p, so E[(Y - pred)^2] = p - 2*p*pred + pred^2
@@ -579,7 +599,11 @@ NULL
 #'
 #' @keywords internal
 .compute_mse_crossfit <- function(predictions, outcomes, treatment, covariates,
-                                   treatment_level, K = 5, ...) {
+                                   treatment_level, K = 5,
+                                   propensity_learner = NULL,
+                                   outcome_learner = NULL,
+                                   parallel = FALSE,
+                                   ...) {
 
   n <- length(outcomes)
   loss <- (outcomes - predictions)^2
@@ -592,6 +616,9 @@ NULL
     treatment_level = treatment_level,
     predictions = predictions,
     K = K,
+    propensity_learner = propensity_learner,
+    outcome_learner = outcome_learner,
+    parallel = parallel,
     ...
   )
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/tr_auc.R
 \name{tr_auc}
 \alias{tr_auc}
-\title{Estimate Transportable Area Under the ROC Curve}
+\title{Estimate (Counterfactual) Area Under the ROC Curve in the Target Population}
 \usage{
 tr_auc(
   predictions,

@@ -11,6 +11,9 @@
   covariates,
   treatment_level,
   K = 5,
+  propensity_learner = NULL,
+  outcome_learner = NULL,
+  parallel = FALSE,
   ...
 )
 }
@@ -26,6 +29,9 @@
 \item{treatment_level}{The counterfactual treatment level (default: 0).}
 
 \item{K}{Number of folds for cross-fitting.}
+
+\item{parallel}{Logical indicating whether to use parallel processing
+for bootstrap (default: FALSE).}
 
 \item{...}{Additional arguments passed to internal functions.}
 }

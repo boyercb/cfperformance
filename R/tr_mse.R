@@ -1,4 +1,4 @@
-#' Estimate Transportable Mean Squared Error
+#' Estimate (Counterfactual) Mean Squared Error in the Target Population
 #'
 #' Estimates the mean squared error (MSE) of a prediction model in a target
 #' population using data transported from a source population (typically an RCT).

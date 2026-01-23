@@ -124,6 +124,10 @@ cf_mse <- function(predictions,
   ci_lower <- NULL
   ci_upper <- NULL
 
+  # Detect if ml_learners are provided
+  use_ml_propensity <- is_ml_learner(propensity_model)
+  use_ml_outcome <- is_ml_learner(outcome_model)
+
   # Fit nuisance models if not provided
   if (estimator != "naive") {
     if (cross_fit && estimator == "dr") {
@@ -135,6 +139,9 @@ cf_mse <- function(predictions,
         covariates = covariates,
         treatment_level = treatment_level,
         K = n_folds,
+        propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+        outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        parallel = parallel,
         ...
       )
       estimate <- cf_result$estimate
@@ -270,9 +277,8 @@ cf_mse <- function(predictions,
   }
 
   # Get propensity scores for ALL observations
-
   if (!is.null(propensity_model)) {
-    ps <- predict(propensity_model, newdata = covariates, type = "response")
+    ps <- .predict_nuisance(propensity_model, covariates)
     if (treatment_level == 0) {
       ps <- 1 - ps  # P(A = 0 | X)
     }
@@ -283,7 +289,7 @@ cf_mse <- function(predictions,
   # Get outcome predictions (conditional loss) for ALL observations
   if (!is.null(outcome_model)) {
     # For binary outcomes with squared error loss
-    pY <- predict(outcome_model, newdata = covariates, type = "response")
+    pY <- .predict_nuisance(outcome_model, covariates)
     h <- pY - 2 * predictions * pY + predictions^2
   }
 
@@ -321,6 +327,14 @@ cf_mse <- function(predictions,
   if (is.null(propensity_model)) {
     ps_data <- cbind(A = treatment, covariates)
     propensity_model <- glm(A ~ ., data = ps_data, family = binomial())
+  } else if (is_ml_learner(propensity_model)) {
+    # ml_learner spec should use cross-fitting - warn user
+    warning("ml_learner passed to propensity_model without cross_fit=TRUE. ",
+            "Using cross_fit=TRUE is recommended for ML learners.",
+            call. = FALSE)
+    ps_data <- cbind(A = treatment, covariates)
+    propensity_model <- .fit_ml_learner(propensity_model, A ~ .,
+                                         data = ps_data, family = "binomial")
   }
 
   # Fit outcome model if not provided (among those with counterfactual treatment)
@@ -330,6 +344,15 @@ cf_mse <- function(predictions,
     outcome_model <- glm(Y ~ ., data = outcome_data, family = binomial())
     # Store the full data for prediction
     attr(outcome_model, "full_data") <- cbind(Y = outcomes, covariates)
+  } else if (is_ml_learner(outcome_model)) {
+    # ml_learner spec should use cross-fitting - warn user
+    warning("ml_learner passed to outcome_model without cross_fit=TRUE. ",
+            "Using cross_fit=TRUE is recommended for ML learners.",
+            call. = FALSE)
+    subset_idx <- treatment == treatment_level
+    outcome_data <- cbind(Y = outcomes, covariates)[subset_idx, ]
+    outcome_model <- .fit_ml_learner(outcome_model, Y ~ .,
+                                      data = outcome_data, family = "binomial")
   }
 
   list(propensity = propensity_model, outcome = outcome_model)

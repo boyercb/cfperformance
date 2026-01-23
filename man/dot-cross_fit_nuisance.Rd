@@ -13,6 +13,9 @@
   K = 5,
   propensity_formula = NULL,
   outcome_formula = NULL,
+  propensity_learner = NULL,
+  outcome_learner = NULL,
+  parallel = FALSE,
   ...
 )
 }
@@ -50,6 +53,9 @@ Cross-fitting (sample splitting) allows the use of flexible machine learning
 methods for nuisance function estimation while maintaining valid inference.
 Each observation's nuisance function predictions are made using models
 trained on data excluding that observation's fold.
+
+When \code{propensity_learner} or \code{outcome_learner} is provided as an \code{ml_learner}
+object, the corresponding ML method is used for cross-fitted estimation.
 }
 \references{
 Chernozhukov, V., Chetverikov, D., Demirer, M., et al. (2018).

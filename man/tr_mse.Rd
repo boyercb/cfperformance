@@ -2,7 +2,7 @@
 % Please edit documentation in R/tr_mse.R
 \name{tr_mse}
 \alias{tr_mse}
-\title{Estimate Transportable Mean Squared Error}
+\title{Estimate (Counterfactual) Mean Squared Error in the Target Population}
 \usage{
 tr_mse(
   predictions,

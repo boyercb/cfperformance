@@ -1,4 +1,4 @@
-#' Estimate Transportable Area Under the ROC Curve
+#' Estimate (Counterfactual) Area Under the ROC Curve in the Target Population
 #'
 #' Estimates the area under the receiver operating characteristic curve (AUC)
 #' of a prediction model in a target population using data transported from

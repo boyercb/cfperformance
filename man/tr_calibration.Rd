@@ -2,7 +2,7 @@
 % Please edit documentation in R/tr_calibration.R
 \name{tr_calibration}
 \alias{tr_calibration}
-\title{Estimate Transportable Calibration}
+\title{Estimate (Counterfactual) Calibration in the Target Population}
 \usage{
 tr_calibration(
   predictions,
