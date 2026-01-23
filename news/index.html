@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,62 @@
       <small>Source: <a href="https://github.com/boyercb/cfperformance/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.0" id="cfperformance-020">cfperformance 0.2.0<a class="anchor" aria-label="anchor" href="#cfperformance-020"></a></h2>
+<p>Major release adding transportability estimators from Voter et al. (2025) for evaluating prediction model performance when transporting from a source population (e.g., RCT) to a target population.</p>
+<div class="section level3">
+<h3 id="new-features-0-2-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h3>
+<div class="section level4">
+<h4 id="transportability-functions-0-2-0">Transportability Functions<a class="anchor" aria-label="anchor" href="#transportability-functions-0-2-0"></a></h4>
+<ul><li>
+<code><a href="../reference/tr_mse.html">tr_mse()</a></code> - Transportable MSE estimation with naive, om, ipw, dr estimators</li>
+<li>
+<code><a href="../reference/tr_auc.html">tr_auc()</a></code> - Transportable AUC estimation with all estimators</li>
+<li>
+<code><a href="../reference/tr_calibration.html">tr_calibration()</a></code> - Transportable calibration curves with ICI, E50, E90, Emax</li>
+</ul></div>
+<div class="section level4">
+<h4 id="analysis-modes-0-2-0">Analysis Modes<a class="anchor" aria-label="anchor" href="#analysis-modes-0-2-0"></a></h4>
+<ul><li>
+<strong>Transport analysis</strong> (<code>analysis = "transport"</code>): Use source/RCT outcomes to estimate performance in target population</li>
+<li>
+<strong>Joint analysis</strong> (<code>analysis = "joint"</code>): Pool source and target data for potentially more efficient estimation</li>
+</ul></div>
+<div class="section level4">
+<h4 id="inference-0-2-0">Inference<a class="anchor" aria-label="anchor" href="#inference-0-2-0"></a></h4>
+<ul><li>Bootstrap standard errors with stratified sampling option (<code>stratified_boot = TRUE</code>) to preserve source/target ratio</li>
+<li>Influence function-based standard errors for <code><a href="../reference/tr_mse.html">tr_mse()</a></code> (all estimators)</li>
+</ul></div>
+<div class="section level4">
+<h4 id="new-data-0-2-0">New Data<a class="anchor" aria-label="anchor" href="#new-data-0-2-0"></a></h4>
+<ul><li>
+<code>transport_sim</code> - Simulated dataset with source (RCT) and target populations for transportability examples (n = 1,500)</li>
+</ul></div>
+<div class="section level4">
+<h4 id="documentation-0-2-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-2-0"></a></h4>
+<ul><li>New vignette: “Transportability Analysis with cfperformance”</li>
+<li>Complete roxygen documentation for all new functions</li>
+<li>Updated README with transportability examples</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="s3-methods-for-tr_-functions-0-2-0">S3 Methods for tr_* Functions<a class="anchor" aria-label="anchor" href="#s3-methods-for-tr_-functions-0-2-0"></a></h3>
+<ul><li>
+<code><a href="../reference/print.tr_performance.html">print.tr_performance()</a></code> - Print method for transportability results</li>
+<li>
+<code><a href="../reference/summary.tr_performance.html">summary.tr_performance()</a></code> - Detailed summary</li>
+<li>
+<code><a href="../reference/coef.tr_performance.html">coef.tr_performance()</a></code> - Extract point estimates</li>
+<li>
+<code><a href="../reference/confint.tr_performance.html">confint.tr_performance()</a></code> - Confidence intervals</li>
+<li>
+<code><a href="../reference/plot.tr_calibration.html">plot.tr_calibration()</a></code> - Calibration curve visualization</li>
+</ul></div>
+<div class="section level3">
+<h3 id="references-0-2-0">References<a class="anchor" aria-label="anchor" href="#references-0-2-0"></a></h3>
+<p>Voter SR, et al. Transportability of machine learning-based counterfactual prediction models with application to CASS. <em>Diagnostic and Prognostic Research</em>. 2025; 9(4). <a href="doi:10.1186/s41512-025-00201-y" class="uri">doi:10.1186/s41512-025-00201-y</a></p>
+<hr></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="cfperformance-010">cfperformance 0.1.0<a class="anchor" aria-label="anchor" href="#cfperformance-010"></a></h2>
 <p>Initial release implementing methods from Boyer, Dahabreh &amp; Steingrimsson (2025), “Estimating and evaluating counterfactual prediction models.”</p>
