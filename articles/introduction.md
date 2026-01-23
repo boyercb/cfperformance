@@ -188,6 +188,7 @@ cal_result <- cf_calibration(
 
 # Plot calibration curve
 plot(cal_result)
+#> Install 'patchwork' package for histogram subplot. Showing rug plot instead.
 ```
 
 ![](introduction_files/figure-html/calibration-example-1.png)
