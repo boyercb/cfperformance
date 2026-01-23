@@ -12,7 +12,7 @@
 
 - A prediction model will be deployed in settings where treatment policies differ from the training setting
 - Predictions are meant to support decisions about treatment initiation
-- You need valid performance estimates even when the prediction model is misspecified
+- You want to assess model performance after transporting from a source (e.g., RCT) to a target population
 
 Based on Boyer, Dahabreh & Steingrimsson (2025). "Estimating and evaluating counterfactual prediction models." *Statistics in Medicine*, 44(23-24), e70287. [doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
 
@@ -102,7 +102,7 @@ cf_compare(
 
 ## Transportability Analysis
 
-The package also implements transportability estimators from Voter et al. (2025) for evaluating prediction model performance when transporting from a source population (typically an RCT) to a target population:
+The package also implements transportability estimators from Steingrimsson et al. (2022) and Voter et al. (2025) for evaluating prediction model performance when transporting from a source population (typically an RCT) to a target population:
 
 ```r
 # Load transportability example data
@@ -189,6 +189,8 @@ Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating counterfactua
 
 For transportability methods, also cite:
 
+Steingrimsson JA, Gatsonis C, Li B, Dahabreh IJ. Transporting a Prediction Model for Use in a New Target Population. *American Journal of Epidemiology*. 2022; 192(2):296-304. doi:[10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
+
 Voter SR, et al. Transportability of machine learning-based counterfactual prediction models with application to CASS. *Diagnostic and Prognostic Research*. 2025; 9(4). doi:[10.1186/s41512-025-00201-y](https://doi.org/10.1186/s41512-025-00201-y)
 
 ```bibtex
@@ -203,9 +205,20 @@ Voter SR, et al. Transportability of machine learning-based counterfactual predi
   doi={10.1002/sim.70287}
 }
 
+@article{10.1093/aje/kwac128,
+    title = {Transporting a Prediction Model for Use in a New Target Population},
+    author = {Steingrimsson, Jon A. and Gatsonis, Constantine and Li, Bing and Dahabreh, Issa J.},
+    journal = {American Journal of Epidemiology},
+    volume = {192},
+    number = {2},
+    pages = {296-304},
+    year = {2022},
+    doi = {10.1093/aje/kwac128}
+}
+
 @article{voter2025transportability,
   title={Transportability of machine learning-based counterfactual prediction models with application to CASS},
-  author={Voter, Sarah R. and others},
+  author = {Voter, Sarah C. and Dahabreh, Issa J. and Boyer, Christopher B. and Rahbar, Habib and Kontos, Despina and Steingrimsson, Jon A.},
   journal={Diagnostic and Prognostic Research},
   volume={9},
   number={4},

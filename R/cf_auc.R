@@ -207,7 +207,7 @@ cf_auc <- function(predictions,
 
   # Propensity scores
   if (!is.null(propensity_model)) {
-    ps <- predict(propensity_model, type = "response")
+    ps <- .predict_nuisance(propensity_model, as.data.frame(covariates), type = "response")
     if (treatment_level == 0) {
       ps <- 1 - ps
     }
@@ -219,7 +219,7 @@ cf_auc <- function(predictions,
     if (is.null(full_data)) {
       full_data <- cbind(Y = outcomes, as.data.frame(covariates))
     }
-    q_hat <- predict(outcome_model, newdata = full_data, type = "response")
+    q_hat <- .predict_nuisance(outcome_model, full_data, type = "response")
   }
 
   # Indicator for treatment level

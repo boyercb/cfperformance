@@ -55,6 +55,7 @@ head(cvd_sim)
 ```
 
 The `cvd_sim` dataset contains simulated cardiovascular data with:
+
 - `age`, `bp`, `chol`: Patient covariates  
 - `treatment`: Binary treatment indicator (confounded by covariates)
 - `event`: Binary outcome (cardiovascular event)

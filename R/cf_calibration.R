@@ -86,7 +86,7 @@ cf_calibration <- function(predictions,
 
   # Get propensity scores
   if (estimator == "ipw") {
-    ps <- predict(propensity_model, type = "response")
+    ps <- .predict_nuisance(propensity_model, as.data.frame(covariates), type = "response")
     if (treatment_level == 0) {
       ps <- 1 - ps
     }
