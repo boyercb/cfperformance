@@ -1,0 +1,303 @@
+---
+title: "Transportability Analysis with cfperformance"
+author: "Christopher Boyer"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Transportability Analysis with cfperformance}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+
+collapse = TRUE,
+  comment = "#>",
+  fig.width = 6,
+  fig.height = 4
+)
+library(cfperformance)
+```
+
+## Overview
+
+This vignette demonstrates how to use the **transportability** functions in 
+`cfperformance` to evaluate prediction model performance when transporting 
+from a source population (such as a randomized controlled trial) to a target 
+population.
+
+The methods are based on Voter et al. (2025), "Transportability of machine 
+learning-based counterfactual prediction models with application to CASS," 
+*Diagnostic and Prognostic Research*, 9(4). 
+[doi:10.1186/s41512-025-00201-y](https://doi.org/10.1186/s41512-025-00201-y)
+
+## When to Use Transportability Analysis
+
+Transportability analysis is appropriate when:
+  
+1. **You have a prediction model** trained in one population (e.g., an RCT)
+2. **You want to evaluate performance** in a different target population
+3. **Treatment is randomized** in the source population
+4. **Covariates are measured** in both populations
+
+Common scenarios include:
+
+- Evaluating an RCT-derived risk score in a real-world patient population
+- Assessing whether a clinical prediction rule "transports" to a new setting
+- Understanding how model performance varies across populations
+
+## The Setting
+
+Consider two populations:
+
+- **Source (S=1)**: Often an RCT where treatment `A` is randomized
+- **Target (S=0)**: The population where we want to deploy the model
+
+We observe:
+- Covariates `X` in both populations
+- Treatment `A` in both populations  
+- Outcomes `Y` in the source (and possibly target)
+- Model predictions `g(X)` for all individuals
+
+The goal is to estimate the counterfactual prediction performance 
+$E[L(Y^a, g(X)) | S=0]$ — how well would the model perform in the target 
+population if everyone received treatment level `a`?
+
+## Using the Included Example Data
+
+The package includes a simulated transportability dataset:
+
+```{r load-data}
+data(transport_sim)
+head(transport_sim)
+
+# Population sizes
+cat("Source (RCT) n =", sum(transport_sim$source == 1), "\n")
+cat("Target n =", sum(transport_sim$source == 0), "\n")
+```
+
+The `transport_sim` dataset contains:
+- `age`, `biomarker`, `smoking`: Patient covariates
+- `source`: Population indicator (1 = source/RCT, 0 = target)
+- `treatment`: Binary treatment (randomized in source, confounded in target)
+- `event`: Binary outcome
+- `risk_score`: Predictions from a model trained in the source population
+
+## Transport Analysis
+
+The **transport analysis** uses outcomes from the source/RCT to estimate 
+performance in the target population. This is useful when:
+
+- Outcomes are only observed in the RCT
+- You want to leverage randomization in the source
+
+### Transportable MSE
+
+```{r tr-mse}
+mse_result <- tr_mse(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,  # Evaluate under no treatment
+  analysis = "transport",
+  estimator = "dr",
+  se_method = "none"
+)
+
+print(mse_result)
+```
+
+### Comparing Estimators
+
+Let's compare all four estimators:
+
+```{r compare-mse-estimators}
+estimators <- c("naive", "om", "ipw", "dr")
+
+mse_estimates <- sapply(estimators, function(est) {
+  result <- tr_mse(
+    predictions = transport_sim$risk_score,
+    outcomes = transport_sim$event,
+    treatment = transport_sim$treatment,
+    source = transport_sim$source,
+    covariates = transport_sim[, c("age", "biomarker", "smoking")],
+    treatment_level = 0,
+    analysis = "transport",
+    estimator = est,
+    se_method = "none"
+  )
+  result$estimate
+})
+
+data.frame(
+  Estimator = estimators,
+  MSE = round(mse_estimates, 4)
+)
+```
+
+- **naive**: Uses source data with A=0 only (ignores population differences)
+- **om** (outcome model): Models E[L|X,A,S=1] and averages over target X
+- **ipw**: Reweights source observations to match target population
+- **dr** (doubly robust): Combines outcome modeling and IPW
+
+### Transportable AUC
+
+For discrimination, we can estimate the transportable AUC:
+
+```{r tr-auc}
+auc_result <- tr_auc(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "transport",
+  estimator = "dr",
+  se_method = "none"
+)
+
+print(auc_result)
+```
+
+### Transportable Calibration
+
+To assess calibration in the target population:
+
+```{r tr-calibration}
+calib_result <- tr_calibration(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "transport",
+  estimator = "ipw",
+  smoother = "loess",
+  se_method = "none"
+)
+
+print(calib_result)
+```
+
+```{r plot-calibration, fig.cap="Transportable calibration curve for the target population"}
+plot(calib_result)
+```
+
+## Joint Analysis
+
+The **joint analysis** pools source and target data for potentially more 
+efficient estimation. This requires outcome data in both populations.
+
+```{r joint-mse}
+mse_joint <- tr_mse(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "joint",  # Pool data
+  estimator = "dr",
+  se_method = "none"
+)
+
+cat("Transport MSE:", round(mse_result$estimate, 4), "\n")
+cat("Joint MSE:", round(mse_joint$estimate, 4), "\n")
+```
+
+## Bootstrap Standard Errors
+
+For inference, use bootstrap standard errors:
+
+```{r bootstrap-se, eval=FALSE}
+mse_with_se <- tr_mse(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "transport",
+  estimator = "dr",
+  se_method = "bootstrap",
+  n_boot = 500,
+  stratified_boot = TRUE  # Preserve source/target ratio
+)
+
+summary(mse_with_se)
+confint(mse_with_se)
+```
+
+The `stratified_boot = TRUE` option (default) ensures that bootstrap samples 
+preserve the ratio of source to target observations, which is recommended for 
+transportability analysis.
+
+## Key Assumptions
+
+The transportability estimators rely on several assumptions:
+
+### 1. Positivity of Selection
+$$P(S=0|X) > 0 \text{ and } P(S=1|X) > 0 \text{ for all } X$$
+
+Both populations must have positive probability for all covariate values.
+
+### 2. Positivity of Treatment
+$$P(A=a|X, S=1) > 0 \text{ for the treatment level of interest}$$
+
+In the source population, the treatment level must have positive probability.
+
+### 3. Conditional Exchangeability (Transportability)
+$$(Y^a \perp S) | X$$
+
+The potential outcome is independent of population membership given covariates. 
+This means the source population is "representative" of how the outcome model 
+would perform in the target, after conditioning on X.
+
+### 4. Consistency
+$$Y = Y^A$$
+
+The observed outcome equals the potential outcome under the received treatment.
+
+## When to Use Each Function
+
+| Scenario | Function | Analysis |
+|----------|----------|----------|
+| Single population, observational data | `cf_mse()`, `cf_auc()`, `cf_calibration()` | - |
+| Source (RCT) to target, outcomes in source only | `tr_mse()`, `tr_auc()`, `tr_calibration()` | `"transport"` |
+| Source + target, outcomes in both | `tr_mse()`, `tr_auc()`, `tr_calibration()` | `"joint"` |
+
+## Comparison with cf_* Functions
+
+The `cf_*` functions (counterfactual) are for single-population analysis:
+
+- Use observational data from one population
+- Adjust for confounding between treatment and outcome
+- Equivalent to "Observational (OBS)" estimators in Voter et al.
+
+The `tr_*` functions (transportability) are for two-population analysis:
+
+- Transport from source to target population
+- Leverage randomization in source (if RCT)
+- Adjust for differences in covariate distributions
+
+## References
+
+Voter, S. R., et al. (2025). "Transportability of machine learning-based
+counterfactual prediction models with application to CASS."
+*Diagnostic and Prognostic Research*, 9(4).
+[doi:10.1186/s41512-025-00201-y](https://doi.org/10.1186/s41512-025-00201-y)
+
+Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
+"Estimating and evaluating counterfactual prediction models."
+*Statistics in Medicine*, 44(23-24), e70287.
+[doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
+
+Dahabreh, I. J., Robertson, S. E., Tchetgen, E. J., Stuart, E. A., & 
+Hernán, M. A. (2019). "Generalizing causal inferences from randomized 
+trials: counterfactual and graphical identification."
+*Biometrics*, 75(2), 685-694.
