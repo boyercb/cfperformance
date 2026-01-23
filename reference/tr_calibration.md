@@ -14,15 +14,15 @@ tr_calibration(
   covariates,
   treatment_level = 0,
   analysis = c("transport", "joint"),
-  estimator = c("ipw", "om"),
+  estimator = c("dr", "ipw", "om"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
   smoother = c("loess", "binned"),
   n_bins = 10,
   span = 0.75,
-  se_method = c("bootstrap", "none"),
-  n_boot = 500,
+  se_method = c("none", "bootstrap"),
+  n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
   ...
@@ -67,7 +67,9 @@ tr_calibration(
 
   Character string specifying the estimator:
 
-  - `"ipw"`: Inverse probability weighting estimator (default)
+  - `"dr"`: Doubly robust estimator (default)
+
+  - `"ipw"`: Inverse probability weighting estimator
 
   - `"om"`: Outcome model estimator
 
@@ -106,13 +108,13 @@ tr_calibration(
 
   Method for standard error estimation:
 
-  - `"bootstrap"`: Bootstrap standard errors (default)
+  - `"none"`: No standard error estimation (default, fastest)
 
-  - `"none"`: No standard error estimation
+  - `"bootstrap"`: Bootstrap standard errors
 
 - n_boot:
 
-  Number of bootstrap replications (default: 500).
+  Number of bootstrap replications (default: 200).
 
 - conf_level:
 

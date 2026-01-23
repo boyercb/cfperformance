@@ -18,6 +18,9 @@ cf_calibration(
   smoother = c("loess", "binned"),
   n_bins = 10,
   span = 0.75,
+  se_method = c("none", "bootstrap"),
+  n_boot = 200,
+  conf_level = 0.95,
   ...
 )
 ```
@@ -82,6 +85,22 @@ cf_calibration(
 
   Span parameter for LOESS smoothing (default: 0.75).
 
+- se_method:
+
+  Method for standard error estimation:
+
+  - `"none"`: No standard errors (default, fastest)
+
+  - `"bootstrap"`: Bootstrap standard errors
+
+- n_boot:
+
+  Number of bootstrap replications (default: 200).
+
+- conf_level:
+
+  Confidence level for intervals (default: 0.95).
+
 - ...:
 
   Additional arguments passed to internal functions.
@@ -118,6 +137,22 @@ An object of class `c("cf_calibration", "cf_performance")` containing:
 
   Maximum absolute calibration error
 
+- se:
+
+  List of standard errors (if se_method = "bootstrap")
+
+- ci_lower:
+
+  List of lower CI bounds (if se_method = "bootstrap")
+
+- ci_upper:
+
+  List of upper CI bounds (if se_method = "bootstrap")
+
+- boot_curves:
+
+  Bootstrap calibration curves for CI bands (if se_method = "bootstrap")
+
 ## Details
 
 The counterfactual calibration curve estimates the relationship between
@@ -130,8 +165,8 @@ receiving the counterfactual treatment. Requires a correctly specified
 propensity score model.
 
 **Conditional Loss (CL) Estimator**: Uses the fitted outcome model
-EY\|X, A=a to estimate calibration over all observations. Requires a
-correctly specified outcome model.
+\\E\[Y \| X, A=a\]\\ to estimate calibration over all observations.
+Requires a correctly specified outcome model.
 
 **Doubly Robust (DR) Estimator**: Combines CL and IPW approaches.
 Consistent if either the propensity or outcome model is correctly
@@ -198,4 +233,12 @@ print(result_dr)
 #>   Emax (Maximum error): 0.3784 
 #> 
 # plot(result_dr)  # If ggplot2 is available
+
+# With bootstrap confidence bands
+# result_boot <- cf_calibration(
+#   predictions = pred, outcomes = y, treatment = a,
+#   covariates = data.frame(x = x), treatment_level = 0,
+#   se_method = "bootstrap", n_boot = 200
+# )
+# plot(result_boot)  # Shows confidence bands
 ```

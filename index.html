@@ -176,7 +176,7 @@
 <code class="sourceCode R"><span><span class="co"># Load transportability example data</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">transport_sim</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Estimate transportable MSE in target population</span></span>
+<span><span class="co"># Estimate MSE in target population</span></span>
 <span><span class="fu"><a href="reference/tr_mse.html">tr_mse</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -189,7 +189,7 @@
 <span>  estimator <span class="op">=</span> <span class="st">"dr"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Transportable AUC</span></span>
+<span><span class="co"># Estimate AUC in the target population</span></span>
 <span><span class="fu"><a href="reference/tr_auc.html">tr_auc</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -201,7 +201,7 @@
 <span>  estimator <span class="op">=</span> <span class="st">"dr"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Transportable calibration</span></span>
+<span><span class="co"># Estimate calibration in the target population</span></span>
 <span><span class="fu"><a href="reference/tr_calibration.html">tr_calibration</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -243,10 +243,10 @@
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
 <p>If you use this package in your research, please cite:</p>
-<p>Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating counterfactual prediction models. <em>Statistics in Medicine</em>. 2025; 44(23-24):e70287. <a href="doi:%5B10.1002/sim.70287" class="uri">doi:[10.1002/sim.70287</a>](<a href="https://doi.org/10.1002/sim.70287" class="external-link uri">https://doi.org/10.1002/sim.70287</a>)</p>
+<p>Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating counterfactual prediction models. <em>Statistics in Medicine</em>. 2025; 44(23-24):e70287. doi: <a href="https://doi.org/10.1002/sim.70287" class="external-link">10.1002/sim.70287</a></p>
 <p>For transportability methods, also cite:</p>
-<p>Steingrimsson JA, Gatsonis C, Li B, Dahabreh IJ. Transporting a Prediction Model for Use in a New Target Population. <em>American Journal of Epidemiology</em>. 2022; 192(2):296-304. <a href="doi:%5B10.1093/aje/kwac128" class="uri">doi:[10.1093/aje/kwac128</a>](<a href="https://doi.org/10.1093/aje/kwac128" class="external-link uri">https://doi.org/10.1093/aje/kwac128</a>)</p>
-<p>Voter SR, et al. Transportability of machine learning-based counterfactual prediction models with application to CASS. <em>Diagnostic and Prognostic Research</em>. 2025; 9(4). <a href="doi:%5B10.1186/s41512-025-00201-y" class="uri">doi:[10.1186/s41512-025-00201-y</a>](<a href="https://doi.org/10.1186/s41512-025-00201-y" class="external-link uri">https://doi.org/10.1186/s41512-025-00201-y</a>)</p>
+<p>Steingrimsson JA, Gatsonis C, Li B, Dahabreh IJ. Transporting a Prediction Model for Use in a New Target Population. <em>American Journal of Epidemiology</em>. 2022; 192(2):296-304. doi: <a href="https://doi.org/10.1093/aje/kwac128" class="external-link">10.1093/aje/kwac128</a></p>
+<p>Voter SR, et al. Transportability of machine learning-based counterfactual prediction models with application to CASS. <em>Diagnostic and Prognostic Research</em>. 2025; 9(4). doi: <a href="https://doi.org/10.1186/s41512-025-00201-y" class="external-link">10.1186/s41512-025-00201-y</a></p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">boyer2025estimating</span>,</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="dt">title</span>={Estimating and Evaluating Counterfactual Prediction Models},</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="dt">author</span>={Boyer, Christopher B. and Dahabreh, Issa J. and Steingrimsson, Jon A.},</span>

@@ -120,7 +120,7 @@ prediction model performance when transporting from a source population
 # Load transportability example data
 data(transport_sim)
 
-# Estimate transportable MSE in target population
+# Estimate MSE in target population
 tr_mse(
   predictions = transport_sim$risk_score,
   outcomes = transport_sim$event,
@@ -133,7 +133,7 @@ tr_mse(
   estimator = "dr"
 )
 
-# Transportable AUC
+# Estimate AUC in the target population
 tr_auc(
   predictions = transport_sim$risk_score,
   outcomes = transport_sim$event,
@@ -145,7 +145,7 @@ tr_auc(
   estimator = "dr"
 )
 
-# Transportable calibration
+# Estimate calibration in the target population
 tr_calibration(
   predictions = transport_sim$risk_score,
   outcomes = transport_sim$event,
@@ -204,20 +204,20 @@ If you use this package in your research, please cite:
 
 Boyer CB, Dahabreh IJ, Steingrimsson JA. Estimating and evaluating
 counterfactual prediction models. *Statistics in Medicine*. 2025;
-44(23-24):e70287.
-<doi:%5B10.1002/sim.70287>\](<https://doi.org/10.1002/sim.70287>)
+44(23-24):e70287. doi:
+[10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
 
 For transportability methods, also cite:
 
 Steingrimsson JA, Gatsonis C, Li B, Dahabreh IJ. Transporting a
 Prediction Model for Use in a New Target Population. *American Journal
-of Epidemiology*. 2022; 192(2):296-304.
-<doi:%5B10.1093/aje/kwac128>\](<https://doi.org/10.1093/aje/kwac128>)
+of Epidemiology*. 2022; 192(2):296-304. doi:
+[10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
 
 Voter SR, et al. Transportability of machine learning-based
 counterfactual prediction models with application to CASS. *Diagnostic
-and Prognostic Research*. 2025; 9(4).
-<doi:%5B10.1186/s41512-025-00201-y>\](<https://doi.org/10.1186/s41512-025-00201-y>)
+and Prognostic Research*. 2025; 9(4). doi:
+[10.1186/s41512-025-00201-y](https://doi.org/10.1186/s41512-025-00201-y)
 
 ``` bibtex
 @article{boyer2025estimating,

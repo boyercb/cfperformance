@@ -220,7 +220,6 @@ print(calib_result)
 
 ``` r
 plot(calib_result)
-#> Install 'patchwork' package for histogram subplot.
 ```
 
 ![Transportable calibration curve for the target
