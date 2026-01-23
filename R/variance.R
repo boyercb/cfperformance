@@ -523,7 +523,8 @@ NULL
 
   # Initialize output vectors
   ps_cf <- numeric(n)  # Cross-fitted propensity scores
-  h_cf <- numeric(n)   # Cross-fitted conditional loss predictions
+  q_cf <- numeric(n)   # Cross-fitted outcome probabilities (for AUC)
+  h_cf <- numeric(n)   # Cross-fitted conditional loss predictions (for MSE)
 
   for (k in 1:K) {
     # Training and validation indices
@@ -575,6 +576,9 @@ NULL
                     type = "response")
     }
 
+    # Store outcome probability (q_hat) for AUC
+    q_cf[val_idx] <- pY
+
     # Compute conditional loss: E[(Y - pred)^2 | X, A=a] = p(1-p) + (p - pred)^2
     # For binary Y: E[Y^2] = p, so E[(Y - pred)^2] = p - 2*p*pred + pred^2
     h_cf[val_idx] <- pY - 2 * predictions[val_idx] * pY + predictions[val_idx]^2
@@ -582,6 +586,7 @@ NULL
 
   list(
     ps = ps_cf,
+    q = q_cf,
     h = h_cf,
     folds = folds
   )
@@ -641,6 +646,118 @@ NULL
     se = se,
     ps = ps,
     h = h,
+    folds = cf_nuisance$folds
+  )
+}
+
+
+#' Compute DR AUC with Cross-Fitting
+#'
+#' Computes the doubly robust AUC estimator using cross-fitted nuisance functions.
+#'
+#' @inheritParams cf_auc
+#' @param K Number of folds for cross-fitting.
+#' @param propensity_learner Optional ml_learner for propensity model.
+#' @param outcome_learner Optional ml_learner for outcome model.
+#' @param parallel Logical for parallel processing (not yet implemented).
+#' @param ... Additional arguments.
+#'
+#' @return Doubly robust AUC estimate with cross-fitting.
+#'
+#' @references
+#' Li, B., Gatsonis, C., Dahabreh, I. J., & Steingrimsson, J. A. (2022).
+#' "Estimating the area under the ROC curve when transporting a prediction
+#' model to a target population." *Biometrics*, 79(3), 2343-2356.
+#' \doi{10.1111/biom.13796}
+#'
+#' @keywords internal
+.compute_auc_crossfit <- function(predictions, outcomes, treatment, covariates,
+                                   treatment_level, K = 5,
+                                   propensity_learner = NULL,
+                                   outcome_learner = NULL,
+                                   parallel = FALSE,
+                                   ...) {
+
+  n <- length(outcomes)
+
+  # Get cross-fitted nuisance functions
+  cf_nuisance <- .cross_fit_nuisance(
+    treatment = treatment,
+    outcomes = outcomes,
+    covariates = covariates,
+    treatment_level = treatment_level,
+    predictions = predictions,
+    K = K,
+    propensity_learner = propensity_learner,
+    outcome_learner = outcome_learner,
+    parallel = parallel,
+    ...
+  )
+
+  ps <- cf_nuisance$ps
+  q_hat <- cf_nuisance$q
+
+  # Treatment indicator
+  I_a <- as.numeric(treatment == treatment_level)
+
+  # Truncate propensity scores for stability
+  ps <- pmax(pmin(ps, 0.99), 0.01)
+
+  # Concordance indicator matrix (f_i > f_j)
+  ind_f <- outer(predictions, predictions, ">")
+
+  # IPW component: reweight observed cases and controls
+  pi_ratio <- I_a / ps
+  mat_ipw0 <- outer(I_a * (outcomes == 1), I_a * (outcomes == 0), "*") *
+              outer(pi_ratio, pi_ratio, "*")
+  mat_ipw1 <- mat_ipw0 * ind_f
+
+  # OM component: use outcome model predictions
+  mat_om0 <- outer(q_hat, 1 - q_hat, "*")
+  mat_om1 <- mat_om0 * ind_f
+
+  # DR correction term: subtract overlap
+  mat_dr0 <- outer(I_a * pi_ratio * q_hat, I_a * pi_ratio * (1 - q_hat), "*")
+  diag(mat_dr0) <- 0
+  mat_dr1 <- mat_dr0 * ind_f
+
+  # DR estimator
+  numerator <- sum(mat_ipw1) + sum(mat_om1) - sum(mat_dr1)
+  denominator <- sum(mat_ipw0) + sum(mat_om0) - sum(mat_dr0)
+  estimate <- numerator / denominator
+
+  # Influence function for SE based on DeLong-like approach
+
+  # Compute V10: for each case i, proportion of controls with lower score
+  # Compute V01: for each control j, proportion of cases with higher score
+  cases <- which(outcomes == 1)
+  controls <- which(outcomes == 0)
+  n1 <- length(cases)
+  n0 <- length(controls)
+
+  V10 <- numeric(n1)
+  V01 <- numeric(n0)
+
+  for (i in seq_len(n1)) {
+    V10[i] <- mean(as.numeric(predictions[cases[i]] > predictions[controls]) +
+                   0.5 * as.numeric(predictions[cases[i]] == predictions[controls]))
+  }
+
+  for (j in seq_len(n0)) {
+    V01[j] <- mean(as.numeric(predictions[controls[j]] < predictions[cases]) +
+                   0.5 * as.numeric(predictions[controls[j]] == predictions[cases]))
+  }
+
+  # DeLong variance estimate
+  S10 <- if (n1 > 1) var(V10) else 0
+  S01 <- if (n0 > 1) var(V01) else 0
+  se <- sqrt(S10 / n1 + S01 / n0)
+
+  list(
+    estimate = estimate,
+    se = se,
+    ps = ps,
+    q = q_hat,
     folds = cf_nuisance$folds
   )
 }

@@ -31,6 +31,8 @@
 #' of treatment.
 #'
 #' **Doubly Robust (DR) Estimator**: Combines OM and IPW for double robustness.
+#' When `cross_fit = TRUE`, uses cross-fitting for valid inference with flexible
+#' ML methods (see [ml_learner()]).
 #'
 #' @references
 #' Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
@@ -39,9 +41,10 @@
 #'
 #' Li, B., Gatsonis, C., Dahabreh, I. J., & Steingrimsson, J. A. (2022).
 #' "Estimating the area under the ROC curve when transporting a prediction
-#' model to a target population." *Biometrics*.
+#' model to a target population." *Biometrics*, 79(3), 2343-2356.
+#' \doi{10.1111/biom.13796}
 #'
-#' @seealso [cf_mse()], [cf_calibration()]
+#' @seealso [cf_mse()], [cf_calibration()], [ml_learner()]
 #'
 #' @export
 #'
@@ -76,6 +79,8 @@ cf_auc <- function(predictions,
                    se_method = c("bootstrap", "influence", "none"),
                    n_boot = 500,
                    conf_level = 0.95,
+                   cross_fit = FALSE,
+                   n_folds = 5,
                    parallel = FALSE,
                    ncores = NULL,
                    ...) {
@@ -92,40 +97,79 @@ cf_auc <- function(predictions,
 
   n <- length(outcomes)
 
-  # Fit nuisance models if needed
-  if (estimator != "naive") {
-    nuisance <- .fit_nuisance_models(
-      treatment = treatment,
-      outcomes = outcomes,
-      covariates = covariates,
-      treatment_level = treatment_level,
-      propensity_model = propensity_model,
-      outcome_model = outcome_model
-    )
-  } else {
-    nuisance <- list(propensity = NULL, outcome = NULL)
-  }
+  # Detect if ml_learners are provided
+ use_ml_propensity <- is_ml_learner(propensity_model)
+  use_ml_outcome <- is_ml_learner(outcome_model)
 
-  # Compute point estimate
-  estimate <- .compute_auc(
-    predictions = predictions,
-    outcomes = outcomes,
-    treatment = treatment,
-    covariates = covariates,
-    treatment_level = treatment_level,
-    estimator = estimator,
-    propensity_model = nuisance$propensity,
-    outcome_model = nuisance$outcome
-  )
-
-  # Naive estimate
-  naive_estimate <- .compute_auc_naive(predictions, outcomes)
-
-  # Standard errors
+  # Initialize SE variables
   se <- NULL
   ci_lower <- NULL
   ci_upper <- NULL
 
+  # Fit nuisance models if needed
+  if (estimator != "naive") {
+    if (cross_fit && estimator == "dr") {
+      # Use cross-fitting for DR estimator
+      cf_result <- .compute_auc_crossfit(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        K = n_folds,
+        propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+        outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        parallel = parallel,
+        ...
+      )
+      estimate <- cf_result$estimate
+      nuisance <- list(propensity = NULL, outcome = NULL,
+                       cross_fitted = TRUE,
+                       ps = cf_result$ps,
+                       q = cf_result$q,
+                       folds = cf_result$folds)
+
+      # SE from cross-fitting
+      if (se_method == "influence") {
+        se <- cf_result$se
+        z <- qnorm(1 - (1 - conf_level) / 2)
+        ci_lower <- estimate - z * se
+        ci_upper <- estimate + z * se
+      }
+    } else {
+      nuisance <- .fit_nuisance_models(
+        treatment = treatment,
+        outcomes = outcomes,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        propensity_model = propensity_model,
+        outcome_model = outcome_model
+      )
+      estimate <- NULL
+    }
+  } else {
+    nuisance <- list(propensity = NULL, outcome = NULL)
+    estimate <- NULL
+  }
+
+  # Compute point estimate (if not already computed via cross-fitting)
+  if (is.null(estimate)) {
+    estimate <- .compute_auc(
+      predictions = predictions,
+      outcomes = outcomes,
+      treatment = treatment,
+      covariates = covariates,
+      treatment_level = treatment_level,
+      estimator = estimator,
+      propensity_model = nuisance$propensity,
+      outcome_model = nuisance$outcome
+    )
+  }
+
+  # Naive estimate
+  naive_estimate <- .compute_auc_naive(predictions, outcomes)
+
+  # Standard errors (if not already computed via cross-fitting)
   if (se_method == "bootstrap") {
     boot_result <- .bootstrap_auc(
       predictions = predictions,
@@ -142,7 +186,7 @@ cf_auc <- function(predictions,
     se <- boot_result$se
     ci_lower <- boot_result$ci_lower
     ci_upper <- boot_result$ci_upper
-  } else if (se_method == "influence") {
+  } else if (se_method == "influence" && !(cross_fit && estimator == "dr")) {
     se <- .influence_se_auc(
       predictions = predictions,
       outcomes = outcomes,

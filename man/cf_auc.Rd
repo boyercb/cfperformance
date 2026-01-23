@@ -16,6 +16,8 @@ cf_auc(
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
+  cross_fit = FALSE,
+  n_folds = 5,
   parallel = FALSE,
   ncores = NULL,
   ...
@@ -57,6 +59,12 @@ regression model is fit using the covariates among treated/untreated.}
 
 \item{conf_level}{Confidence level for intervals (default: 0.95).}
 
+\item{cross_fit}{Logical indicating whether to use cross-fitting for
+nuisance model estimation (default: FALSE). Cross-fitting enables
+valid inference when using flexible machine learning estimators.}
+
+\item{n_folds}{Number of folds for cross-fitting (default: 5).}
+
 \item{parallel}{Logical indicating whether to use parallel processing
 for bootstrap (default: FALSE).}
 
@@ -96,6 +104,8 @@ predicted probability of case/non-case status under the counterfactual.
 of treatment.
 
 \strong{Doubly Robust (DR) Estimator}: Combines OM and IPW for double robustness.
+When \code{cross_fit = TRUE}, uses cross-fitting for valid inference with flexible
+ML methods (see \code{\link[=ml_learner]{ml_learner()}}).
 }
 \examples{
 # Generate example data
@@ -125,8 +135,9 @@ Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
 
 Li, B., Gatsonis, C., Dahabreh, I. J., & Steingrimsson, J. A. (2022).
 "Estimating the area under the ROC curve when transporting a prediction
-model to a target population." \emph{Biometrics}.
+model to a target population." \emph{Biometrics}, 79(3), 2343-2356.
+\doi{10.1111/biom.13796}
 }
 \seealso{
-\code{\link[=cf_mse]{cf_mse()}}, \code{\link[=cf_calibration]{cf_calibration()}}
+\code{\link[=cf_mse]{cf_mse()}}, \code{\link[=cf_calibration]{cf_calibration()}}, \code{\link[=ml_learner]{ml_learner()}}
 }

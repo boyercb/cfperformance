@@ -91,3 +91,73 @@ test_that("cf_auc different estimators work", {
     expect_true(r$estimate >= 0 && r$estimate <= 1)
   }
 })
+
+
+test_that("cf_auc cross_fit with ML learners works", {
+  skip_if_not_installed("ranger")
+
+  set.seed(42)
+  n <- 200
+  x <- rnorm(n)
+  a <- rbinom(n, 1, plogis(-0.5 + 0.5 * x))
+  y <- rbinom(n, 1, plogis(-1 + x - 0.5 * a))
+  pred <- plogis(-1 + 0.8 * x)
+
+  result <- cf_auc(
+    predictions = pred,
+    outcomes = y,
+    treatment = a,
+    covariates = data.frame(x = x),
+    treatment_level = 0,
+    estimator = "dr",
+    propensity_model = ml_learner("ranger", num.trees = 50),
+    outcome_model = ml_learner("ranger", num.trees = 50),
+    cross_fit = TRUE,
+    n_folds = 3,
+    se_method = "influence"
+  )
+
+  expect_s3_class(result, "cf_auc")
+  expect_true(result$estimate >= 0 && result$estimate <= 1)
+  expect_true(!is.null(result$se))
+  expect_true(result$se > 0)
+})
+
+
+test_that("cf_auc cross_fit only works with DR estimator",
+{
+  set.seed(42)
+  n <- 100
+  x <- rnorm(n)
+  a <- rbinom(n, 1, plogis(-0.5 + 0.5 * x))
+  y <- rbinom(n, 1, plogis(-1 + x - 0.5 * a))
+  pred <- plogis(-1 + 0.8 * x)
+
+  # Cross-fitting with DR should work
+  result_dr <- cf_auc(
+    predictions = pred,
+    outcomes = y,
+    treatment = a,
+    covariates = data.frame(x = x),
+    treatment_level = 0,
+    estimator = "dr",
+    cross_fit = TRUE,
+    n_folds = 3,
+    se_method = "none"
+  )
+  expect_s3_class(result_dr, "cf_auc")
+
+  # Cross-fitting with other estimators falls back to non-cross-fit
+  result_ipw <- cf_auc(
+    predictions = pred,
+    outcomes = y,
+    treatment = a,
+    covariates = data.frame(x = x),
+    treatment_level = 0,
+    estimator = "ipw",
+    cross_fit = TRUE,
+    n_folds = 3,
+    se_method = "none"
+  )
+  expect_s3_class(result_ipw, "cf_auc")
+})
