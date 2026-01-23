@@ -19,6 +19,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/introduction.html">Introduction to cfperformance</a></li>
+    <li><a class="dropdown-item" href="../articles/transportability.html">Transportability Analysis</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -36,9 +37,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="counterfactual-performance-single-population-">Counterfactual Performance (Single Population)<a class="anchor" aria-label="anchor" href="#counterfactual-performance-single-population-"></a></h2>
 
-
+      <div class="section-desc"><p>Estimate prediction model performance under counterfactual interventions</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -46,6 +47,13 @@
 
 
       <dl><dt>
+
+          <code><a href="cf_mse.html">cf_mse()</a></code>
+
+        </dt>
+        <dd>Estimate Counterfactual Mean Squared Error</dd>
+
+        <dt>
 
           <code><a href="cf_auc.html">cf_auc()</a></code>
 
@@ -58,15 +66,47 @@
 
         </dt>
         <dd>Estimate Counterfactual Calibration Curve</dd>
+      </dl></div><div class="section level2">
+      <h2 id="transportability-two-populations-">Transportability (Two Populations)<a class="anchor" aria-label="anchor" href="#transportability-two-populations-"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>Transport prediction model performance from source to target population</p></div>
 
-          <code><a href="cf_compare.html">cf_compare()</a></code>
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="tr_mse.html">tr_mse()</a></code>
 
         </dt>
-        <dd>Compare Multiple Prediction Models</dd>
+        <dd>Estimate Transportable Mean Squared Error</dd>
 
         <dt>
+
+          <code><a href="tr_auc.html">tr_auc()</a></code>
+
+        </dt>
+        <dd>Estimate Transportable Area Under the ROC Curve</dd>
+
+        <dt>
+
+          <code><a href="tr_calibration.html">tr_calibration()</a></code>
+
+        </dt>
+        <dd>Estimate Transportable Calibration</dd>
+      </dl></div><div class="section level2">
+      <h2 id="model-selection">Model Selection<a class="anchor" aria-label="anchor" href="#model-selection"></a></h2>
+
+      <div class="section-desc"><p>Cross-validation and model comparison</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="cf_cv.html">cf_cv()</a></code>
 
@@ -75,12 +115,37 @@
 
         <dt>
 
-          <code><a href="cf_mse.html">cf_mse()</a></code>
+          <code><a href="cf_compare.html">cf_compare()</a></code>
 
         </dt>
-        <dd>Estimate Counterfactual Mean Squared Error</dd>
+        <dd>Compare Multiple Prediction Models</dd>
+      </dl></div><div class="section level2">
+      <h2 id="nuisance-models">Nuisance Models<a class="anchor" aria-label="anchor" href="#nuisance-models"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>Fit propensity and outcome models</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="fit_nuisance.html">fit_nuisance()</a></code>
+
+        </dt>
+        <dd>Fit Nuisance Models for Counterfactual Performance Estimation</dd>
+      </dl></div><div class="section level2">
+      <h2 id="s-methods">S3 Methods<a class="anchor" aria-label="anchor" href="#s-methods"></a></h2>
+
+      <div class="section-desc"><p>Methods for result objects</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="coef.cf_performance.html">coef(<i>&lt;cf_performance&gt;</i>)</a></code>
 
@@ -107,20 +172,6 @@
 
         </dt>
         <dd>Confidence Interval Method for tr_performance Objects</dd>
-
-        <dt>
-
-          <code><a href="cvd_sim.html">cvd_sim</a></code>
-
-        </dt>
-        <dd>Simulated Cardiovascular Disease Data</dd>
-
-        <dt>
-
-          <code><a href="fit_nuisance.html">fit_nuisance()</a></code>
-
-        </dt>
-        <dd>Fit Nuisance Models for Counterfactual Performance Estimation</dd>
 
         <dt>
 
@@ -205,27 +256,22 @@
 
         </dt>
         <dd>Summary Method for tr_performance Objects</dd>
+      </dl></div><div class="section level2">
+      <h2 id="example-data">Example Data<a class="anchor" aria-label="anchor" href="#example-data"></a></h2>
 
-        <dt>
 
-          <code><a href="tr_auc.html">tr_auc()</a></code>
 
-        </dt>
-        <dd>Estimate Transportable Area Under the ROC Curve</dd>
+      <dl></dl></div><div class="section level2">
 
-        <dt>
 
-          <code><a href="tr_calibration.html">tr_calibration()</a></code>
 
-        </dt>
-        <dd>Estimate Transportable Calibration</dd>
 
-        <dt>
+      <dl><dt>
 
-          <code><a href="tr_mse.html">tr_mse()</a></code>
+          <code><a href="cvd_sim.html">cvd_sim</a></code>
 
         </dt>
-        <dd>Estimate Transportable Mean Squared Error</dd>
+        <dd>Simulated Cardiovascular Disease Data</dd>
 
         <dt>
 
@@ -234,7 +280,8 @@
         </dt>
         <dd>Simulated Transportability Data</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

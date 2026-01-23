@@ -209,18 +209,48 @@ MIT License
 
 # Package index
 
-## All functions
+## Counterfactual Performance (Single Population)
 
+Estimate prediction model performance under counterfactual interventions
+
+- [`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md)
+  : Estimate Counterfactual Mean Squared Error
 - [`cf_auc()`](https://boyercb.github.io/cfperformance/reference/cf_auc.md)
   : Estimate Counterfactual Area Under the ROC Curve
 - [`cf_calibration()`](https://boyercb.github.io/cfperformance/reference/cf_calibration.md)
   : Estimate Counterfactual Calibration Curve
-- [`cf_compare()`](https://boyercb.github.io/cfperformance/reference/cf_compare.md)
-  : Compare Multiple Prediction Models
+
+## Transportability (Two Populations)
+
+Transport prediction model performance from source to target population
+
+- [`tr_mse()`](https://boyercb.github.io/cfperformance/reference/tr_mse.md)
+  : Estimate Transportable Mean Squared Error
+- [`tr_auc()`](https://boyercb.github.io/cfperformance/reference/tr_auc.md)
+  : Estimate Transportable Area Under the ROC Curve
+- [`tr_calibration()`](https://boyercb.github.io/cfperformance/reference/tr_calibration.md)
+  : Estimate Transportable Calibration
+
+## Model Selection
+
+Cross-validation and model comparison
+
 - [`cf_cv()`](https://boyercb.github.io/cfperformance/reference/cf_cv.md)
   : Cross-Validation with Counterfactual Performance Metrics
-- [`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md)
-  : Estimate Counterfactual Mean Squared Error
+- [`cf_compare()`](https://boyercb.github.io/cfperformance/reference/cf_compare.md)
+  : Compare Multiple Prediction Models
+
+## Nuisance Models
+
+Fit propensity and outcome models
+
+- [`fit_nuisance()`](https://boyercb.github.io/cfperformance/reference/fit_nuisance.md)
+  : Fit Nuisance Models for Counterfactual Performance Estimation
+
+## S3 Methods
+
+Methods for result objects
+
 - [`coef(`*`<cf_performance>`*`)`](https://boyercb.github.io/cfperformance/reference/coef.cf_performance.md)
   : Coefficient Method for cf_performance Objects
 - [`coef(`*`<tr_performance>`*`)`](https://boyercb.github.io/cfperformance/reference/coef.tr_performance.md)
@@ -229,10 +259,6 @@ MIT License
   : Confidence Interval Method for cf_performance Objects
 - [`confint(`*`<tr_performance>`*`)`](https://boyercb.github.io/cfperformance/reference/confint.tr_performance.md)
   : Confidence Interval Method for tr_performance Objects
-- [`cvd_sim`](https://boyercb.github.io/cfperformance/reference/cvd_sim.md)
-  : Simulated Cardiovascular Disease Data
-- [`fit_nuisance()`](https://boyercb.github.io/cfperformance/reference/fit_nuisance.md)
-  : Fit Nuisance Models for Counterfactual Performance Estimation
 - [`plot(`*`<cf_auc>`*`)`](https://boyercb.github.io/cfperformance/reference/plot.cf_auc.md)
   : Plot Method for cf_auc Objects
 - [`plot(`*`<cf_calibration>`*`)`](https://boyercb.github.io/cfperformance/reference/plot.cf_calibration.md)
@@ -257,12 +283,11 @@ MIT License
   : Summary Method for cf_performance Objects
 - [`summary(`*`<tr_performance>`*`)`](https://boyercb.github.io/cfperformance/reference/summary.tr_performance.md)
   : Summary Method for tr_performance Objects
-- [`tr_auc()`](https://boyercb.github.io/cfperformance/reference/tr_auc.md)
-  : Estimate Transportable Area Under the ROC Curve
-- [`tr_calibration()`](https://boyercb.github.io/cfperformance/reference/tr_calibration.md)
-  : Estimate Transportable Calibration
-- [`tr_mse()`](https://boyercb.github.io/cfperformance/reference/tr_mse.md)
-  : Estimate Transportable Mean Squared Error
+
+## Example Data
+
+- [`cvd_sim`](https://boyercb.github.io/cfperformance/reference/cvd_sim.md)
+  : Simulated Cardiovascular Disease Data
 - [`transport_sim`](https://boyercb.github.io/cfperformance/reference/transport_sim.md)
   : Simulated Transportability Data
 

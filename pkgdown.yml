@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   introduction: introduction.html
   transportability: transportability.html
-last_built: 2026-01-23T02:40Z
+last_built: 2026-01-23T12:01Z
 urls:
   reference: https://boyercb.github.io/cfperformance/reference
   article: https://boyercb.github.io/cfperformance/articles
