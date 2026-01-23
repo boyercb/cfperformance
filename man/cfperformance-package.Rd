@@ -6,6 +6,8 @@
 \alias{cfperformance-package}
 \title{cfperformance: Counterfactual Prediction Model Performance Estimation}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 Provides methods for estimating model performance measures (mean squared error, area under the ROC curve, calibration) under hypothetical/counterfactual interventions. Implements conditional loss, inverse probability weighting, and doubly robust estimators from Boyer, Dahabreh & Steingrimsson (2025) \doi{10.1002/sim.70287}. These methods are essential when prediction models will be deployed in settings where treatment policies differ from training, or when predictions support treatment decisions.
 
 Provides methods for estimating model performance measures (MSE, AUC,

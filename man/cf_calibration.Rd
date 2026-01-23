@@ -10,7 +10,7 @@ cf_calibration(
   treatment,
   covariates,
   treatment_level = 0,
-  estimator = c("ipw", "cl"),
+  estimator = c("dr", "ipw", "cl"),
   propensity_model = NULL,
   outcome_model = NULL,
   smoother = c("loess", "binned"),
@@ -73,8 +73,19 @@ intervention where treatment is set to a specific level.
 \details{
 The counterfactual calibration curve estimates the relationship between
 predicted risk and observed risk under the counterfactual intervention.
-This is done by applying inverse probability weights to the calibration
-curve estimation.
+
+The function implements three estimators:
+
+\strong{IPW Estimator}: Weights observations by the inverse probability of
+receiving the counterfactual treatment. Requires a correctly specified
+propensity score model.
+
+\strong{Conditional Loss (CL) Estimator}: Uses the fitted outcome model
+E\link{Y|X, A=a} to estimate calibration over all observations. Requires a
+correctly specified outcome model.
+
+\strong{Doubly Robust (DR) Estimator}: Combines CL and IPW approaches. Consistent
+if either the propensity or outcome model is correctly specified.
 }
 \examples{
 # Generate example data
@@ -85,21 +96,35 @@ a <- rbinom(n, 1, plogis(-0.5 + 0.5 * x))
 y <- rbinom(n, 1, plogis(-1 + x - 0.5 * a))
 pred <- plogis(-1 + 0.8 * x)
 
-# Estimate counterfactual calibration curve
-result <- cf_calibration(
+# Estimate counterfactual calibration curve with different estimators
+result_ipw <- cf_calibration(
   predictions = pred,
   outcomes = y,
   treatment = a,
   covariates = data.frame(x = x),
-  treatment_level = 0
+  treatment_level = 0,
+  estimator = "ipw"
 )
-print(result)
-# plot(result)  # If ggplot2 is available
+
+result_dr <- cf_calibration(
+  predictions = pred,
+  outcomes = y,
+  treatment = a,
+  covariates = data.frame(x = x),
+  treatment_level = 0,
+  estimator = "dr"
+)
+print(result_dr)
+# plot(result_dr)  # If ggplot2 is available
 }
 \references{
 Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
 "Estimating and evaluating counterfactual prediction models."
 \emph{Statistics in Medicine}, 44(23-24), e70287. \doi{10.1002/sim.70287}
+
+Steingrimsson, J. A., Gatsonis, C., Li, B., & Dahabreh, I. J. (2023).
+"Transporting a prediction model for use in a new target population."
+\emph{American Journal of Epidemiology}, 192(2), 296-304.
 }
 \seealso{
 \code{\link[=cf_mse]{cf_mse()}}, \code{\link[=cf_auc]{cf_auc()}}, \code{\link[=plot.cf_calibration]{plot.cf_calibration()}}
