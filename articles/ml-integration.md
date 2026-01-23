@@ -280,16 +280,22 @@ cf_mse(
 
 ## Current Support
 
-ML learners with cross-fitting are currently fully supported in
-[`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md).
+ML learners with cross-fitting are currently fully supported in:
+
+- [`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md) -
+  Counterfactual mean squared error
+- [`cf_auc()`](https://boyercb.github.io/cfperformance/reference/cf_auc.md) -
+  Counterfactual AUC (doubly robust estimator only)
+
 Support for
-[`cf_auc()`](https://boyercb.github.io/cfperformance/reference/cf_auc.md),
-[`cf_calibration()`](https://boyercb.github.io/cfperformance/reference/cf_calibration.md),
+[`cf_calibration()`](https://boyercb.github.io/cfperformance/reference/cf_calibration.md)
 and the transportability variants is planned for a future release.
+
+### MSE with ML Learners
 
 ``` r
 # Full example with ML nuisance models
-result_ml <- cf_mse(
+result_mse <- cf_mse(
   predictions = pred,
   outcomes = y,
   treatment = a,
@@ -303,7 +309,7 @@ result_ml <- cf_mse(
   se_method = "influence"
 )
 
-print(result_ml)
+print(result_mse)
 #> 
 #> Counterfactual MSE Estimation
 #> ---------------------------------------- 
@@ -315,6 +321,38 @@ print(result_ml)
 #> 95% CI: [0.2021, 0.2471]
 #> 
 #> Naive estimate: 0.2081
+```
+
+### AUC with ML Learners
+
+``` r
+# AUC estimation with ML nuisance models
+result_auc <- cf_auc(
+  predictions = pred,
+  outcomes = y,
+  treatment = a,
+  covariates = df,
+  treatment_level = 0,
+  estimator = "dr",
+  propensity_model = ml_learner("ranger", num.trees = 100),
+  outcome_model = ml_learner("ranger", num.trees = 100),
+  cross_fit = TRUE,
+  n_folds = 5,
+  se_method = "influence"
+)
+
+print(result_auc)
+#> 
+#> Counterfactual AUC Estimation
+#> ---------------------------------------- 
+#> Estimator: dr 
+#> Treatment level: 0 
+#> N observations: 1000 
+#> 
+#> Estimate: 0.6073 (SE: 0.0197 )
+#> 95% CI: [0.5687, 0.6458]
+#> 
+#> Naive estimate: 0.5994
 ```
 
 ## Best Practices

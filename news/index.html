@@ -53,6 +53,13 @@
 <li>Seamlessly integrates with existing <code>propensity_model</code>/<code>outcome_model</code> arguments</li>
 </ul></div>
 <div class="section level4">
+<h4 id="cross-fitting-support-0-3-0">Cross-Fitting Support<a class="anchor" aria-label="anchor" href="#cross-fitting-support-0-3-0"></a></h4>
+<ul><li>
+<code><a href="../reference/cf_mse.html">cf_mse()</a></code> - Full support for ML learners with cross-fitting</li>
+<li>
+<code><a href="../reference/cf_auc.html">cf_auc()</a></code> - Full support for ML learners with cross-fitting (DR estimator)</li>
+</ul></div>
+<div class="section level4">
 <h4 id="supported-learners-0-3-0">Supported Learners<a class="anchor" aria-label="anchor" href="#supported-learners-0-3-0"></a></h4>
 <ul><li>
 <strong>ranger</strong> - Fast random forest implementation</li>
@@ -70,10 +77,19 @@
 <div class="section level4">
 <h4 id="usage-example-0-3-0">Usage Example<a class="anchor" aria-label="anchor" href="#usage-example-0-3-0"></a></h4>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="co"># MSE with ML learners</span></span>
+<span><span class="fu"><a href="../reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">pred</span>, outcomes <span class="op">=</span> <span class="va">y</span>, treatment <span class="op">=</span> <span class="va">a</span>, covariates <span class="op">=</span> <span class="va">df</span>,</span>
 <span>  propensity_model <span class="op">=</span> <span class="fu"><a href="../reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"ranger"</span>, num.trees <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
 <span>  outcome_model <span class="op">=</span> <span class="fu"><a href="../reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"xgboost"</span>, nrounds <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
+<span>  cross_fit <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># AUC with ML learners</span></span>
+<span><span class="fu"><a href="../reference/cf_auc.html">cf_auc</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">pred</span>, outcomes <span class="op">=</span> <span class="va">y</span>, treatment <span class="op">=</span> <span class="va">a</span>, covariates <span class="op">=</span> <span class="va">df</span>,</span>
+<span>  propensity_model <span class="op">=</span> <span class="fu"><a href="../reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"ranger"</span>, num.trees <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
+<span>  outcome_model <span class="op">=</span> <span class="fu"><a href="../reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"ranger"</span>, num.trees <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
 <span>  cross_fit <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -86,6 +102,7 @@
 <div class="section level3">
 <h3 id="references-0-3-0">References<a class="anchor" aria-label="anchor" href="#references-0-3-0"></a></h3>
 <p>Chernozhukov, V., et al. (2018). Double/debiased machine learning for treatment and structural parameters. <em>The Econometrics Journal</em>, 21(1), C1-C68.</p>
+<p>Li, B., Gatsonis, C., Dahabreh, I. J., &amp; Steingrimsson, J. A. (2022). Estimating the area under the ROC curve when transporting a prediction model to a target population. <em>Biometrics</em>, 79(3), 2343-2356.</p>
 <hr></div>
 </div>
     <div class="section level2">

@@ -63,6 +63,8 @@ set to a specific level.</p>
 <span>  se_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"bootstrap"</span>, <span class="st">"influence"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
 <span>  n_boot <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>  conf_level <span class="op">=</span> <span class="fl">0.95</span>,</span>
+<span>  cross_fit <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  n_folds <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  parallel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  ncores <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -126,6 +128,16 @@ regression model is fit using the covariates among treated/untreated.</p></dd>
 <dd><p>Confidence level for intervals (default: 0.95).</p></dd>
 
 
+<dt id="arg-cross-fit">cross_fit<a class="anchor" aria-label="anchor" href="#arg-cross-fit"></a></dt>
+<dd><p>Logical indicating whether to use cross-fitting for
+nuisance model estimation (default: FALSE). Cross-fitting enables
+valid inference when using flexible machine learning estimators.</p></dd>
+
+
+<dt id="arg-n-folds">n_folds<a class="anchor" aria-label="anchor" href="#arg-n-folds"></a></dt>
+<dd><p>Number of folds for cross-fitting (default: 5).</p></dd>
+
+
 <dt id="arg-parallel">parallel<a class="anchor" aria-label="anchor" href="#arg-parallel"></a></dt>
 <dd><p>Logical indicating whether to use parallel processing
 for bootstrap (default: FALSE).</p></dd>
@@ -179,7 +191,9 @@ the outcome.</p>
 predicted probability of case/non-case status under the counterfactual.</p>
 <p><strong>IPW Estimator</strong>: Weights concordant pairs by the inverse probability
 of treatment.</p>
-<p><strong>Doubly Robust (DR) Estimator</strong>: Combines OM and IPW for double robustness.</p>
+<p><strong>Doubly Robust (DR) Estimator</strong>: Combines OM and IPW for double robustness.
+When <code>cross_fit = TRUE</code>, uses cross-fitting for valid inference with flexible
+ML methods (see <code><a href="ml_learner.html">ml_learner()</a></code>).</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -188,11 +202,12 @@ of treatment.</p>
 <em>Statistics in Medicine</em>, 44(23-24), e70287. <a href="https://doi.org/10.1002/sim.70287" class="external-link">doi:10.1002/sim.70287</a></p>
 <p>Li, B., Gatsonis, C., Dahabreh, I. J., &amp; Steingrimsson, J. A. (2022).
 "Estimating the area under the ROC curve when transporting a prediction
-model to a target population." <em>Biometrics</em>.</p>
+model to a target population." <em>Biometrics</em>, 79(3), 2343-2356.
+<a href="https://doi.org/10.1111/biom.13796" class="external-link">doi:10.1111/biom.13796</a></p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="cf_mse.html">cf_mse()</a></code>, <code><a href="cf_calibration.html">cf_calibration()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="cf_mse.html">cf_mse()</a></code>, <code><a href="cf_calibration.html">cf_calibration()</a></code>, <code><a href="ml_learner.html">ml_learner()</a></code></p></div>
     </div>
 
     <div class="section level2">

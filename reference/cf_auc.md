@@ -19,6 +19,8 @@ cf_auc(
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
+  cross_fit = FALSE,
+  n_folds = 5,
   parallel = FALSE,
   ncores = NULL,
   ...
@@ -87,6 +89,16 @@ cf_auc(
 
   Confidence level for intervals (default: 0.95).
 
+- cross_fit:
+
+  Logical indicating whether to use cross-fitting for nuisance model
+  estimation (default: FALSE). Cross-fitting enables valid inference
+  when using flexible machine learning estimators.
+
+- n_folds:
+
+  Number of folds for cross-fitting (default: 5).
+
 - parallel:
 
   Logical indicating whether to use parallel processing for bootstrap
@@ -153,7 +165,9 @@ predicted probability of case/non-case status under the counterfactual.
 of treatment.
 
 **Doubly Robust (DR) Estimator**: Combines OM and IPW for double
-robustness.
+robustness. When `cross_fit = TRUE`, uses cross-fitting for valid
+inference with flexible ML methods (see
+[`ml_learner()`](https://boyercb.github.io/cfperformance/reference/ml_learner.md)).
 
 ## References
 
@@ -164,12 +178,14 @@ Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
 
 Li, B., Gatsonis, C., Dahabreh, I. J., & Steingrimsson, J. A. (2022).
 "Estimating the area under the ROC curve when transporting a prediction
-model to a target population." *Biometrics*.
+model to a target population." *Biometrics*, 79(3), 2343-2356.
+[doi:10.1111/biom.13796](https://doi.org/10.1111/biom.13796)
 
 ## See also
 
 [`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md),
-[`cf_calibration()`](https://boyercb.github.io/cfperformance/reference/cf_calibration.md)
+[`cf_calibration()`](https://boyercb.github.io/cfperformance/reference/cf_calibration.md),
+[`ml_learner()`](https://boyercb.github.io/cfperformance/reference/ml_learner.md)
 
 ## Examples
 

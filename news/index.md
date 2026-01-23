@@ -17,6 +17,13 @@ with automatic cross-fitting for valid inference.
 - Seamlessly integrates with existing `propensity_model`/`outcome_model`
   arguments
 
+#### Cross-Fitting Support
+
+- [`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md) -
+  Full support for ML learners with cross-fitting
+- [`cf_auc()`](https://boyercb.github.io/cfperformance/reference/cf_auc.md) -
+  Full support for ML learners with cross-fitting (DR estimator)
+
 #### Supported Learners
 
 - **ranger** - Fast random forest implementation
@@ -29,10 +36,19 @@ with automatic cross-fitting for valid inference.
 #### Usage Example
 
 ``` r
+# MSE with ML learners
 cf_mse(
   predictions = pred, outcomes = y, treatment = a, covariates = df,
   propensity_model = ml_learner("ranger", num.trees = 500),
   outcome_model = ml_learner("xgboost", nrounds = 100),
+  cross_fit = TRUE
+)
+
+# AUC with ML learners
+cf_auc(
+  predictions = pred, outcomes = y, treatment = a, covariates = df,
+  propensity_model = ml_learner("ranger", num.trees = 500),
+  outcome_model = ml_learner("ranger", num.trees = 500),
   cross_fit = TRUE
 )
 ```
@@ -47,6 +63,10 @@ cf_mse(
 Chernozhukov, V., et al. (2018). Double/debiased machine learning for
 treatment and structural parameters. *The Econometrics Journal*, 21(1),
 C1-C68.
+
+Li, B., Gatsonis, C., Dahabreh, I. J., & Steingrimsson, J. A. (2022).
+Estimating the area under the ROC curve when transporting a prediction
+model to a target population. *Biometrics*, 79(3), 2343-2356.
 
 ------------------------------------------------------------------------
 

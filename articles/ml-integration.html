@@ -382,13 +382,22 @@ estimation:</p>
 <div class="section level2">
 <h2 id="current-support">Current Support<a class="anchor" aria-label="anchor" href="#current-support"></a>
 </h2>
-<p>ML learners with cross-fitting are currently fully supported in
-<code><a href="../reference/cf_mse.html">cf_mse()</a></code>. Support for <code><a href="../reference/cf_auc.html">cf_auc()</a></code>,
-<code><a href="../reference/cf_calibration.html">cf_calibration()</a></code>, and the transportability variants is
-planned for a future release.</p>
+<p>ML learners with cross-fitting are currently fully supported in:</p>
+<ul>
+<li>
+<code><a href="../reference/cf_mse.html">cf_mse()</a></code> - Counterfactual mean squared error</li>
+<li>
+<code><a href="../reference/cf_auc.html">cf_auc()</a></code> - Counterfactual AUC (doubly robust estimator
+only)</li>
+</ul>
+<p>Support for <code><a href="../reference/cf_calibration.html">cf_calibration()</a></code> and the transportability
+variants is planned for a future release.</p>
+<div class="section level3">
+<h3 id="mse-with-ml-learners">MSE with ML Learners<a class="anchor" aria-label="anchor" href="#mse-with-ml-learners"></a>
+</h3>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Full example with ML nuisance models</span></span>
-<span><span class="va">result_ml</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
+<span><span class="va">result_mse</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">pred</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">y</span>,</span>
 <span>  treatment <span class="op">=</span> <span class="va">a</span>,</span>
@@ -402,7 +411,7 @@ planned for a future release.</p>
 <span>  se_method <span class="op">=</span> <span class="st">"influence"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result_ml</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result_mse</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Counterfactual MSE Estimation</span></span>
 <span><span class="co">#&gt; ---------------------------------------- </span></span>
@@ -414,6 +423,39 @@ planned for a future release.</p>
 <span><span class="co">#&gt; 95% CI: [0.2021, 0.2471]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Naive estimate: 0.2081</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="auc-with-ml-learners">AUC with ML Learners<a class="anchor" aria-label="anchor" href="#auc-with-ml-learners"></a>
+</h3>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># AUC estimation with ML nuisance models</span></span>
+<span><span class="va">result_auc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cf_auc.html">cf_auc</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">pred</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">y</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="va">a</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">df</span>,</span>
+<span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  estimator <span class="op">=</span> <span class="st">"dr"</span>,</span>
+<span>  propensity_model <span class="op">=</span> <span class="fu"><a href="../reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"ranger"</span>, num.trees <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
+<span>  outcome_model <span class="op">=</span> <span class="fu"><a href="../reference/ml_learner.html">ml_learner</a></span><span class="op">(</span><span class="st">"ranger"</span>, num.trees <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>,</span>
+<span>  cross_fit <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  n_folds <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  se_method <span class="op">=</span> <span class="st">"influence"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result_auc</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Counterfactual AUC Estimation</span></span>
+<span><span class="co">#&gt; ---------------------------------------- </span></span>
+<span><span class="co">#&gt; Estimator: dr </span></span>
+<span><span class="co">#&gt; Treatment level: 0 </span></span>
+<span><span class="co">#&gt; N observations: 1000 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Estimate: 0.6073 (SE: 0.0197 )</span></span>
+<span><span class="co">#&gt; 95% CI: [0.5687, 0.6458]</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Naive estimate: 0.5994</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
