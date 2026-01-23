@@ -13,7 +13,8 @@
 #'   - `"transport"`: Use source outcomes for target estimation (default)
 #'   - `"joint"`: Pool source and target data
 #' @param estimator Character string specifying the estimator:
-#'   - `"ipw"`: Inverse probability weighting estimator (default)
+#'   - `"dr"`: Doubly robust estimator (default)
+#'   - `"ipw"`: Inverse probability weighting estimator
 #'   - `"om"`: Outcome model estimator
 #' @param selection_model Optional fitted selection model for P(S=0|X). If NULL,
 #'   a logistic regression model is fit using the covariates.
@@ -124,7 +125,7 @@ tr_calibration <- function(predictions,
                            covariates,
                            treatment_level = 0,
                            analysis = c("transport", "joint"),
-                           estimator = c("ipw", "om"),
+                           estimator = c("dr", "ipw", "om"),
                            selection_model = NULL,
                            propensity_model = NULL,
                            outcome_model = NULL,
@@ -419,8 +420,8 @@ tr_calibration <- function(predictions,
     ps <- 1 - ps
   }
 
-  # Outcome model for OM estimator
-  if (estimator == "om" && is.null(outcome_model)) {
+  # Outcome model for OM and DR estimators
+  if (estimator %in% c("om", "dr") && is.null(outcome_model)) {
     if (analysis == "transport") {
       # E[Y|X, A=a, S=1] using source data
       source_a_idx <- source == 1 & treatment == treatment_level
@@ -498,7 +499,7 @@ tr_calibration <- function(predictions,
       span = span
     )
 
-  } else {
+  } else if (estimator == "om") {
     # OM estimator: use outcome model predictions
     if (is.null(nuisance$outcome_model)) {
       stop("Outcome model fitting failed - insufficient data")
@@ -517,6 +518,42 @@ tr_calibration <- function(predictions,
       predictions = pred_sub,
       outcomes = out_sub,
       weights = w_sub,
+      smoother = smoother,
+      n_bins = n_bins,
+      span = span
+    )
+  } else {
+    # DR estimator: augmented IPW
+    if (is.null(nuisance$outcome_model)) {
+      stop("Outcome model fitting failed - insufficient data for DR estimator")
+    }
+
+    # Get outcome model predictions for all observations
+    all_df <- data.frame(pred = predictions)
+    mu_hat <- predict(nuisance$outcome_model, newdata = all_df, type = "response")
+
+    # IPW weights for source observations with A=a
+    idx <- I_source & I_a
+    denom <- nuisance$p_s1[idx] * nuisance$ps[idx]
+    denom <- pmax(denom, 1e-10)
+    ipw_weight <- nuisance$p_s0[idx] / denom
+
+    # Augmented pseudo-outcomes for source observations
+    augmentation <- ipw_weight * (outcomes[idx] - mu_hat[idx])
+
+    # Pseudo-outcomes: mu_hat for target + augmentation for source
+    # We compute over ALL target observations using mu_hat, plus augmentation from source
+    pred_all <- c(predictions[I_target], predictions[idx])
+    pseudo_out <- c(mu_hat[I_target], mu_hat[idx] + augmentation)
+    w_all <- c(rep(1, n_target), rep(1, sum(idx)))
+
+    # Normalize weights
+    w_all <- w_all / sum(w_all) * n_target
+
+    calib <- .compute_weighted_calibration(
+      predictions = pred_all,
+      outcomes = pseudo_out,
+      weights = w_all,
       smoother = smoother,
       n_bins = n_bins,
       span = span
@@ -571,7 +608,7 @@ tr_calibration <- function(predictions,
       span = span
     )
 
-  } else {
+  } else if (estimator == "om") {
     # OM estimator: use outcome model predictions for target
     if (is.null(nuisance$outcome_model)) {
       stop("Outcome model fitting failed - insufficient data")
@@ -589,6 +626,41 @@ tr_calibration <- function(predictions,
       predictions = pred_sub,
       outcomes = out_sub,
       weights = w_sub,
+      smoother = smoother,
+      n_bins = n_bins,
+      span = span
+    )
+  } else {
+    # DR estimator: augmented IPW for joint analysis
+    if (is.null(nuisance$outcome_model)) {
+      stop("Outcome model fitting failed - insufficient data for DR estimator")
+    }
+
+    # Get outcome model predictions for all observations
+    all_df <- data.frame(pred = predictions)
+    mu_hat <- predict(nuisance$outcome_model, newdata = all_df, type = "response")
+
+    # IPW weights: P(S=0|X) / P(A=a|X) for all observations with A=a
+    idx <- I_a
+    denom <- nuisance$ps[idx]
+    denom <- pmax(denom, 1e-10)
+    ipw_weight <- nuisance$p_s0[idx] / denom
+
+    # Augmented pseudo-outcomes
+    augmentation <- ipw_weight * (outcomes[idx] - mu_hat[idx])
+
+    # Combine: mu_hat for target + augmented for those with A=a
+    pred_all <- c(predictions[I_target], predictions[idx])
+    pseudo_out <- c(mu_hat[I_target], mu_hat[idx] + augmentation)
+    w_all <- c(rep(1, n_target), rep(1, sum(idx)))
+
+    # Normalize weights
+    w_all <- w_all / sum(w_all) * n_target
+
+    calib <- .compute_weighted_calibration(
+      predictions = pred_all,
+      outcomes = pseudo_out,
+      weights = w_all,
       smoother = smoother,
       n_bins = n_bins,
       span = span

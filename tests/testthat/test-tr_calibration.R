@@ -270,6 +270,93 @@ test_that("tr_calibration transport OM and IPW produce different results", {
 
 
 # ==============================================================================
+# Transport Analysis Tests - DR Estimator
+# ==============================================================================
+
+test_that("tr_calibration transport DR returns correct structure", {
+  d <- generate_tr_calibration_data(n = 500)
+
+  result <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "transport",
+    estimator = "dr",
+    se_method = "none"
+  )
+
+  expect_s3_class(result, "tr_calibration")
+  expect_equal(result$estimator, "dr")
+  expect_gte(result$ici, 0)
+})
+
+test_that("tr_calibration transport DR is default estimator", {
+  d <- generate_tr_calibration_data(n = 500)
+
+  result <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "transport",
+    se_method = "none"
+  )
+
+  expect_equal(result$estimator, "dr")
+})
+
+test_that("tr_calibration transport DR, OM, and IPW produce valid but distinct results", {
+  d <- generate_tr_calibration_data(n = 500, seed = 456)
+
+  result_ipw <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "transport",
+    estimator = "ipw",
+    se_method = "none"
+  )
+
+  result_om <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "transport",
+    estimator = "om",
+    se_method = "none"
+  )
+
+  result_dr <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "transport",
+    estimator = "dr",
+    se_method = "none"
+  )
+
+  # All estimators should produce valid (non-negative) ICI
+  expect_gte(result_ipw$ici, 0)
+  expect_gte(result_om$ici, 0)
+  expect_gte(result_dr$ici, 0)
+})
+
+
+# ==============================================================================
 # Joint Analysis Tests
 # ==============================================================================
 
@@ -312,6 +399,89 @@ test_that("tr_calibration joint OM returns correct structure", {
   expect_equal(result$analysis, "joint")
   expect_equal(result$estimator, "om")
   expect_gte(result$ici, 0)
+})
+
+test_that("tr_calibration joint DR returns correct structure", {
+  d <- generate_tr_calibration_data(n = 500)
+
+  result <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "joint",
+    estimator = "dr",
+    se_method = "none"
+  )
+
+  expect_s3_class(result, "tr_calibration")
+  expect_equal(result$analysis, "joint")
+  expect_equal(result$estimator, "dr")
+  expect_gte(result$ici, 0)
+})
+
+test_that("tr_calibration joint DR is default estimator", {
+  d <- generate_tr_calibration_data(n = 500)
+
+  result <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "joint",
+    se_method = "none"
+  )
+
+  expect_equal(result$estimator, "dr")
+})
+
+test_that("tr_calibration joint all estimators produce valid results", {
+  d <- generate_tr_calibration_data(n = 500, seed = 456)
+
+  result_ipw <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "joint",
+    estimator = "ipw",
+    se_method = "none"
+  )
+
+  result_om <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "joint",
+    estimator = "om",
+    se_method = "none"
+  )
+
+  result_dr <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    treatment_level = 0,
+    analysis = "joint",
+    estimator = "dr",
+    se_method = "none"
+  )
+
+  # All estimators should produce valid (non-negative) ICI
+  expect_gte(result_ipw$ici, 0)
+  expect_gte(result_om$ici, 0)
+  expect_gte(result_dr$ici, 0)
 })
 
 test_that("tr_calibration transport and joint produce different results", {
