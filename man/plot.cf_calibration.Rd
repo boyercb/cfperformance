@@ -4,14 +4,31 @@
 \alias{plot.cf_calibration}
 \title{Plot Method for cf_calibration Objects}
 \usage{
-\method{plot}{cf_calibration}(x, add_histogram = TRUE, add_rug = TRUE, ...)
+\method{plot}{cf_calibration}(
+  x,
+  add_reference = TRUE,
+  show_metrics = TRUE,
+  add_histogram = TRUE,
+  add_rug = FALSE,
+  add_ci = !is.null(x$boot_curves),
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{cf_calibration} object.}
 
-\item{add_histogram}{Logical; add histogram of predictions (default: TRUE).}
+\item{add_reference}{Logical; add 45-degree reference line (default: TRUE).}
 
-\item{add_rug}{Logical; add rug plot (default: TRUE).}
+\item{show_metrics}{Logical; show calibration metrics on plot (default: TRUE).}
+
+\item{add_histogram}{Logical; add histogram of predictions below the
+calibration curve (default: TRUE).}
+
+\item{add_rug}{Logical; add rug plot to show individual predictions
+(default: FALSE).}
+
+\item{add_ci}{Logical; add bootstrap confidence bands if available
+(default: TRUE if bootstrap was run).}
 
 \item{...}{Additional arguments passed to plotting functions.}
 }
@@ -20,5 +37,6 @@ A ggplot object (if ggplot2 available) or base R plot.
 }
 \description{
 Creates a calibration plot showing predicted vs observed probabilities
-under the counterfactual intervention.
+under the counterfactual intervention, with an optional histogram showing
+the distribution of predicted probabilities and optional confidence bands.
 }

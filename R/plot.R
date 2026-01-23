@@ -2,22 +2,29 @@
 #'
 #' Creates a calibration plot showing predicted vs observed probabilities
 #' under the counterfactual intervention, with an optional histogram showing
-#' the distribution of predicted probabilities.
+#' the distribution of predicted probabilities and optional confidence bands.
 #'
 #' @param x A `cf_calibration` object.
+#' @param add_reference Logical; add 45-degree reference line (default: TRUE).
+#' @param show_metrics Logical; show calibration metrics on plot (default: TRUE).
 #' @param add_histogram Logical; add histogram of predictions below the
 #'   calibration curve (default: TRUE).
 #' @param add_rug Logical; add rug plot to show individual predictions
 #'   (default: FALSE).
+#' @param add_ci Logical; add bootstrap confidence bands if available
+#'   (default: TRUE if bootstrap was run).
 #' @param ... Additional arguments passed to plotting functions.
 #'
 #' @return A ggplot object (if ggplot2 available) or base R plot.
 #'
 #' @export
-plot.cf_calibration <- function(x, add_histogram = TRUE, add_rug = FALSE, ...) {
+plot.cf_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE,
+                                 add_histogram = TRUE, add_rug = FALSE, 
+                                 add_ci = !is.null(x$boot_curves), ...) {
 
   estimator_label <- toupper(x$estimator)
   treatment_label <- x$treatment_level
+  has_ci <- !is.null(x$boot_curves) && add_ci
   
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     # Base R plot - simple version without histogram
@@ -35,7 +42,16 @@ plot.cf_calibration <- function(x, add_histogram = TRUE, add_rug = FALSE, ...) {
          main = "Counterfactual Calibration Curve",
          xlim = c(0, 1), ylim = c(0, 1),
          xaxt = if (add_histogram) "n" else "s")
-    abline(0, 1, lty = 2, col = "gray")
+    if (add_reference) {
+      abline(0, 1, lty = 2, col = "gray")
+    }
+    
+    # Add CI band if available
+    if (has_ci) {
+      polygon(c(x$boot_curves$predicted, rev(x$boot_curves$predicted)),
+              c(x$boot_curves$ci_lower, rev(x$boot_curves$ci_upper)),
+              col = rgb(46/255, 134/255, 171/255, 0.2), border = NA)
+    }
     
     if (add_histogram && !is.null(x$predictions_raw)) {
       par(mar = c(4, 4, 0, 2))
@@ -52,18 +68,41 @@ plot.cf_calibration <- function(x, add_histogram = TRUE, add_rug = FALSE, ...) {
     observed = x$observed
   )
 
+  # Build subtitle
+  subtitle_text <- NULL
+  if (show_metrics) {
+    subtitle_text <- sprintf("ICI = %.3f, Emax = %.3f%s", x$ici, x$emax,
+                             if (has_ci) sprintf(" (%d%% CI)", round(x$conf_level * 100)) else "")
+  }
+
   # Main calibration curve
-  p_cal <- ggplot2::ggplot(df_curve, ggplot2::aes(x = .data$predicted, y = .data$observed)) +
+  p_cal <- ggplot2::ggplot(df_curve, ggplot2::aes(x = .data$predicted, y = .data$observed))
+  
+  # Add confidence band first (so it's behind the line)
+  if (has_ci) {
+    df_ci <- x$boot_curves
+    p_cal <- p_cal +
+      ggplot2::geom_ribbon(
+        data = df_ci,
+        ggplot2::aes(x = .data$predicted, ymin = .data$ci_lower, ymax = .data$ci_upper),
+        fill = "#2E86AB", alpha = 0.2, inherit.aes = FALSE
+      )
+  }
+  
+  p_cal <- p_cal +
     ggplot2::geom_line(linewidth = 1.2, color = "#2E86AB") +
-    ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                         color = "gray50") +
     ggplot2::labs(
       y = sprintf("Probability under A = %s (%s)", treatment_label, estimator_label),
       title = "Counterfactual Calibration Curve",
-      subtitle = sprintf("ICI = %.3f, Emax = %.3f", x$ici, x$emax)
+      subtitle = subtitle_text
     ) +
     ggplot2::coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
     ggplot2::theme_bw()
+  
+  if (add_reference) {
+    p_cal <- p_cal + ggplot2::geom_abline(slope = 1, intercept = 0,
+                                           linetype = "dashed", color = "gray50")
+  }
   
   # Add rug if requested
   if (add_rug && !is.null(x$predictions_raw)) {

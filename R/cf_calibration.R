@@ -9,6 +9,11 @@
 #'   - `"binned"`: Binned calibration
 #' @param n_bins Number of bins for binned calibration (default: 10).
 #' @param span Span parameter for LOESS smoothing (default: 0.75).
+#' @param se_method Method for standard error estimation:
+#'   - `"none"`: No standard errors (default, fastest)
+#'   - `"bootstrap"`: Bootstrap standard errors
+#' @param n_boot Number of bootstrap replications (default: 200).
+#' @param conf_level Confidence level for intervals (default: 0.95).
 #'
 #' @return An object of class `c("cf_calibration", "cf_performance")` containing:
 #'   \item{predicted}{Vector of predicted probabilities}
@@ -18,6 +23,10 @@
 #'   \item{e50}{Median absolute calibration error}
 #'   \item{e90}{90th percentile absolute calibration error}
 #'   \item{emax}{Maximum absolute calibration error}
+#'   \item{se}{List of standard errors (if se_method = "bootstrap")}
+#'   \item{ci_lower}{List of lower CI bounds (if se_method = "bootstrap")}
+#'   \item{ci_upper}{List of upper CI bounds (if se_method = "bootstrap")}
+#'   \item{boot_curves}{Bootstrap calibration curves for CI bands (if se_method = "bootstrap")}
 #'
 #' @details
 #' The counterfactual calibration curve estimates the relationship between
@@ -30,7 +39,7 @@
 #' propensity score model.
 #'
 #' **Conditional Loss (CL) Estimator**: Uses the fitted outcome model
-#' E[Y|X, A=a] to estimate calibration over all observations. Requires a
+#' \eqn{E[Y | X, A=a]} to estimate calibration over all observations. Requires a
 #' correctly specified outcome model.
 #'
 #' **Doubly Robust (DR) Estimator**: Combines CL and IPW approaches. Consistent
@@ -78,6 +87,14 @@
 #' )
 #' print(result_dr)
 #' # plot(result_dr)  # If ggplot2 is available
+#'
+#' # With bootstrap confidence bands
+#' # result_boot <- cf_calibration(
+#' #   predictions = pred, outcomes = y, treatment = a,
+#' #   covariates = data.frame(x = x), treatment_level = 0,
+#' #   se_method = "bootstrap", n_boot = 200
+#' # )
+#' # plot(result_boot)  # Shows confidence bands
 cf_calibration <- function(predictions,
                            outcomes,
                            treatment,
@@ -89,10 +106,14 @@ cf_calibration <- function(predictions,
                            smoother = c("loess", "binned"),
                            n_bins = 10,
                            span = 0.75,
+                           se_method = c("none", "bootstrap"),
+                           n_boot = 200,
+                           conf_level = 0.95,
                            ...) {
 
   estimator <- match.arg(estimator)
   smoother <- match.arg(smoother)
+  se_method <- match.arg(se_method)
 
   # Validate inputs
   .validate_inputs(predictions, outcomes, treatment, covariates)
@@ -198,9 +219,171 @@ cf_calibration <- function(predictions,
     emax = emax,
     propensity_model = propensity_model,
     outcome_model = outcome_model,
+    se_method = se_method,
+    conf_level = conf_level,
     call = match.call()
   )
 
+  # Add bootstrap standard errors and confidence bands if requested
+  if (se_method == "bootstrap") {
+    boot_results <- .bootstrap_cf_calibration(
+      predictions = predictions,
+      outcomes = outcomes,
+      treatment = treatment,
+      covariates = covariates,
+      treatment_level = treatment_level,
+      estimator = estimator,
+      smoother = smoother,
+      n_bins = n_bins,
+      span = span,
+      n_boot = n_boot,
+      conf_level = conf_level,
+      eval_points = predicted,  # Evaluate at same points as main estimate
+      ...
+    )
+
+    # Standard errors for metrics
+    result$se <- list(
+      ici = boot_results$se_ici,
+      e50 = boot_results$se_e50,
+      e90 = boot_results$se_e90,
+      emax = boot_results$se_emax
+    )
+
+    # Confidence intervals for metrics (percentile method)
+    result$ci_lower <- list(
+      ici = boot_results$ci_ici[1],
+      e50 = boot_results$ci_e50[1],
+      e90 = boot_results$ci_e90[1],
+      emax = boot_results$ci_emax[1]
+    )
+    result$ci_upper <- list(
+      ici = boot_results$ci_ici[2],
+      e50 = boot_results$ci_e50[2],
+      e90 = boot_results$ci_e90[2],
+      emax = boot_results$ci_emax[2]
+    )
+
+    # Store bootstrap curves for plotting confidence bands
+    result$boot_curves <- boot_results$curves
+    result$boot_samples <- boot_results$samples
+  } else {
+    result$se <- NULL
+    result$ci_lower <- NULL
+    result$ci_upper <- NULL
+    result$boot_curves <- NULL
+    result$boot_samples <- NULL
+  }
+
   class(result) <- c("cf_calibration", "cf_performance")
   return(result)
+}
+
+
+#' Bootstrap Standard Errors for Counterfactual Calibration
+#' @keywords internal
+#' @noRd
+.bootstrap_cf_calibration <- function(predictions, outcomes, treatment,
+                                       covariates, treatment_level, estimator,
+                                       smoother, n_bins, span, n_boot,
+                                       conf_level, eval_points, ...) {
+
+  n <- length(outcomes)
+
+  # Storage for bootstrap results
+  boot_ici <- numeric(n_boot)
+  boot_e50 <- numeric(n_boot)
+  boot_e90 <- numeric(n_boot)
+  boot_emax <- numeric(n_boot)
+
+  # Storage for bootstrap curves (evaluated at common points)
+  n_eval <- length(eval_points)
+  boot_observed <- matrix(NA, nrow = n_boot, ncol = n_eval)
+
+  for (b in seq_len(n_boot)) {
+    boot_idx <- sample(n, replace = TRUE)
+
+    tryCatch({
+      # Refit on bootstrap sample
+      boot_result <- cf_calibration(
+        predictions = predictions[boot_idx],
+        outcomes = outcomes[boot_idx],
+        treatment = treatment[boot_idx],
+        covariates = covariates[boot_idx, , drop = FALSE],
+        treatment_level = treatment_level,
+        estimator = estimator,
+        propensity_model = NULL,  # Refit on bootstrap
+        outcome_model = NULL,
+        smoother = smoother,
+        n_bins = n_bins,
+        span = span,
+        se_method = "none",  # Don't recurse
+        ...
+      )
+
+      boot_ici[b] <- boot_result$ici
+      boot_e50[b] <- boot_result$e50
+      boot_e90[b] <- boot_result$e90
+      boot_emax[b] <- boot_result$emax
+
+      # Interpolate bootstrap curve to common evaluation points
+      if (length(boot_result$predicted) > 1) {
+        boot_observed[b, ] <- approx(
+          x = boot_result$predicted,
+          y = boot_result$observed,
+          xout = eval_points,
+          rule = 2  # Use nearest value for extrapolation
+        )$y
+      }
+    }, error = function(e) {
+      boot_ici[b] <<- NA
+      boot_e50[b] <<- NA
+      boot_e90[b] <<- NA
+      boot_emax[b] <<- NA
+    })
+  }
+
+  # Remove failed bootstraps
+  valid <- !is.na(boot_ici)
+
+  # Compute SEs for metrics
+  se_ici <- sd(boot_ici[valid], na.rm = TRUE)
+  se_e50 <- sd(boot_e50[valid], na.rm = TRUE)
+  se_e90 <- sd(boot_e90[valid], na.rm = TRUE)
+  se_emax <- sd(boot_emax[valid], na.rm = TRUE)
+
+  # Confidence intervals for metrics (percentile method)
+  alpha <- 1 - conf_level
+  ci_ici <- quantile(boot_ici[valid], c(alpha/2, 1 - alpha/2), na.rm = TRUE)
+  ci_e50 <- quantile(boot_e50[valid], c(alpha/2, 1 - alpha/2), na.rm = TRUE)
+  ci_e90 <- quantile(boot_e90[valid], c(alpha/2, 1 - alpha/2), na.rm = TRUE)
+  ci_emax <- quantile(boot_emax[valid], c(alpha/2, 1 - alpha/2), na.rm = TRUE)
+
+  # Compute pointwise CIs for the calibration curve
+  ci_lower_curve <- apply(boot_observed[valid, , drop = FALSE], 2,
+                          quantile, probs = alpha/2, na.rm = TRUE)
+  ci_upper_curve <- apply(boot_observed[valid, , drop = FALSE], 2,
+                          quantile, probs = 1 - alpha/2, na.rm = TRUE)
+
+  list(
+    se_ici = se_ici,
+    se_e50 = se_e50,
+    se_e90 = se_e90,
+    se_emax = se_emax,
+    ci_ici = as.numeric(ci_ici),
+    ci_e50 = as.numeric(ci_e50),
+    ci_e90 = as.numeric(ci_e90),
+    ci_emax = as.numeric(ci_emax),
+    curves = data.frame(
+      predicted = eval_points,
+      ci_lower = ci_lower_curve,
+      ci_upper = ci_upper_curve
+    ),
+    samples = data.frame(
+      ici = boot_ici[valid],
+      e50 = boot_e50[valid],
+      e90 = boot_e90[valid],
+      emax = boot_emax[valid]
+    )
+  )
 }

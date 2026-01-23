@@ -12,15 +12,15 @@ tr_calibration(
   covariates,
   treatment_level = 0,
   analysis = c("transport", "joint"),
-  estimator = c("ipw", "om"),
+  estimator = c("dr", "ipw", "om"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
   smoother = c("loess", "binned"),
   n_bins = 10,
   span = 0.75,
-  se_method = c("bootstrap", "none"),
-  n_boot = 500,
+  se_method = c("none", "bootstrap"),
+  n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
   ...
@@ -47,7 +47,8 @@ tr_calibration(
 
 \item{estimator}{Character string specifying the estimator:
 \itemize{
-\item \code{"ipw"}: Inverse probability weighting estimator (default)
+\item \code{"dr"}: Doubly robust estimator (default)
+\item \code{"ipw"}: Inverse probability weighting estimator
 \item \code{"om"}: Outcome model estimator
 }}
 
@@ -72,11 +73,11 @@ If NULL, a regression model is fit using the relevant data.}
 
 \item{se_method}{Method for standard error estimation:
 \itemize{
-\item \code{"bootstrap"}: Bootstrap standard errors (default)
-\item \code{"none"}: No standard error estimation
+\item \code{"none"}: No standard error estimation (default, fastest)
+\item \code{"bootstrap"}: Bootstrap standard errors
 }}
 
-\item{n_boot}{Number of bootstrap replications (default: 500).}
+\item{n_boot}{Number of bootstrap replications (default: 200).}
 
 \item{conf_level}{Confidence level for intervals (default: 0.95).}
 

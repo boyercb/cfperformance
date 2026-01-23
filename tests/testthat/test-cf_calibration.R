@@ -180,3 +180,96 @@ test_that("cf_calibration all three estimators produce reasonable results", {
   ici_values <- c(result_ipw$ici, result_cl$ici, result_dr$ici)
   expect_true(max(ici_values) - min(ici_values) < 0.2)
 })
+
+
+# ==============================================================================
+# Bootstrap Standard Error Tests
+# ==============================================================================
+
+test_that("cf_calibration bootstrap returns SE and CI", {
+  set.seed(42)
+  n <- 300
+  x <- rnorm(n)
+  a <- rbinom(n, 1, 0.5)
+  y <- rbinom(n, 1, plogis(-1 + x))
+  pred <- plogis(-1 + x)
+
+  result <- cf_calibration(
+    predictions = pred,
+    outcomes = y,
+    treatment = a,
+    covariates = data.frame(x = x),
+    se_method = "bootstrap",
+    n_boot = 50  # Small for testing
+  )
+
+  expect_s3_class(result, "cf_calibration")
+  expect_equal(result$se_method, "bootstrap")
+
+  # Check SE structure
+  expect_true(!is.null(result$se))
+  expect_true("ici" %in% names(result$se))
+  expect_true("e50" %in% names(result$se))
+  expect_true("emax" %in% names(result$se))
+
+  # Check CI structure
+  expect_true(!is.null(result$ci_lower))
+  expect_true(!is.null(result$ci_upper))
+
+  # SEs should be positive
+
+  expect_true(result$se$ici > 0)
+  expect_true(result$se$e50 > 0)
+})
+
+
+test_that("cf_calibration bootstrap returns curves for CI bands", {
+  set.seed(42)
+  n <- 300
+  x <- rnorm(n)
+  a <- rbinom(n, 1, 0.5)
+  y <- rbinom(n, 1, plogis(-1 + x))
+  pred <- plogis(-1 + x)
+
+  result <- cf_calibration(
+    predictions = pred,
+    outcomes = y,
+    treatment = a,
+    covariates = data.frame(x = x),
+    se_method = "bootstrap",
+    n_boot = 50
+  )
+
+  expect_true(!is.null(result$boot_curves))
+  expect_true(is.data.frame(result$boot_curves))
+  expect_true("predicted" %in% names(result$boot_curves))
+  expect_true("ci_lower" %in% names(result$boot_curves))
+  expect_true("ci_upper" %in% names(result$boot_curves))
+
+  # CI bounds should be reasonable
+  expect_true(all(result$boot_curves$ci_lower <= result$boot_curves$ci_upper, na.rm = TRUE))
+})
+
+
+test_that("cf_calibration without bootstrap has NULL SE fields", {
+  set.seed(42)
+  n <- 200
+  x <- rnorm(n)
+  a <- rbinom(n, 1, 0.5)
+  y <- rbinom(n, 1, plogis(-1 + x))
+  pred <- plogis(-1 + x)
+
+  result <- cf_calibration(
+    predictions = pred,
+    outcomes = y,
+    treatment = a,
+    covariates = data.frame(x = x),
+    se_method = "none"
+  )
+
+  # Use [["se"]] to avoid partial matching with se_method
+  expect_null(result[["se"]])
+  expect_null(result[["ci_lower"]])
+  expect_null(result[["ci_upper"]])
+  expect_null(result[["boot_curves"]])
+})

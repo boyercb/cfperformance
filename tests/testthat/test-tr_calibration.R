@@ -663,6 +663,46 @@ test_that("tr_calibration non-stratified bootstrap works", {
 })
 
 
+test_that("tr_calibration bootstrap returns curves for CI bands", {
+  d <- generate_tr_calibration_data(n = 300)
+
+  result <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    se_method = "bootstrap",
+    n_boot = 50
+  )
+
+  expect_true(!is.null(result$boot_curves))
+  expect_true(is.data.frame(result$boot_curves))
+  expect_true("predicted" %in% names(result$boot_curves))
+  expect_true("ci_lower" %in% names(result$boot_curves))
+  expect_true("ci_upper" %in% names(result$boot_curves))
+
+  # CI bounds should be reasonable
+  expect_true(all(result$boot_curves$ci_lower <= result$boot_curves$ci_upper, na.rm = TRUE))
+})
+
+
+test_that("tr_calibration without bootstrap has NULL boot_curves", {
+  d <- generate_tr_calibration_data(n = 200)
+
+  result <- tr_calibration(
+    predictions = d$predictions,
+    outcomes = d$outcomes,
+    treatment = d$treatment,
+    source = d$source,
+    covariates = d$covariates,
+    se_method = "none"
+  )
+
+  expect_null(result$boot_curves)
+})
+
+
 # ==============================================================================
 # S3 Methods Tests
 # ==============================================================================
@@ -756,6 +796,10 @@ test_that("confint.tr_calibration warns without bootstrap", {
 # ==============================================================================
 
 test_that("plot.tr_calibration works with base R", {
+  skip_if(requireNamespace("ggplot2", quietly = TRUE) && 
+          !requireNamespace("patchwork", quietly = TRUE),
+          "ggplot2 available but patchwork not - message expected")
+  
   d <- generate_tr_calibration_data(n = 200)
 
   result <- tr_calibration(
@@ -767,8 +811,8 @@ test_that("plot.tr_calibration works with base R", {
     se_method = "none"
   )
 
-  # Should not error
-  expect_silent(plot(result))
+  # Should not error (may produce message if patchwork not installed)
+  expect_no_error(plot(result))
 })
 
 test_that("plot.tr_calibration returns ggplot when available", {

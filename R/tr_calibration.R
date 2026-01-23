@@ -28,9 +28,9 @@
 #' @param n_bins Number of bins for binned calibration (default: 10).
 #' @param span Span parameter for LOESS smoothing (default: 0.75).
 #' @param se_method Method for standard error estimation:
-#'   - `"bootstrap"`: Bootstrap standard errors (default)
-#'   - `"none"`: No standard error estimation
-#' @param n_boot Number of bootstrap replications (default: 500).
+#'   - `"none"`: No standard error estimation (default, fastest)
+#'   - `"bootstrap"`: Bootstrap standard errors
+#' @param n_boot Number of bootstrap replications (default: 200).
 #' @param conf_level Confidence level for intervals (default: 0.95).
 #' @param stratified_boot Logical indicating whether to use stratified bootstrap
 #'   that preserves the source/target ratio (default: TRUE).
@@ -132,8 +132,8 @@ tr_calibration <- function(predictions,
                            smoother = c("loess", "binned"),
                            n_bins = 10,
                            span = 0.75,
-                           se_method = c("bootstrap", "none"),
-                           n_boot = 500,
+                           se_method = c("none", "bootstrap"),
+                           n_boot = 200,
                            conf_level = 0.95,
                            stratified_boot = TRUE,
                            ...) {
@@ -182,6 +182,8 @@ tr_calibration <- function(predictions,
       span = span,
       n_boot = n_boot,
       stratified = stratified_boot,
+      conf_level = conf_level,
+      eval_points = result$predicted,  # Evaluate at same points as main estimate
       ...
     )
 
@@ -194,7 +196,6 @@ tr_calibration <- function(predictions,
     )
 
     # Confidence intervals (percentile method)
-    alpha <- 1 - conf_level
     result$ci_lower <- list(
       ici = boot_results$ci_ici[1],
       e50 = boot_results$ci_e50[1],
@@ -208,11 +209,13 @@ tr_calibration <- function(predictions,
       emax = boot_results$ci_emax[2]
     )
 
+    result$boot_curves <- boot_results$curves
     result$boot_samples <- boot_results$samples
   } else {
     result$se <- NULL
     result$ci_lower <- NULL
     result$ci_upper <- NULL
+    result$boot_curves <- NULL
     result$boot_samples <- NULL
   }
 
@@ -755,7 +758,8 @@ tr_calibration <- function(predictions,
 .bootstrap_tr_calibration <- function(predictions, outcomes, treatment, source,
                                       covariates, treatment_level, analysis,
                                       estimator, smoother, n_bins, span,
-                                      n_boot, stratified, ...) {
+                                      n_boot, stratified, conf_level = 0.95,
+                                      eval_points = NULL, ...) {
 
   n <- length(outcomes)
 
@@ -772,11 +776,15 @@ tr_calibration <- function(predictions,
     }
   }
 
-  # Bootstrap samples
+  # Bootstrap samples for metrics
   boot_ici <- numeric(n_boot)
   boot_e50 <- numeric(n_boot)
   boot_e90 <- numeric(n_boot)
   boot_emax <- numeric(n_boot)
+
+  # Storage for bootstrap curves (evaluated at common points)
+  n_eval <- if (!is.null(eval_points)) length(eval_points) else 0
+  boot_observed <- if (n_eval > 0) matrix(NA, nrow = n_boot, ncol = n_eval) else NULL
 
   for (b in seq_len(n_boot)) {
     boot_idx <- get_boot_idx()
@@ -804,6 +812,16 @@ tr_calibration <- function(predictions,
       boot_e50[b] <- boot_result$e50
       boot_e90[b] <- boot_result$e90
       boot_emax[b] <- boot_result$emax
+
+      # Interpolate bootstrap curve to common evaluation points
+      if (n_eval > 0 && length(boot_result$predicted) > 1) {
+        boot_observed[b, ] <- approx(
+          x = boot_result$predicted,
+          y = boot_result$observed,
+          xout = eval_points,
+          rule = 2  # Use nearest value for extrapolation
+        )$y
+      }
     }, error = function(e) {
       boot_ici[b] <<- NA
       boot_e50[b] <<- NA
@@ -822,11 +840,25 @@ tr_calibration <- function(predictions,
   se_emax <- sd(boot_emax[valid], na.rm = TRUE)
 
   # Confidence intervals (percentile method)
-  alpha <- 0.05  # Will be overridden by conf_level in main function
+  alpha <- 1 - conf_level
   ci_ici <- quantile(boot_ici[valid], c(alpha/2, 1 - alpha/2), na.rm = TRUE)
   ci_e50 <- quantile(boot_e50[valid], c(alpha/2, 1 - alpha/2), na.rm = TRUE)
   ci_e90 <- quantile(boot_e90[valid], c(alpha/2, 1 - alpha/2), na.rm = TRUE)
   ci_emax <- quantile(boot_emax[valid], c(alpha/2, 1 - alpha/2), na.rm = TRUE)
+
+  # Compute pointwise CIs for the calibration curve
+  curves <- NULL
+  if (n_eval > 0 && !is.null(boot_observed)) {
+    ci_lower_curve <- apply(boot_observed[valid, , drop = FALSE], 2,
+                            quantile, probs = alpha/2, na.rm = TRUE)
+    ci_upper_curve <- apply(boot_observed[valid, , drop = FALSE], 2,
+                            quantile, probs = 1 - alpha/2, na.rm = TRUE)
+    curves <- data.frame(
+      predicted = eval_points,
+      ci_lower = ci_lower_curve,
+      ci_upper = ci_upper_curve
+    )
+  }
 
   list(
     se_ici = se_ici,
@@ -837,6 +869,7 @@ tr_calibration <- function(predictions,
     ci_e50 = as.numeric(ci_e50),
     ci_e90 = as.numeric(ci_e90),
     ci_emax = as.numeric(ci_emax),
+    curves = curves,
     samples = data.frame(
       ici = boot_ici[valid],
       e50 = boot_e50[valid],
@@ -850,22 +883,28 @@ tr_calibration <- function(predictions,
 #' Plot Method for tr_calibration Objects
 #'
 #' Creates a calibration plot showing predicted vs observed probabilities
-#' in the target population.
+#' in the target population, with optional confidence bands and histogram.
 #'
 #' @param x A `tr_calibration` object.
 #' @param add_reference Logical; add 45-degree reference line (default: TRUE).
 #' @param show_metrics Logical; show calibration metrics on plot (default: TRUE).
 #' @param add_histogram Logical; add histogram of predictions below the
 #'   calibration curve (default: TRUE).
+#' @param add_rug Logical; add rug plot to show individual predictions
+#'   (default: FALSE).
+#' @param add_ci Logical; add bootstrap confidence bands if available
+#'   (default: TRUE if bootstrap was run).
 #' @param ... Additional arguments passed to plotting functions.
 #'
 #' @return A ggplot object (if ggplot2 available) or base R plot.
 #'
 #' @export
 plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE, 
-                                 add_histogram = TRUE, ...) {
+                                 add_histogram = TRUE, add_rug = FALSE,
+                                 add_ci = !is.null(x$boot_curves), ...) {
 
   estimator_label <- toupper(x$estimator)
+  has_ci <- !is.null(x$boot_curves) && add_ci
   
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     # Base R plot - simple version without histogram
@@ -887,6 +926,13 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE,
       abline(0, 1, lty = 2, col = "gray")
     }
     
+    # Add CI band if available
+    if (has_ci) {
+      polygon(c(x$boot_curves$predicted, rev(x$boot_curves$predicted)),
+              c(x$boot_curves$ci_lower, rev(x$boot_curves$ci_upper)),
+              col = rgb(46/255, 134/255, 171/255, 0.2), border = NA)
+    }
+    
     if (add_histogram && !is.null(x$predictions_raw)) {
       par(mar = c(4, 4, 0, 2))
       hist(x$predictions_raw, breaks = 30, col = "#2E86AB", border = "white",
@@ -904,11 +950,25 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE,
 
   subtitle_text <- NULL
   if (show_metrics) {
-    subtitle_text <- sprintf("ICI = %.3f, E50 = %.3f, Emax = %.3f",
-                             x$ici, x$e50, x$emax)
+    subtitle_text <- sprintf("ICI = %.3f, E50 = %.3f, Emax = %.3f%s",
+                             x$ici, x$e50, x$emax,
+                             if (has_ci) sprintf(" (%d%% CI)", round(x$conf_level * 100)) else "")
   }
 
-  p_cal <- ggplot2::ggplot(df, ggplot2::aes(x = .data$predicted, y = .data$observed)) +
+  p_cal <- ggplot2::ggplot(df, ggplot2::aes(x = .data$predicted, y = .data$observed))
+  
+  # Add confidence band first (so it's behind the line)
+  if (has_ci) {
+    df_ci <- x$boot_curves
+    p_cal <- p_cal +
+      ggplot2::geom_ribbon(
+        data = df_ci,
+        ggplot2::aes(x = .data$predicted, ymin = .data$ci_lower, ymax = .data$ci_upper),
+        fill = "#2E86AB", alpha = 0.2, inherit.aes = FALSE
+      )
+  }
+  
+  p_cal <- p_cal +
     ggplot2::geom_line(linewidth = 1.2, color = "#2E86AB") +
     ggplot2::labs(
       y = sprintf("Probability in Target Population (%s)", estimator_label),
@@ -923,12 +983,26 @@ plot.tr_calibration <- function(x, add_reference = TRUE, show_metrics = TRUE,
                                            linetype = "dashed", color = "gray50")
   }
 
+  # Add rug if requested
+  if (add_rug && !is.null(x$predictions_raw)) {
+    df_raw <- data.frame(predictions_raw = x$predictions_raw)
+    p_cal <- p_cal + 
+      ggplot2::geom_rug(data = df_raw, 
+                        ggplot2::aes(x = .data$predictions_raw, y = NULL),
+                        alpha = 0.3, color = "#2E86AB")
+  }
+
   # Add histogram subplot if requested
   if (add_histogram && !is.null(x$predictions_raw)) {
     if (!requireNamespace("patchwork", quietly = TRUE)) {
-      # Fall back to just the calibration plot
-      message("Install 'patchwork' package for histogram subplot.")
-      p_cal <- p_cal + ggplot2::labs(x = "Predicted probability")
+      # Fall back to just the calibration plot with rug
+      message("Install 'patchwork' package for histogram subplot. Showing rug plot instead.")
+      df_raw <- data.frame(predictions_raw = x$predictions_raw)
+      p_cal <- p_cal + 
+        ggplot2::geom_rug(data = df_raw, 
+                          ggplot2::aes(x = .data$predictions_raw, y = NULL),
+                          alpha = 0.3, color = "#2E86AB") +
+        ggplot2::labs(x = "Predicted probability")
       return(p_cal)
     }
     

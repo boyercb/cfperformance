@@ -4,7 +4,15 @@
 \alias{plot.tr_calibration}
 \title{Plot Method for tr_calibration Objects}
 \usage{
-\method{plot}{tr_calibration}(x, add_reference = TRUE, show_metrics = TRUE, ...)
+\method{plot}{tr_calibration}(
+  x,
+  add_reference = TRUE,
+  show_metrics = TRUE,
+  add_histogram = TRUE,
+  add_rug = FALSE,
+  add_ci = !is.null(x$boot_curves),
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{tr_calibration} object.}
@@ -13,6 +21,15 @@
 
 \item{show_metrics}{Logical; show calibration metrics on plot (default: TRUE).}
 
+\item{add_histogram}{Logical; add histogram of predictions below the
+calibration curve (default: TRUE).}
+
+\item{add_rug}{Logical; add rug plot to show individual predictions
+(default: FALSE).}
+
+\item{add_ci}{Logical; add bootstrap confidence bands if available
+(default: TRUE if bootstrap was run).}
+
 \item{...}{Additional arguments passed to plotting functions.}
 }
 \value{
@@ -20,5 +37,5 @@ A ggplot object (if ggplot2 available) or base R plot.
 }
 \description{
 Creates a calibration plot showing predicted vs observed probabilities
-in the target population.
+in the target population, with optional confidence bands and histogram.
 }

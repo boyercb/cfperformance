@@ -16,6 +16,9 @@ cf_calibration(
   smoother = c("loess", "binned"),
   n_bins = 10,
   span = 0.75,
+  se_method = c("none", "bootstrap"),
+  n_boot = 200,
+  conf_level = 0.95,
   ...
 )
 }
@@ -54,6 +57,16 @@ regression model is fit using the covariates among treated/untreated.}
 
 \item{span}{Span parameter for LOESS smoothing (default: 0.75).}
 
+\item{se_method}{Method for standard error estimation:
+\itemize{
+\item \code{"none"}: No standard errors (default, fastest)
+\item \code{"bootstrap"}: Bootstrap standard errors
+}}
+
+\item{n_boot}{Number of bootstrap replications (default: 200).}
+
+\item{conf_level}{Confidence level for intervals (default: 0.95).}
+
 \item{...}{Additional arguments passed to internal functions.}
 }
 \value{
@@ -65,6 +78,10 @@ An object of class \code{c("cf_calibration", "cf_performance")} containing:
 \item{e50}{Median absolute calibration error}
 \item{e90}{90th percentile absolute calibration error}
 \item{emax}{Maximum absolute calibration error}
+\item{se}{List of standard errors (if se_method = "bootstrap")}
+\item{ci_lower}{List of lower CI bounds (if se_method = "bootstrap")}
+\item{ci_upper}{List of upper CI bounds (if se_method = "bootstrap")}
+\item{boot_curves}{Bootstrap calibration curves for CI bands (if se_method = "bootstrap")}
 }
 \description{
 Estimates the calibration curve of a prediction model under a hypothetical
@@ -81,7 +98,7 @@ receiving the counterfactual treatment. Requires a correctly specified
 propensity score model.
 
 \strong{Conditional Loss (CL) Estimator}: Uses the fitted outcome model
-E\link{Y|X, A=a} to estimate calibration over all observations. Requires a
+\eqn{E[Y | X, A=a]} to estimate calibration over all observations. Requires a
 correctly specified outcome model.
 
 \strong{Doubly Robust (DR) Estimator}: Combines CL and IPW approaches. Consistent
@@ -116,6 +133,14 @@ result_dr <- cf_calibration(
 )
 print(result_dr)
 # plot(result_dr)  # If ggplot2 is available
+
+# With bootstrap confidence bands
+# result_boot <- cf_calibration(
+#   predictions = pred, outcomes = y, treatment = a,
+#   covariates = data.frame(x = x), treatment_level = 0,
+#   se_method = "bootstrap", n_boot = 200
+# )
+# plot(result_boot)  # Shows confidence bands
 }
 \references{
 Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
