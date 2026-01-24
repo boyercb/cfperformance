@@ -1,5 +1,70 @@
 # Changelog
 
+## cfperformance 0.4.0
+
+Adds sensitivity, specificity, and ROC curve functions for both
+counterfactual and transportability settings.
+
+### New Features
+
+#### Counterfactual Sensitivity/Specificity
+
+- [`cf_sensitivity()`](https://boyercb.github.io/cfperformance/reference/cf_sensitivity.md) -
+  Counterfactual sensitivity (true positive rate)
+- [`cf_specificity()`](https://boyercb.github.io/cfperformance/reference/cf_specificity.md) -
+  Counterfactual specificity (true negative rate)
+- [`cf_fpr()`](https://boyercb.github.io/cfperformance/reference/cf_fpr.md) -
+  Counterfactual false positive rate (1 - specificity)
+- [`cf_tpr()`](https://boyercb.github.io/cfperformance/reference/cf_sensitivity.md) -
+  Alias for
+  [`cf_sensitivity()`](https://boyercb.github.io/cfperformance/reference/cf_sensitivity.md)
+- [`cf_tnr()`](https://boyercb.github.io/cfperformance/reference/cf_specificity.md) -
+  Alias for
+  [`cf_specificity()`](https://boyercb.github.io/cfperformance/reference/cf_specificity.md)
+- Supports CL, IPW, DR, and naive estimators
+- Vectorized threshold parameter for efficient ROC curve computation
+
+#### Transportable Sensitivity/Specificity
+
+- [`tr_sensitivity()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md) -
+  Transportable sensitivity for target population
+- [`tr_specificity()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md) -
+  Transportable specificity for target population
+- [`tr_fpr()`](https://boyercb.github.io/cfperformance/reference/tr_fpr.md) -
+  Transportable false positive rate
+- [`tr_tpr()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md) -
+  Alias for
+  [`tr_sensitivity()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md)
+- [`tr_tnr()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md) -
+  Alias for
+  [`tr_specificity()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md)
+- Supports OM, IPW, DR, and naive estimators
+- Works with both “transport” and “joint” analysis types
+
+#### ROC Curves
+
+- [`tr_roc()`](https://boyercb.github.io/cfperformance/reference/tr_roc.md) -
+  Compute transportable ROC curve in target population
+- [`cf_roc()`](https://boyercb.github.io/cfperformance/reference/cf_roc.md) -
+  Compute counterfactual ROC curve
+- [`plot.tr_roc()`](https://boyercb.github.io/cfperformance/reference/plot.tr_roc.md)
+  /
+  [`plot.cf_roc()`](https://boyercb.github.io/cfperformance/reference/plot.tr_roc.md) -
+  Plot ROC curves with AUC in legend
+- [`as.data.frame.tr_roc()`](https://boyercb.github.io/cfperformance/reference/as.data.frame.tr_roc.md)
+  /
+  [`as.data.frame.cf_roc()`](https://boyercb.github.io/cfperformance/reference/as.data.frame.tr_roc.md) -
+  Convert to data frame for ggplot2
+- AUC computed via trapezoidal integration
+- Option to include naive ROC curve for comparison
+
+#### Documentation
+
+- Updated introduction vignette with ROC curve examples
+- Updated transportability vignette with ROC curve examples
+
+------------------------------------------------------------------------
+
 ## cfperformance 0.3.0
 
 Adds machine learning integration for flexible nuisance model estimation

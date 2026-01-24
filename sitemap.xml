@@ -9,11 +9,16 @@
 <url><loc>https://boyercb.github.io/cfperformance/authors.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/index.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/news/index.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/as.data.frame.tr_roc.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/cf_auc.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/cf_calibration.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/cf_compare.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/cf_cv.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/cf_fpr.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/cf_mse.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/cf_roc.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/cf_sensitivity.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/cf_specificity.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/cfperformance-package.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/coef.cf_performance.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/coef.tr_performance.html</loc></url>
@@ -41,6 +46,7 @@
 <url><loc>https://boyercb.github.io/cfperformance/reference/plot.cf_auc.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/plot.cf_calibration.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/plot.tr_calibration.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/plot.tr_roc.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/print.cf_compare.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/print.cf_cv.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/print.cf_nuisance.html</loc></url>
@@ -53,7 +59,11 @@
 <url><loc>https://boyercb.github.io/cfperformance/reference/summary.tr_performance.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/tr_auc.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/tr_calibration.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/tr_fpr.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/tr_mse.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/tr_roc.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/tr_sensitivity.html</loc></url>
+<url><loc>https://boyercb.github.io/cfperformance/reference/tr_specificity.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/transport_sim.html</loc></url>
 <url><loc>https://boyercb.github.io/cfperformance/reference/variance.html</loc></url>
 </urlset>

@@ -214,9 +214,10 @@ Prediction Model for Use in a New Target Population. *American Journal
 of Epidemiology*. 2022; 192(2):296-304. doi:
 [10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
 
-Voter SR, et al. Transportability of machine learning-based
-counterfactual prediction models with application to CASS. *Diagnostic
-and Prognostic Research*. 2025; 9(4). doi:
+Voter SR, et al. Counterfactual prediction from machine learning models:
+transportability and joint analysis for model development and evaluation
+using multi-source data. *Diagnostic and Prognostic Research*. 2025;
+9(4). doi:
 [10.1186/s41512-025-00201-y](https://doi.org/10.1186/s41512-025-00201-y)
 
 ``` bibtex
@@ -243,7 +244,7 @@ and Prognostic Research*. 2025; 9(4). doi:
 }
 
 @article{voter2025transportability,
-  title={Transportability of machine learning-based counterfactual prediction models with application to CASS},
+  title={Counterfactual prediction from machine learning models: transportability and joint analysis for model development and evaluation using multi-source data},
   author = {Voter, Sarah C. and Dahabreh, Issa J. and Boyer, Christopher B. and Rahbar, Habib and Kontos, Despina and Steingrimsson, Jon A.},
   journal={Diagnostic and Prognostic Research},
   volume={9},

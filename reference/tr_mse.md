@@ -263,7 +263,7 @@ print(result)
 #> Treatment level: 0 
 #> N target: 376  | N source: 624 
 #> 
-#> Estimate: 0.1713
+#> Estimate: 0.1779
 #> 
 #> Naive estimate: 0.1577 
 #> 

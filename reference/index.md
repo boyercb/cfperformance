@@ -10,6 +10,16 @@ Estimate prediction model performance under counterfactual interventions
   : Estimate Counterfactual Area Under the ROC Curve
 - [`cf_calibration()`](https://boyercb.github.io/cfperformance/reference/cf_calibration.md)
   : Estimate Counterfactual Calibration Curve
+- [`cf_sensitivity()`](https://boyercb.github.io/cfperformance/reference/cf_sensitivity.md)
+  [`cf_tpr()`](https://boyercb.github.io/cfperformance/reference/cf_sensitivity.md)
+  : Estimate Counterfactual Sensitivity
+- [`cf_specificity()`](https://boyercb.github.io/cfperformance/reference/cf_specificity.md)
+  [`cf_tnr()`](https://boyercb.github.io/cfperformance/reference/cf_specificity.md)
+  : Estimate Counterfactual Specificity
+- [`cf_fpr()`](https://boyercb.github.io/cfperformance/reference/cf_fpr.md)
+  : Estimate Counterfactual False Positive Rate
+- [`cf_roc()`](https://boyercb.github.io/cfperformance/reference/cf_roc.md)
+  : Compute Counterfactual ROC Curve
 
 ## Transportability (Two Populations)
 
@@ -23,6 +33,17 @@ Transport prediction model performance from source to target population
   Population
 - [`tr_calibration()`](https://boyercb.github.io/cfperformance/reference/tr_calibration.md)
   : Estimate (Counterfactual) Calibration in the Target Population
+- [`tr_sensitivity()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md)
+  [`tr_tpr()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md)
+  : Estimate (Counterfactual) Sensitivity in the Target Population
+- [`tr_specificity()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md)
+  [`tr_tnr()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md)
+  : Estimate (Counterfactual) Specificity in the Target Population
+- [`tr_fpr()`](https://boyercb.github.io/cfperformance/reference/tr_fpr.md)
+  : Estimate (Counterfactual) False Positive Rate in the Target
+  Population
+- [`tr_roc()`](https://boyercb.github.io/cfperformance/reference/tr_roc.md)
+  : Compute Transportable ROC Curve
 
 ## Model Selection
 
@@ -53,6 +74,9 @@ Fit propensity and outcome models
 
 Methods for result objects
 
+- [`as.data.frame(`*`<tr_roc>`*`)`](https://boyercb.github.io/cfperformance/reference/as.data.frame.tr_roc.md)
+  [`as.data.frame(`*`<cf_roc>`*`)`](https://boyercb.github.io/cfperformance/reference/as.data.frame.tr_roc.md)
+  : Convert ROC Curve to Data Frame
 - [`coef(`*`<cf_performance>`*`)`](https://boyercb.github.io/cfperformance/reference/coef.cf_performance.md)
   : Coefficient Method for cf_performance Objects
 - [`coef(`*`<tr_performance>`*`)`](https://boyercb.github.io/cfperformance/reference/coef.tr_performance.md)
@@ -67,6 +91,9 @@ Methods for result objects
   : Plot Method for cf_calibration Objects
 - [`plot(`*`<tr_calibration>`*`)`](https://boyercb.github.io/cfperformance/reference/plot.tr_calibration.md)
   : Plot Method for tr_calibration Objects
+- [`plot(`*`<tr_roc>`*`)`](https://boyercb.github.io/cfperformance/reference/plot.tr_roc.md)
+  [`plot(`*`<cf_roc>`*`)`](https://boyercb.github.io/cfperformance/reference/plot.tr_roc.md)
+  : Plot ROC Curve
 - [`print(`*`<cf_compare>`*`)`](https://boyercb.github.io/cfperformance/reference/print.cf_compare.md)
   : Print Method for cf_compare Objects
 - [`print(`*`<cf_cv>`*`)`](https://boyercb.github.io/cfperformance/reference/print.cf_cv.md)

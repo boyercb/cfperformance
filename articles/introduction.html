@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,7 +61,7 @@
                         <h4 data-toc-skip class="author">Christopher
 Boyer, Issa Dahabreh, Jon Steingrimsson</h4>
             
-            <h4 data-toc-skip class="date">2026-01-23</h4>
+            <h4 data-toc-skip class="date">2026-01-24</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/boyercb/cfperformance/blob/main/vignettes/introduction.Rmd" class="external-link"><code>vignettes/introduction.Rmd</code></a></small>
       <div class="d-none name"><code>introduction.Rmd</code></div>
@@ -178,7 +178,7 @@ estimates even if one model is misspecified.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">estimators</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">results</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt;  naive     cl    ipw     dr </span></span>
-<span><span class="co">#&gt; 0.1086 0.1190 0.2095 0.1186</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.1086 0.1190 0.1192 0.1186</span></span></code></pre></div>
 <ul>
 <li>
 <strong>naive</strong>: Simply computes MSE on the subset with the
@@ -222,10 +222,43 @@ IPW; consistent if either model is correct.</li>
 <span><span class="co">#&gt; Naive estimate: 0.6729</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="roc-curve">ROC Curve<a class="anchor" aria-label="anchor" href="#roc-curve"></a>
+</h3>
+<p>We can also visualize the full ROC curve, which shows the tradeoff
+between sensitivity (true positive rate) and 1-specificity (false
+positive rate) across all classification thresholds:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">roc_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cf_roc.html">cf_roc</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"bp"</span>, <span class="st">"chol"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  estimator <span class="op">=</span> <span class="st">"dr"</span>,</span>
+<span>  include_naive <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Plot the ROC curve</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">roc_result</span><span class="op">)</span></span></code></pre></div>
+<p><img src="introduction_files/figure-html/roc-example-1.png" class="r-plt" alt="" width="576"></p>
+<p>The ROC curve data can also be extracted as a data frame for custom
+plotting:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">roc_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">roc_result</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">roc_df</span><span class="op">)</span></span>
+<span><span class="co">#&gt;   threshold       fpr sensitivity  specificity     type</span></span>
+<span><span class="co">#&gt; 1     0.000 1.0000000    1.000000 0.0000000000 adjusted</span></span>
+<span><span class="co">#&gt; 2     0.005 1.0000000    1.000000 0.0000000000 adjusted</span></span>
+<span><span class="co">#&gt; 3     0.010 1.0000000    1.000000 0.0000000000 adjusted</span></span>
+<span><span class="co">#&gt; 4     0.015 0.9990597    1.000008 0.0009403139 adjusted</span></span>
+<span><span class="co">#&gt; 5     0.020 0.9985887    1.000017 0.0014112567 adjusted</span></span>
+<span><span class="co">#&gt; 6     0.025 0.9957604    1.000083 0.0042395558 adjusted</span></span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="bootstrap-standard-errors">Bootstrap Standard Errors<a class="anchor" aria-label="anchor" href="#bootstrap-standard-errors"></a>
 </h3>
 <p>Both functions support bootstrap standard errors:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mse_with_se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cf_mse.html">cf_mse</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -254,7 +287,7 @@ IPW; consistent if either model is correct.</li>
 <h2 id="calibration-curves">Calibration Curves<a class="anchor" aria-label="anchor" href="#calibration-curves"></a>
 </h2>
 <p>The package also supports counterfactual calibration assessment:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cal_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cf_calibration.html">cf_calibration</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">cvd_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -272,7 +305,7 @@ IPW; consistent if either model is correct.</li>
 </h2>
 <p>When comparing multiple prediction models, use counterfactual
 cross-validation:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Compare two models using counterfactual CV</span></span>
 <span><span class="va">models</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="st">"Simple"</span> <span class="op">=</span> <span class="va">event</span> <span class="op">~</span> <span class="va">age</span>,</span>

@@ -94,8 +94,8 @@ result
 #> Treatment level: 0 
 #> N observations: 2500 
 #> 
-#> Estimate: 0.1186 (SE: 0.0064 )
-#> 95% CI: [0.1059, 0.1322]
+#> Estimate: 0.1186 (SE: 0.0065 )
+#> 95% CI: [0.1064, 0.1309]
 #> 
 #> Naive estimate: 0.1086 
 #> 

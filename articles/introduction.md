@@ -104,7 +104,7 @@ results <- sapply(estimators, function(est) {
 names(results) <- estimators
 round(results, 4)
 #>  naive     cl    ipw     dr 
-#> 0.1086 0.1190 0.2095 0.1186
+#> 0.1086 0.1190 0.1192 0.1186
 ```
 
 - **naive**: Simply computes MSE on the subset with the target treatment
@@ -142,6 +142,44 @@ auc_result
 #> 95% CI: [0.6444, 0.725]
 #> 
 #> Naive estimate: 0.6729
+```
+
+### ROC Curve
+
+We can also visualize the full ROC curve, which shows the tradeoff
+between sensitivity (true positive rate) and 1-specificity (false
+positive rate) across all classification thresholds:
+
+``` r
+roc_result <- cf_roc(
+  predictions = cvd_sim$risk_score,
+  outcomes = cvd_sim$event,
+  treatment = cvd_sim$treatment,
+  covariates = cvd_sim[, c("age", "bp", "chol")],
+  treatment_level = 0,
+  estimator = "dr",
+  include_naive = TRUE
+)
+
+# Plot the ROC curve
+plot(roc_result)
+```
+
+![](introduction_files/figure-html/roc-example-1.png)
+
+The ROC curve data can also be extracted as a data frame for custom
+plotting:
+
+``` r
+roc_df <- as.data.frame(roc_result)
+head(roc_df)
+#>   threshold       fpr sensitivity  specificity     type
+#> 1     0.000 1.0000000    1.000000 0.0000000000 adjusted
+#> 2     0.005 1.0000000    1.000000 0.0000000000 adjusted
+#> 3     0.010 1.0000000    1.000000 0.0000000000 adjusted
+#> 4     0.015 0.9990597    1.000008 0.0009403139 adjusted
+#> 5     0.020 0.9985887    1.000017 0.0014112567 adjusted
+#> 6     0.025 0.9957604    1.000083 0.0042395558 adjusted
 ```
 
 ### Bootstrap Standard Errors

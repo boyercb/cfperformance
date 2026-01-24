@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,7 +61,7 @@
                         <h4 data-toc-skip class="author">Christopher
 Boyer</h4>
             
-            <h4 data-toc-skip class="date">2026-01-23</h4>
+            <h4 data-toc-skip class="date">2026-01-24</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/boyercb/cfperformance/blob/main/vignettes/transportability.Rmd" class="external-link"><code>vignettes/transportability.Rmd</code></a></small>
       <div class="d-none name"><code>transportability.Rmd</code></div>
@@ -191,7 +191,7 @@ useful when:</p>
 <span><span class="co">#&gt; Treatment level: 0 </span></span>
 <span><span class="co">#&gt; N target: 1224  | N source: 1276 </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Estimate: 0.2211</span></span>
+<span><span class="co">#&gt; Estimate: 0.2219</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Naive estimate: 0.2178</span></span></code></pre></div>
 </div>
@@ -223,9 +223,9 @@ useful when:</p>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;       Estimator    MSE</span></span>
 <span><span class="co">#&gt; naive     naive 0.2178</span></span>
-<span><span class="co">#&gt; om           om 0.2212</span></span>
+<span><span class="co">#&gt; om           om 0.2222</span></span>
 <span><span class="co">#&gt; ipw         ipw 0.2213</span></span>
-<span><span class="co">#&gt; dr           dr 0.2211</span></span></code></pre></div>
+<span><span class="co">#&gt; dr           dr 0.2219</span></span></code></pre></div>
 <ul>
 <li>
 <strong>naive</strong>: Uses source data with A=0 only (ignores
@@ -272,10 +272,34 @@ IPW</li>
 <span><span class="co">#&gt; Naive estimate: 0.6249</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="roc-curve-in-the-target-population">ROC Curve in the Target Population<a class="anchor" aria-label="anchor" href="#roc-curve-in-the-target-population"></a>
+</h3>
+<p>We can visualize the full ROC curve for the target population:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">roc_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_roc.html">tr_roc</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">treatment</span>,</span>
+<span>  source <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">source</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">transport_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"biomarker"</span>, <span class="st">"smoking"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  analysis <span class="op">=</span> <span class="st">"transport"</span>,</span>
+<span>  estimator <span class="op">=</span> <span class="st">"dr"</span>,</span>
+<span>  include_naive <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Plot the ROC curve</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">roc_result</span><span class="op">)</span></span></code></pre></div>
+<p><img src="transportability_files/figure-html/tr-roc-1.png" class="r-plt" alt="" width="576"></p>
+<p>The comparison between the doubly robust and naive ROC curves shows
+how performance estimates change when properly accounting for the
+distribution shift between source and target populations.</p>
+</div>
+<div class="section level3">
 <h3 id="calibration-in-the-target-population">Calibration in the Target Population<a class="anchor" aria-label="anchor" href="#calibration-in-the-target-population"></a>
 </h3>
 <p>To assess calibration in the target population:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">calib_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_calibration.html">tr_calibration</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -303,7 +327,7 @@ IPW</li>
 <span><span class="co">#&gt;   E50 (Median absolute error): 0.0558 </span></span>
 <span><span class="co">#&gt;   E90 (90th percentile error): 0.0852 </span></span>
 <span><span class="co">#&gt;   Emax (Maximum error): 0.1806</span></span></code></pre></div>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">calib_result</span><span class="op">)</span></span></code></pre></div>
 <div class="figure">
 <img src="transportability_files/figure-html/plot-calibration-1.png" class="r-plt" alt="Transportable calibration curve for the target population" width="576"><p class="caption">
@@ -318,7 +342,7 @@ Transportable calibration curve for the target population
 <p>The <strong>joint analysis</strong> pools source and target data for
 potentially more efficient estimation. This requires outcome data in
 both populations.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mse_joint</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_mse.html">tr_mse</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -332,15 +356,15 @@ both populations.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Transport MSE:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mse_result</span><span class="op">$</span><span class="va">estimate</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Transport MSE: 0.2211</span></span>
+<span><span class="co">#&gt; Transport MSE: 0.2219</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Joint MSE:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">mse_joint</span><span class="op">$</span><span class="va">estimate</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Joint MSE: 0.2222</span></span></code></pre></div>
+<span><span class="co">#&gt; Joint MSE: 0.2223</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="bootstrap-standard-errors">Bootstrap Standard Errors<a class="anchor" aria-label="anchor" href="#bootstrap-standard-errors"></a>
 </h2>
 <p>For inference, use bootstrap standard errors:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mse_with_se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_mse.html">tr_mse</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -376,13 +400,13 @@ both populations.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Results:</span></span>
 <span><span class="co">#&gt;      Estimator Estimate       SE CI_lower CI_upper</span></span>
-<span><span class="co">#&gt;  Transportable   0.2211 0.008868   0.2043    0.239</span></span>
+<span><span class="co">#&gt;  Transportable   0.2219 0.008787   0.2055   0.2404</span></span>
 <span><span class="co">#&gt;          Naive   0.2178       NA       NA       NA</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Difference (Transportable - Naive): 0.0033</span></span>
+<span><span class="co">#&gt; Difference (Transportable - Naive): 0.0041</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/confint.html" class="external-link">confint</a></span><span class="op">(</span><span class="va">mse_with_se</span><span class="op">)</span></span>
-<span><span class="co">#&gt;             2.5%     97.5%</span></span>
-<span><span class="co">#&gt; tr_mse 0.2042813 0.2390305</span></span></code></pre></div>
+<span><span class="co">#&gt;            2.5%     97.5%</span></span>
+<span><span class="co">#&gt; tr_mse 0.205452 0.2403893</span></span></code></pre></div>
 <p>The <code>stratified_boot = TRUE</code> option (default) ensures that
 bootstrap samples preserve the ratio of source to target observations,
 which is recommended for transportability analysis.</p>

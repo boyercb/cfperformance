@@ -114,8 +114,8 @@ result
 #> Treatment level: 0 
 #> N target: 1224  | N source: 1276 
 #> 
-#> Estimate: 0.2211 (SE: 0.0082 )
-#> 95% CI: [0.2048, 0.2375]
+#> Estimate: 0.2219 (SE: 0.0081 )
+#> 95% CI: [0.2055, 0.2392]
 #> 
 #> Naive estimate: 0.2178 
 #> 

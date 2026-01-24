@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,65 @@
       <small>Source: <a href="https://github.com/boyercb/cfperformance/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.0" id="cfperformance-040">cfperformance 0.4.0<a class="anchor" aria-label="anchor" href="#cfperformance-040"></a></h2>
+<p>Adds sensitivity, specificity, and ROC curve functions for both counterfactual and transportability settings.</p>
+<div class="section level3">
+<h3 id="new-features-0-4-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-0-4-0"></a></h3>
+<div class="section level4">
+<h4 id="counterfactual-sensitivityspecificity-0-4-0">Counterfactual Sensitivity/Specificity<a class="anchor" aria-label="anchor" href="#counterfactual-sensitivityspecificity-0-4-0"></a></h4>
+<ul><li>
+<code><a href="../reference/cf_sensitivity.html">cf_sensitivity()</a></code> - Counterfactual sensitivity (true positive rate)</li>
+<li>
+<code><a href="../reference/cf_specificity.html">cf_specificity()</a></code> - Counterfactual specificity (true negative rate)</li>
+<li>
+<code><a href="../reference/cf_fpr.html">cf_fpr()</a></code> - Counterfactual false positive rate (1 - specificity)</li>
+<li>
+<code><a href="../reference/cf_sensitivity.html">cf_tpr()</a></code> - Alias for <code><a href="../reference/cf_sensitivity.html">cf_sensitivity()</a></code>
+</li>
+<li>
+<code><a href="../reference/cf_specificity.html">cf_tnr()</a></code> - Alias for <code><a href="../reference/cf_specificity.html">cf_specificity()</a></code>
+</li>
+<li>Supports CL, IPW, DR, and naive estimators</li>
+<li>Vectorized threshold parameter for efficient ROC curve computation</li>
+</ul></div>
+<div class="section level4">
+<h4 id="transportable-sensitivityspecificity-0-4-0">Transportable Sensitivity/Specificity<a class="anchor" aria-label="anchor" href="#transportable-sensitivityspecificity-0-4-0"></a></h4>
+<ul><li>
+<code><a href="../reference/tr_sensitivity.html">tr_sensitivity()</a></code> - Transportable sensitivity for target population</li>
+<li>
+<code><a href="../reference/tr_specificity.html">tr_specificity()</a></code> - Transportable specificity for target population</li>
+<li>
+<code><a href="../reference/tr_fpr.html">tr_fpr()</a></code> - Transportable false positive rate</li>
+<li>
+<code><a href="../reference/tr_sensitivity.html">tr_tpr()</a></code> - Alias for <code><a href="../reference/tr_sensitivity.html">tr_sensitivity()</a></code>
+</li>
+<li>
+<code><a href="../reference/tr_specificity.html">tr_tnr()</a></code> - Alias for <code><a href="../reference/tr_specificity.html">tr_specificity()</a></code>
+</li>
+<li>Supports OM, IPW, DR, and naive estimators</li>
+<li>Works with both “transport” and “joint” analysis types</li>
+</ul></div>
+<div class="section level4">
+<h4 id="roc-curves-0-4-0">ROC Curves<a class="anchor" aria-label="anchor" href="#roc-curves-0-4-0"></a></h4>
+<ul><li>
+<code><a href="../reference/tr_roc.html">tr_roc()</a></code> - Compute transportable ROC curve in target population</li>
+<li>
+<code><a href="../reference/cf_roc.html">cf_roc()</a></code> - Compute counterfactual ROC curve</li>
+<li>
+<code><a href="../reference/plot.tr_roc.html">plot.tr_roc()</a></code> / <code><a href="../reference/plot.tr_roc.html">plot.cf_roc()</a></code> - Plot ROC curves with AUC in legend</li>
+<li>
+<code><a href="../reference/as.data.frame.tr_roc.html">as.data.frame.tr_roc()</a></code> / <code><a href="../reference/as.data.frame.tr_roc.html">as.data.frame.cf_roc()</a></code> - Convert to data frame for ggplot2</li>
+<li>AUC computed via trapezoidal integration</li>
+<li>Option to include naive ROC curve for comparison</li>
+</ul></div>
+<div class="section level4">
+<h4 id="documentation-0-4-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-4-0"></a></h4>
+<ul><li>Updated introduction vignette with ROC curve examples</li>
+<li>Updated transportability vignette with ROC curve examples</li>
+</ul><hr></div>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.0" id="cfperformance-030">cfperformance 0.3.0<a class="anchor" aria-label="anchor" href="#cfperformance-030"></a></h2>
 <p>Adds machine learning integration for flexible nuisance model estimation with automatic cross-fitting for valid inference.</p>

@@ -108,7 +108,7 @@ print(mse_result)
 #> Treatment level: 0 
 #> N target: 1224  | N source: 1276 
 #> 
-#> Estimate: 0.2211
+#> Estimate: 0.2219
 #> 
 #> Naive estimate: 0.2178
 ```
@@ -141,9 +141,9 @@ data.frame(
 )
 #>       Estimator    MSE
 #> naive     naive 0.2178
-#> om           om 0.2212
+#> om           om 0.2222
 #> ipw         ipw 0.2213
-#> dr           dr 0.2211
+#> dr           dr 0.2219
 ```
 
 - **naive**: Uses source data with A=0 only (ignores population
@@ -183,6 +183,33 @@ print(auc_result)
 #> 
 #> Naive estimate: 0.6249
 ```
+
+### ROC Curve in the Target Population
+
+We can visualize the full ROC curve for the target population:
+
+``` r
+roc_result <- tr_roc(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  treatment = transport_sim$treatment,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  treatment_level = 0,
+  analysis = "transport",
+  estimator = "dr",
+  include_naive = TRUE
+)
+
+# Plot the ROC curve
+plot(roc_result)
+```
+
+![](transportability_files/figure-html/tr-roc-1.png)
+
+The comparison between the doubly robust and naive ROC curves shows how
+performance estimates change when properly accounting for the
+distribution shift between source and target populations.
 
 ### Calibration in the Target Population
 
@@ -246,9 +273,9 @@ mse_joint <- tr_mse(
 )
 
 cat("Transport MSE:", round(mse_result$estimate, 4), "\n")
-#> Transport MSE: 0.2211
+#> Transport MSE: 0.2219
 cat("Joint MSE:", round(mse_joint$estimate, 4), "\n")
-#> Joint MSE: 0.2222
+#> Joint MSE: 0.2223
 ```
 
 ## Bootstrap Standard Errors
@@ -291,13 +318,13 @@ summary(mse_with_se)
 #> 
 #> Results:
 #>      Estimator Estimate       SE CI_lower CI_upper
-#>  Transportable   0.2211 0.008868   0.2043    0.239
+#>  Transportable   0.2219 0.008787   0.2055   0.2404
 #>          Naive   0.2178       NA       NA       NA
 #> 
-#> Difference (Transportable - Naive): 0.0033
+#> Difference (Transportable - Naive): 0.0041
 confint(mse_with_se)
-#>             2.5%     97.5%
-#> tr_mse 0.2042813 0.2390305
+#>            2.5%     97.5%
+#> tr_mse 0.205452 0.2403893
 ```
 
 The `stratified_boot = TRUE` option (default) ensures that bootstrap
