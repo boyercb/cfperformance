@@ -109,12 +109,16 @@ tr_auc <- function(predictions,
                    n_folds = 5,
                    parallel = FALSE,
                    ncores = NULL,
+                   ps_trim = NULL,
                    ...) {
 
   # Input validation
   analysis <- match.arg(analysis)
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
 
@@ -152,6 +156,7 @@ tr_auc <- function(predictions,
       outcome_learner = outcome_model,
       parallel = parallel,
       return_se = compute_cf_se,
+      ps_trim_spec = ps_trim_spec,
       ...
     )
 
@@ -204,6 +209,7 @@ tr_auc <- function(predictions,
         outcome_learner = outcome_model,
         parallel = parallel,
         ncores = ncores,
+        ps_trim_spec = ps_trim_spec,
         ...
       )
       se <- boot_result$se
@@ -248,7 +254,8 @@ tr_auc <- function(predictions,
       estimator = estimator,
       selection_model = nuisance$selection,
       propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
+      outcome_model = nuisance$outcome,
+      ps_trim_spec = ps_trim_spec
     )
 
     # Compute naive estimate for comparison
@@ -277,6 +284,7 @@ tr_auc <- function(predictions,
         stratified = stratified_boot,
         parallel = parallel,
         ncores = ncores,
+        ps_trim_spec = ps_trim_spec,
         ...
       )
       se <- boot_result$se
@@ -344,7 +352,13 @@ tr_auc <- function(predictions,
                                                propensity_learner = NULL,
                                                outcome_learner = NULL,
                                                parallel = FALSE,
+                                               ps_trim_spec = NULL,
                                                ...) {
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   n <- length(outcomes)
 
@@ -385,7 +399,7 @@ tr_auc <- function(predictions,
       pi_s0_pred <- predict(sel_model, newdata = covariates[val_idx, , drop = FALSE],
                             type = "response")
     }
-    pi_s0_cf[val_idx] <- pmax(pmin(pi_s0_pred, 0.99), 0.01)
+    pi_s0_cf[val_idx] <- .trim_propensity(pi_s0_pred, ps_trim_spec$method, ps_trim_spec$bounds)
 
     # --- Propensity model ---
     if (analysis == "transport") {
@@ -410,7 +424,7 @@ tr_auc <- function(predictions,
     if (treatment_level == 0) {
       ps_pred <- 1 - ps_pred
     }
-    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
+    ps_cf[val_idx] <- .trim_propensity(ps_pred, ps_trim_spec$method, ps_trim_spec$bounds)
 
     # --- Outcome model: E[Y | X, A=a, S] ---
     if (analysis == "transport") {
@@ -432,7 +446,8 @@ tr_auc <- function(predictions,
       q_pred <- predict(om_model, newdata = covariates[val_idx, , drop = FALSE],
                         type = "response")
     }
-    q_cf[val_idx] <- pmax(pmin(q_pred, 0.99), 0.01)
+    # Clip to [0, 1] bounds (not propensity trimming - this is an outcome model)
+    q_cf[val_idx] <- pmin(pmax(q_pred, 0), 1)
   }
 
   list(
@@ -467,7 +482,13 @@ tr_auc <- function(predictions,
                                       outcome_learner = NULL,
                                       parallel = FALSE,
                                       return_se = FALSE,
+                                      ps_trim_spec = NULL,
                                       ...) {
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   n <- length(outcomes)
   n0 <- sum(source == 0)
@@ -485,6 +506,7 @@ tr_auc <- function(predictions,
     propensity_learner = propensity_learner,
     outcome_learner = outcome_learner,
     parallel = parallel,
+    ps_trim_spec = ps_trim_spec,
     ...
   )
 
@@ -866,7 +888,13 @@ tr_auc <- function(predictions,
 #' @noRd
 .compute_tr_auc <- function(predictions, outcomes, treatment, source, covariates,
                             treatment_level, analysis, estimator,
-                            selection_model, propensity_model, outcome_model) {
+                            selection_model, propensity_model, outcome_model,
+                            ps_trim_spec = NULL) {
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   if (estimator == "naive") {
     return(.compute_tr_auc_naive(predictions, outcomes, treatment, source,
@@ -884,7 +912,8 @@ tr_auc <- function(predictions,
       estimator = estimator,
       selection_model = selection_model,
       propensity_model = propensity_model,
-      outcome_model = outcome_model
+      outcome_model = outcome_model,
+      ps_trim_spec = ps_trim_spec
     ))
   } else {
     return(.tr_auc_joint(
@@ -897,7 +926,8 @@ tr_auc <- function(predictions,
       estimator = estimator,
       selection_model = selection_model,
       propensity_model = propensity_model,
-      outcome_model = outcome_model
+      outcome_model = outcome_model,
+      ps_trim_spec = ps_trim_spec
     ))
   }
 }
@@ -936,7 +966,13 @@ tr_auc <- function(predictions,
 #' @noRd
 .tr_auc_transport <- function(predictions, outcomes, treatment, source, covariates,
                                treatment_level, estimator, selection_model,
-                               propensity_model, outcome_model) {
+                               propensity_model, outcome_model,
+                               ps_trim_spec = NULL) {
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   n <- length(outcomes)
   n0 <- sum(source == 0)
@@ -1037,7 +1073,13 @@ tr_auc <- function(predictions,
 #' @noRd
 .tr_auc_joint <- function(predictions, outcomes, treatment, source, covariates,
                            treatment_level, estimator, selection_model,
-                           propensity_model, outcome_model) {
+                           propensity_model, outcome_model,
+                           ps_trim_spec = NULL) {
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   n <- length(outcomes)
   n0 <- sum(source == 0)
@@ -1136,7 +1178,12 @@ tr_auc <- function(predictions,
 .bootstrap_tr_auc <- function(predictions, outcomes, treatment, source, covariates,
                                treatment_level, analysis, estimator,
                                n_boot, conf_level, stratified = TRUE,
-                               parallel, ncores, ...) {
+                               parallel, ncores, ps_trim_spec = NULL, ...) {
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   n <- length(outcomes)
 
@@ -1189,7 +1236,8 @@ tr_auc <- function(predictions,
         estimator = estimator,
         selection_model = nuisance_boot$selection,
         propensity_model = nuisance_boot$propensity,
-        outcome_model = nuisance_boot$outcome
+        outcome_model = nuisance_boot$outcome,
+        ps_trim_spec = ps_trim_spec
       )
     }, error = function(e) NA_real_)
   }
@@ -1253,7 +1301,12 @@ tr_auc <- function(predictions,
                                         selection_learner = NULL,
                                         propensity_learner = NULL,
                                         outcome_learner = NULL,
-                                        parallel, ncores, ...) {
+                                        parallel, ncores, ps_trim_spec = NULL, ...) {
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   n <- length(outcomes)
 
@@ -1289,6 +1342,7 @@ tr_auc <- function(predictions,
         propensity_learner = propensity_learner,
         outcome_learner = outcome_learner,
         parallel = FALSE,
+        ps_trim_spec = ps_trim_spec,
         ...
       )$estimate
     }, error = function(e) NA_real_)

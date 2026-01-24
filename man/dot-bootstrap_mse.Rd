@@ -15,6 +15,7 @@
   conf_level = 0.95,
   parallel = FALSE,
   ncores = NULL,
+  ps_trim = NULL,
   ...
 )
 }

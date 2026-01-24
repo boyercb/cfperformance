@@ -13,7 +13,9 @@
   K = 5,
   propensity_learner = NULL,
   outcome_learner = NULL,
+  outcome_type = "binary",
   parallel = FALSE,
+  ps_trim_spec = NULL,
   ...
 )
 }
@@ -30,8 +32,12 @@
 
 \item{K}{Number of folds for cross-fitting.}
 
+\item{outcome_type}{Either "binary" or "continuous".}
+
 \item{parallel}{Logical indicating whether to use parallel processing
 for bootstrap (default: FALSE).}
+
+\item{ps_trim_spec}{Parsed propensity score trimming specification from .parse_ps_trim().}
 
 \item{...}{Additional arguments passed to internal functions.}
 }

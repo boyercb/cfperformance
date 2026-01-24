@@ -108,6 +108,7 @@ tr_sensitivity <- function(predictions,
                            stratified_boot = TRUE,
                            cross_fit = FALSE,
                            n_folds = 5,
+                           ps_trim = NULL,
                            parallel = FALSE,
                            ncores = NULL,
                            ...) {
@@ -116,6 +117,9 @@ tr_sensitivity <- function(predictions,
   analysis <- match.arg(analysis)
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
 
@@ -158,6 +162,7 @@ tr_sensitivity <- function(predictions,
         selection_learner = if (use_ml_selection) selection_model else NULL,
         propensity_learner = if (use_ml_propensity) propensity_model else NULL,
         outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        ps_trim_spec = ps_trim_spec,
         parallel = parallel,
         ...
       )
@@ -294,6 +299,7 @@ tr_sensitivity <- function(predictions,
       n_boot = n_boot,
       conf_level = conf_level,
       stratified = stratified_boot,
+      ps_trim_spec = ps_trim_spec,
       parallel = parallel,
       ncores = ncores,
       ...
@@ -408,6 +414,7 @@ tr_specificity <- function(predictions,
                            stratified_boot = TRUE,
                            cross_fit = FALSE,
                            n_folds = 5,
+                           ps_trim = NULL,
                            parallel = FALSE,
                            ncores = NULL,
                            ...) {
@@ -416,6 +423,9 @@ tr_specificity <- function(predictions,
   analysis <- match.arg(analysis)
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Parse ps_trim specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
 
@@ -458,6 +468,7 @@ tr_specificity <- function(predictions,
         selection_learner = if (use_ml_selection) selection_model else NULL,
         propensity_learner = if (use_ml_propensity) propensity_model else NULL,
         outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        ps_trim_spec = ps_trim_spec,
         parallel = parallel,
         ...
       )
@@ -594,6 +605,7 @@ tr_specificity <- function(predictions,
       n_boot = n_boot,
       conf_level = conf_level,
       stratified = stratified_boot,
+      ps_trim_spec = ps_trim_spec,
       parallel = parallel,
       ncores = ncores,
       ...
@@ -687,6 +699,7 @@ tr_fpr <- function(predictions,
                    n_boot = 200,
                    conf_level = 0.95,
                    stratified_boot = TRUE,
+                   ps_trim = NULL,
                    parallel = FALSE,
                    ncores = NULL,
                    ...) {
@@ -710,6 +723,7 @@ tr_fpr <- function(predictions,
     n_boot = n_boot,
     conf_level = conf_level,
     stratified_boot = stratified_boot,
+    ps_trim = ps_trim,
     parallel = parallel,
     ncores = ncores,
     ...
@@ -753,6 +767,7 @@ tr_fpr <- function(predictions,
 #' @param propensity_learner Optional ml_learner for propensity model.
 #' @param outcome_learner Optional ml_learner for outcome model.
 #' @param parallel Logical for parallel processing.
+#' @param ps_trim_spec Parsed propensity score trimming specification.
 #' @param ... Additional arguments.
 #'
 #' @return List containing cross-fitted nuisance function predictions.
@@ -764,10 +779,16 @@ tr_fpr <- function(predictions,
                                                      selection_learner = NULL,
                                                      propensity_learner = NULL,
                                                      outcome_learner = NULL,
+                                                     ps_trim_spec = NULL,
                                                      parallel = FALSE,
                                                      ...) {
 
   n <- length(outcomes)
+
+  # Parse ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -806,7 +827,7 @@ tr_fpr <- function(predictions,
       pi_s0_pred <- predict(sel_model, newdata = covariates[val_idx, , drop = FALSE],
                             type = "response")
     }
-    pi_s0_cf[val_idx] <- pmax(pmin(pi_s0_pred, 0.99), 0.01)
+    pi_s0_cf[val_idx] <- .trim_propensity(pi_s0_pred, ps_trim_spec$method, ps_trim_spec$bounds)
 
     # --- Propensity model ---
     if (analysis == "transport") {
@@ -831,7 +852,7 @@ tr_fpr <- function(predictions,
     if (treatment_level == 0) {
       ps_pred <- 1 - ps_pred
     }
-    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
+    ps_cf[val_idx] <- .trim_propensity(ps_pred, ps_trim_spec$method, ps_trim_spec$bounds)
 
     # --- Outcome model: P(Y=1|X, A=a) ---
     if (analysis == "transport") {
@@ -853,7 +874,8 @@ tr_fpr <- function(predictions,
       m_pred <- predict(om_model, newdata = covariates[val_idx, , drop = FALSE],
                         type = "response")
     }
-    m_hat_cf[val_idx] <- pmax(pmin(m_pred, 0.99), 0.01)
+    # Clip to [0, 1] bounds (not propensity trimming - this is an outcome model)
+    m_hat_cf[val_idx] <- pmin(pmax(m_pred, 0), 1)
   }
 
   list(

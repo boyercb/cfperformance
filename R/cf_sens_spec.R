@@ -102,10 +102,14 @@ cf_sensitivity <- function(predictions,
                            n_folds = 5,
                            parallel = FALSE,
                            ncores = NULL,
+                           ps_trim = NULL,
                            ...) {
 
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   # Validate inputs
   .validate_inputs(predictions, outcomes, treatment, covariates)
@@ -136,7 +140,8 @@ cf_sensitivity <- function(predictions,
       treatment_level = treatment_level,
       K = n_folds,
       propensity_learner = if (use_ml_propensity) propensity_model else NULL,
-      outcome_learner = if (use_ml_outcome) outcome_model else NULL
+      outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+      ps_trim_spec = ps_trim_spec
     )
 
     # Compute point estimates and optionally SE using cross-fitted nuisance
@@ -363,10 +368,14 @@ cf_specificity <- function(predictions,
                            n_folds = 5,
                            parallel = FALSE,
                            ncores = NULL,
+                           ps_trim = NULL,
                            ...) {
 
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   # Validate inputs
   .validate_inputs(predictions, outcomes, treatment, covariates)
@@ -397,7 +406,8 @@ cf_specificity <- function(predictions,
       treatment_level = treatment_level,
       K = n_folds,
       propensity_learner = if (use_ml_propensity) propensity_model else NULL,
-      outcome_learner = if (use_ml_outcome) outcome_model else NULL
+      outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+      ps_trim_spec = ps_trim_spec
     )
 
     # Compute point estimates and optionally SE using cross-fitted nuisance
@@ -611,6 +621,7 @@ cf_fpr <- function(predictions,
                    n_folds = 5,
                    parallel = FALSE,
                    ncores = NULL,
+                   ps_trim = NULL,
                    ...) {
 
   # Call specificity and transform
@@ -631,6 +642,7 @@ cf_fpr <- function(predictions,
     n_folds = n_folds,
     parallel = parallel,
     ncores = ncores,
+    ps_trim = ps_trim,
     ...
   )
 
@@ -681,9 +693,15 @@ cf_tnr <- cf_specificity
 .cross_fit_nuisance_sens_spec <- function(treatment, outcomes, covariates,
                                            treatment_level, K = 5,
                                            propensity_learner = NULL,
-                                           outcome_learner = NULL) {
+                                           outcome_learner = NULL,
+                                           ps_trim_spec = NULL) {
 
   n <- length(outcomes)
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -718,7 +736,7 @@ cf_tnr <- cf_specificity
     if (treatment_level == 0) {
       ps_pred <- 1 - ps_pred
     }
-    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.99), 0.01)
+    ps_cf[val_idx] <- .trim_propensity(ps_pred, ps_trim_spec$method, ps_trim_spec$bounds)
 
     # --- Outcome model: E[Y | X, A=a] ---
     train_a <- train_idx[treatment[train_idx] == treatment_level]
@@ -733,7 +751,8 @@ cf_tnr <- cf_specificity
       m_pred <- predict(om_model, newdata = covariates[val_idx, , drop = FALSE],
                         type = "response")
     }
-    m_cf[val_idx] <- pmax(pmin(m_pred, 0.99), 0.01)
+    # Clip to [0, 1] bounds (not propensity trimming - this is an outcome model)
+    m_cf[val_idx] <- pmin(pmax(m_pred, 0), 1)
   }
 
   list(
@@ -887,7 +906,8 @@ cf_tnr <- cf_specificity
                                               n_folds, n_boot, conf_level,
                                               propensity_learner = NULL,
                                               outcome_learner = NULL,
-                                              parallel, ncores) {
+                                              parallel, ncores,
+                                              ps_trim_spec = NULL) {
 
   n <- length(outcomes)
   n_thresholds <- length(threshold)
@@ -903,7 +923,8 @@ cf_tnr <- cf_specificity
         treatment_level = treatment_level,
         K = n_folds,
         propensity_learner = propensity_learner,
-        outcome_learner = outcome_learner
+        outcome_learner = outcome_learner,
+        ps_trim_spec = ps_trim_spec
       )
     }, error = function(e) NULL)
 

@@ -109,11 +109,15 @@ cf_calibration <- function(predictions,
                            se_method = c("none", "bootstrap"),
                            n_boot = 200,
                            conf_level = 0.95,
+                           ps_trim = NULL,
                            ...) {
 
   estimator <- match.arg(estimator)
   smoother <- match.arg(smoother)
   se_method <- match.arg(se_method)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   # Validate inputs
   .validate_inputs(predictions, outcomes, treatment, covariates)
@@ -148,8 +152,8 @@ cf_calibration <- function(predictions,
     if (treatment_level == 0) {
       ps <- 1 - ps
     }
-    # Truncate extreme propensities for stability
-    ps <- pmax(pmin(ps, 0.975), 0.025)
+    # Trim extreme propensities for stability
+    ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
   }
 
   # Get outcome model predictions E[Y|X, A=a]

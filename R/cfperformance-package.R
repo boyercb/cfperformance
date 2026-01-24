@@ -7,7 +7,7 @@
 #' @importFrom stats loess median formula nobs plogis
 #' @importFrom graphics abline hist layout par polygon lines legend
 #' @importFrom grDevices rgb
-#' @importFrom rlang .data abort warn inform
+#' @importFrom rlang .data abort warn inform `%||%`
 ## usethis namespace: end
 NULL
 

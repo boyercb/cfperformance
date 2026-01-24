@@ -21,6 +21,7 @@ cf_fpr(
   n_folds = 5,
   parallel = FALSE,
   ncores = NULL,
+  ps_trim = NULL,
   ...
 )
 }
@@ -51,8 +52,10 @@ Default is 0.5.}
 \item{propensity_model}{Optional fitted propensity score model. If NULL,
 a logistic regression model is fit using the covariates.}
 
-\item{outcome_model}{Optional fitted outcome model. If NULL, a logistic
-regression model is fit using the covariates among treated/untreated.}
+\item{outcome_model}{Optional fitted outcome model. If NULL, a regression
+model is fit using the covariates among treated/untreated. For binary
+outcomes, this should be a model for E[Y|X,A] (binomial family). For
+continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 
 \item{se_method}{Method for standard error estimation:
 \itemize{
@@ -76,6 +79,18 @@ for bootstrap (default: FALSE).}
 
 \item{ncores}{Number of cores for parallel processing (default: NULL,
 which uses all available cores minus one).}
+
+\item{ps_trim}{Propensity score trimming specification. Controls how
+extreme propensity scores are handled. Can be:
+\itemize{
+\item \code{NULL} (default): Uses absolute bounds \code{c(0.01, 0.99)}
+\item \code{"none"}: No trimming applied
+\item \code{"quantile"}: Quantile-based trimming with default \code{c(0.01, 0.99)}
+\item \code{"absolute"}: Explicit absolute bounds with default \code{c(0.01, 0.99)}
+\item A numeric vector of length 2: \code{c(lower, upper)} absolute bounds
+\item A single numeric: Symmetric bounds \code{c(x, 1-x)}
+\item A list with \code{method} ("absolute"/"quantile"/"none") and \code{bounds}
+}}
 
 \item{...}{Additional arguments passed to internal functions.}
 }

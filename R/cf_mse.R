@@ -37,6 +37,15 @@
 #'   for bootstrap (default: FALSE).
 #' @param ncores Number of cores for parallel processing (default: NULL,
 #'   which uses all available cores minus one).
+#' @param ps_trim Propensity score trimming specification. Controls how
+#'   extreme propensity scores are handled. Can be:
+#'   - `NULL` (default): Uses absolute bounds `c(0.01, 0.99)`
+#'   - `"none"`: No trimming applied
+#'   - `"quantile"`: Quantile-based trimming with default `c(0.01, 0.99)`
+#'   - `"absolute"`: Explicit absolute bounds with default `c(0.01, 0.99)`
+#'   - A numeric vector of length 2: `c(lower, upper)` absolute bounds
+#'   - A single numeric: Symmetric bounds `c(x, 1-x)`
+#'   - A list with `method` ("absolute"/"quantile"/"none") and `bounds`
 #' @param ... Additional arguments passed to internal functions.
 #'
 #' @return An object of class `c("cf_mse", "cf_performance")` containing:
@@ -113,13 +122,18 @@ cf_mse <- function(predictions,
                    n_folds = 5,
                    parallel = FALSE,
                    ncores = NULL,
+                   ps_trim = NULL,
                    ...) {
 
 
   # Input validation
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
   outcome_type <- match.arg(outcome_type)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   # Validate inputs
 
@@ -156,6 +170,7 @@ cf_mse <- function(predictions,
         outcome_learner = if (use_ml_outcome) outcome_model else NULL,
         outcome_type = outcome_type,
         parallel = parallel,
+        ps_trim_spec = ps_trim_spec,
         ...
       )
       estimate <- cf_result$estimate
@@ -202,7 +217,8 @@ cf_mse <- function(predictions,
       estimator = estimator,
       propensity_model = nuisance$propensity,
       outcome_model = nuisance$outcome,
-      outcome_type = outcome_type
+      outcome_type = outcome_type,
+      ps_trim_spec = ps_trim_spec
     )
   }
 
@@ -231,6 +247,7 @@ cf_mse <- function(predictions,
       conf_level = conf_level,
       parallel = parallel,
       ncores = ncores,
+      ps_trim = ps_trim,
       ...
     )
     se <- boot_result$se
@@ -247,7 +264,8 @@ cf_mse <- function(predictions,
         treatment_level = treatment_level,
         estimator = estimator,
         propensity_model = nuisance$propensity,
-        outcome_model = nuisance$outcome
+        outcome_model = nuisance$outcome,
+        ps_trim_spec = ps_trim_spec
       )
       z <- qnorm(1 - (1 - conf_level) / 2)
       ci_lower <- estimate - z * se
@@ -280,13 +298,19 @@ cf_mse <- function(predictions,
 # Internal function to compute MSE
 .compute_mse <- function(predictions, outcomes, treatment, covariates,
                          treatment_level, estimator, propensity_model,
-                         outcome_model, outcome_type = "binary") {
+                         outcome_model, outcome_type = "binary",
+                         ps_trim_spec = NULL) {
 
   n <- length(outcomes)
   loss <- (outcomes - predictions)^2
 
   if (estimator == "naive") {
     return(mean(loss))
+  }
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
   }
 
   # Convert covariates to data frame if needed for prediction
@@ -300,8 +324,8 @@ cf_mse <- function(predictions,
     if (treatment_level == 0) {
       ps <- 1 - ps  # P(A = 0 | X)
     }
-    # Truncate extreme propensities for stability
-    ps <- pmax(pmin(ps, 0.99), 0.01)
+    # Trim extreme propensities for stability
+    ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
   }
 
   # Get outcome predictions (conditional loss) for ALL observations

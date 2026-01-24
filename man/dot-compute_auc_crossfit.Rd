@@ -14,6 +14,7 @@
   propensity_learner = NULL,
   outcome_learner = NULL,
   parallel = FALSE,
+  ps_trim_spec = NULL,
   ...
 )
 }
@@ -35,6 +36,8 @@
 \item{outcome_learner}{Optional ml_learner for outcome model.}
 
 \item{parallel}{Logical for parallel processing (not yet implemented).}
+
+\item{ps_trim_spec}{Parsed propensity score trimming specification from .parse_ps_trim().}
 
 \item{...}{Additional arguments.}
 }

@@ -39,10 +39,15 @@ NULL
 #' @keywords internal
 .influence_se_mse <- function(predictions, outcomes, treatment, covariates,
                                treatment_level, estimator, propensity_model,
-                               outcome_model) {
+                               outcome_model, ps_trim_spec = NULL) {
 
   n <- length(outcomes)
   loss <- (outcomes - predictions)^2
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -65,7 +70,7 @@ NULL
   if (treatment_level == 0) {
     ps <- 1 - ps  # P(A = 0 | X)
   }
-  ps <- pmax(pmin(ps, 0.99), 0.01)  # Truncate for stability
+  ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
 
   # Get conditional loss predictions
   pY <- predict(outcome_model, newdata = covariates, type = "response")
@@ -133,10 +138,13 @@ NULL
 .bootstrap_mse <- function(predictions, outcomes, treatment, covariates,
                            treatment_level, estimator, n_boot = 500,
                            conf_level = 0.95, parallel = FALSE,
-                           ncores = NULL, ...) {
+                           ncores = NULL, ps_trim = NULL, ...) {
 
   n <- length(outcomes)
   alpha <- 1 - conf_level
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   # Define single bootstrap iteration
   boot_one <- function(idx) {
@@ -158,7 +166,8 @@ NULL
       treatment_level = treatment_level,
       estimator = estimator,
       propensity_model = nuisance_b$propensity,
-      outcome_model = nuisance_b$outcome
+      outcome_model = nuisance_b$outcome,
+      ps_trim_spec = ps_trim_spec
     )
   }
 
@@ -202,10 +211,13 @@ NULL
 .bootstrap_auc <- function(predictions, outcomes, treatment, covariates,
                            treatment_level, estimator, n_boot = 500,
                            conf_level = 0.95, parallel = FALSE,
-                           ncores = NULL, ...) {
+                           ncores = NULL, ps_trim = NULL, ...) {
 
   n <- length(outcomes)
   alpha <- 1 - conf_level
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   boot_one <- function(idx) {
     nuisance_b <- .fit_nuisance_models(
@@ -225,7 +237,8 @@ NULL
       treatment_level = treatment_level,
       estimator = estimator,
       propensity_model = nuisance_b$propensity,
-      outcome_model = nuisance_b$outcome
+      outcome_model = nuisance_b$outcome,
+      ps_trim_spec = ps_trim_spec
     )
   }
 
@@ -273,9 +286,14 @@ NULL
 #' @keywords internal
 .influence_se_auc <- function(predictions, outcomes, treatment, covariates,
                                treatment_level, estimator, propensity_model,
-                               outcome_model) {
+                               outcome_model, ps_trim_spec = NULL) {
 
   n <- length(outcomes)
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -296,7 +314,7 @@ NULL
   if (treatment_level == 0) {
     ps <- 1 - ps
   }
-  ps <- pmax(pmin(ps, 0.99), 0.01)
+  ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
 
   # Get outcome predictions
   pY <- predict(outcome_model, newdata = covariates, type = "response")
@@ -510,10 +528,16 @@ NULL
                                  outcome_learner = NULL,
                                  outcome_type = "binary",
                                  parallel = FALSE,
+                                 ps_trim_spec = NULL,
                                  ...) {
 
   n <- length(outcomes)
   loss <- (outcomes - predictions)^2
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -556,9 +580,8 @@ NULL
       ps_pred <- 1 - ps_pred
     }
 
-    # Truncate propensity scores for stability
-    # Use 0.025-0.975 bounds to avoid extreme weights while allowing flexibility
-    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
+    # Trim propensity scores for stability using specified method
+    ps_cf[val_idx] <- .trim_propensity(ps_pred, ps_trim_spec$method, ps_trim_spec$bounds)
 
     # Fit outcome model on training fold (among treated)
     # For binary outcomes: model E[Y | X, A=a] and transform to loss
@@ -586,8 +609,8 @@ NULL
       }
 
       # Store outcome probability (q_hat) for AUC
-      # Truncate to avoid extreme values that cause instability in DR estimator
-      q_cf[val_idx] <- pmax(pmin(pY, 0.99), 0.01)
+      # Clip to [0, 1] bounds (not propensity trimming - this is an outcome model)
+      q_cf[val_idx] <- pmin(pmax(pY, 0), 1)
 
       # Transform to conditional expected loss: E[(Y - pred)^2 | X] = pY - 2*pred*pY + pred^2
       h_cf[val_idx] <- pY - 2 * predictions[val_idx] * pY + predictions[val_idx]^2
@@ -633,6 +656,7 @@ NULL
 #' @inheritParams cf_mse
 #' @param K Number of folds for cross-fitting.
 #' @param outcome_type Either "binary" or "continuous".
+#' @param ps_trim_spec Parsed propensity score trimming specification from .parse_ps_trim().
 #'
 #' @return Doubly robust MSE estimate with cross-fitting.
 #'
@@ -643,6 +667,7 @@ NULL
                                    outcome_learner = NULL,
                                    outcome_type = "binary",
                                    parallel = FALSE,
+                                   ps_trim_spec = NULL,
                                    ...) {
 
   n <- length(outcomes)
@@ -660,6 +685,7 @@ NULL
     outcome_learner = outcome_learner,
     outcome_type = outcome_type,
     parallel = parallel,
+    ps_trim_spec = ps_trim_spec,
     ...
   )
 
@@ -696,6 +722,7 @@ NULL
 #' @param propensity_learner Optional ml_learner for propensity model.
 #' @param outcome_learner Optional ml_learner for outcome model.
 #' @param parallel Logical for parallel processing (not yet implemented).
+#' @param ps_trim_spec Parsed propensity score trimming specification from .parse_ps_trim().
 #' @param ... Additional arguments.
 #'
 #' @return Doubly robust AUC estimate with cross-fitting.
@@ -712,6 +739,7 @@ NULL
                                    propensity_learner = NULL,
                                    outcome_learner = NULL,
                                    parallel = FALSE,
+                                   ps_trim_spec = NULL,
                                    ...) {
 
   n <- length(outcomes)
@@ -727,6 +755,7 @@ NULL
     propensity_learner = propensity_learner,
     outcome_learner = outcome_learner,
     parallel = parallel,
+    ps_trim_spec = ps_trim_spec,
     ...
   )
 

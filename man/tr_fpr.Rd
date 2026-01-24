@@ -21,6 +21,7 @@ tr_fpr(
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
+  ps_trim = NULL,
   parallel = FALSE,
   ncores = NULL,
   ...
@@ -65,7 +66,9 @@ a logistic regression model is fit using the covariates.}
 If NULL, a logistic regression model is fit using source data.}
 
 \item{outcome_model}{Optional fitted outcome model for E[L(Y,g)|X,A,S].
-If NULL, a regression model is fit using the relevant data.}
+If NULL, a regression model is fit using the relevant data. For binary
+outcomes, this should be a model for E[Y|X,A] (binomial family). For
+continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 
 \item{se_method}{Method for standard error estimation:
 \itemize{
@@ -81,6 +84,18 @@ If NULL, a regression model is fit using the relevant data.}
 \item{stratified_boot}{Logical indicating whether to use stratified bootstrap
 that preserves the source/target ratio (default: TRUE). Recommended for
 transportability analysis.}
+
+\item{ps_trim}{Propensity score trimming specification. Controls how
+extreme propensity scores are handled. Can be:
+\itemize{
+\item \code{NULL} (default): Uses absolute bounds \code{c(0.01, 0.99)}
+\item \code{"none"}: No trimming applied
+\item \code{"quantile"}: Quantile-based trimming with default \code{c(0.01, 0.99)}
+\item \code{"absolute"}: Explicit absolute bounds with default \code{c(0.01, 0.99)}
+\item A numeric vector of length 2: \code{c(lower, upper)} absolute bounds
+\item A single numeric: Symmetric bounds \code{c(x, 1-x)}
+\item A list with \code{method} ("absolute"/"quantile"/"none") and \code{bounds}
+}}
 
 \item{parallel}{Logical indicating whether to use parallel processing
 for bootstrap (default: FALSE).}

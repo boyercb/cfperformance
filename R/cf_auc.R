@@ -83,10 +83,14 @@ cf_auc <- function(predictions,
                    n_folds = 5,
                    parallel = FALSE,
                    ncores = NULL,
+                   ps_trim = NULL,
                    ...) {
 
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   # Validate inputs
   .validate_inputs(predictions, outcomes, treatment, covariates)
@@ -98,7 +102,7 @@ cf_auc <- function(predictions,
   n <- length(outcomes)
 
   # Detect if ml_learners are provided
- use_ml_propensity <- is_ml_learner(propensity_model)
+  use_ml_propensity <- is_ml_learner(propensity_model)
   use_ml_outcome <- is_ml_learner(outcome_model)
 
   # Initialize SE variables
@@ -120,6 +124,7 @@ cf_auc <- function(predictions,
         propensity_learner = if (use_ml_propensity) propensity_model else NULL,
         outcome_learner = if (use_ml_outcome) outcome_model else NULL,
         parallel = parallel,
+        ps_trim_spec = ps_trim_spec,
         ...
       )
       estimate <- cf_result$estimate
@@ -162,7 +167,8 @@ cf_auc <- function(predictions,
       treatment_level = treatment_level,
       estimator = estimator,
       propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
+      outcome_model = nuisance$outcome,
+      ps_trim_spec = ps_trim_spec
     )
   }
 
@@ -181,7 +187,8 @@ cf_auc <- function(predictions,
       n_boot = n_boot,
       conf_level = conf_level,
       parallel = parallel,
-      ncores = ncores
+      ncores = ncores,
+      ps_trim = ps_trim
     )
     se <- boot_result$se
     ci_lower <- boot_result$ci_lower
@@ -195,7 +202,8 @@ cf_auc <- function(predictions,
       treatment_level = treatment_level,
       estimator = estimator,
       propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
+      outcome_model = nuisance$outcome,
+      ps_trim_spec = ps_trim_spec
     )
     z <- qnorm(1 - (1 - conf_level) / 2)
     ci_lower <- estimate - z * se
@@ -241,10 +249,15 @@ cf_auc <- function(predictions,
 # Compute counterfactual AUC
 .compute_auc <- function(predictions, outcomes, treatment, covariates,
                          treatment_level, estimator, propensity_model,
-                         outcome_model) {
+                         outcome_model, ps_trim_spec = NULL) {
 
   if (estimator == "naive") {
     return(.compute_auc_naive(predictions, outcomes))
+  }
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
   }
 
   n <- length(outcomes)
@@ -255,6 +268,8 @@ cf_auc <- function(predictions,
     if (treatment_level == 0) {
       ps <- 1 - ps
     }
+    # Trim propensity scores for stability
+    ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
   }
 
   # Outcome probabilities

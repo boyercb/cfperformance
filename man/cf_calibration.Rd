@@ -19,6 +19,7 @@ cf_calibration(
   se_method = c("none", "bootstrap"),
   n_boot = 200,
   conf_level = 0.95,
+  ps_trim = NULL,
   ...
 )
 }
@@ -44,8 +45,10 @@ cf_calibration(
 \item{propensity_model}{Optional fitted propensity score model. If NULL,
 a logistic regression model is fit using the covariates.}
 
-\item{outcome_model}{Optional fitted outcome model. If NULL, a logistic
-regression model is fit using the covariates among treated/untreated.}
+\item{outcome_model}{Optional fitted outcome model. If NULL, a regression
+model is fit using the covariates among treated/untreated. For binary
+outcomes, this should be a model for E[Y|X,A] (binomial family). For
+continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 
 \item{smoother}{Smoothing method for the calibration curve:
 \itemize{
@@ -66,6 +69,18 @@ regression model is fit using the covariates among treated/untreated.}
 \item{n_boot}{Number of bootstrap replications (default: 200).}
 
 \item{conf_level}{Confidence level for intervals (default: 0.95).}
+
+\item{ps_trim}{Propensity score trimming specification. Controls how
+extreme propensity scores are handled. Can be:
+\itemize{
+\item \code{NULL} (default): Uses absolute bounds \code{c(0.01, 0.99)}
+\item \code{"none"}: No trimming applied
+\item \code{"quantile"}: Quantile-based trimming with default \code{c(0.01, 0.99)}
+\item \code{"absolute"}: Explicit absolute bounds with default \code{c(0.01, 0.99)}
+\item A numeric vector of length 2: \code{c(lower, upper)} absolute bounds
+\item A single numeric: Symmetric bounds \code{c(x, 1-x)}
+\item A list with \code{method} ("absolute"/"quantile"/"none") and \code{bounds}
+}}
 
 \item{...}{Additional arguments passed to internal functions.}
 }

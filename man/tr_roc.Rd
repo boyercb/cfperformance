@@ -56,7 +56,9 @@ a logistic regression model is fit using the covariates.}
 If NULL, a logistic regression model is fit using source data.}
 
 \item{outcome_model}{Optional fitted outcome model for E[L(Y,g)|X,A,S].
-If NULL, a regression model is fit using the relevant data.}
+If NULL, a regression model is fit using the relevant data. For binary
+outcomes, this should be a model for E[Y|X,A] (binomial family). For
+continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 
 \item{n_thresholds}{Integer specifying the number of thresholds to evaluate.
 Thresholds are evenly spaced between 0 and 1. Default is 201.}

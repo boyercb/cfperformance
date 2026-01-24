@@ -45,6 +45,15 @@
 #'   for bootstrap (default: FALSE).
 #' @param ncores Number of cores for parallel processing (default: NULL,
 #'   which uses all available cores minus one).
+#' @param ps_trim Propensity score trimming specification. Controls how
+#'   extreme propensity scores are handled. Can be:
+#'   - `NULL` (default): Uses absolute bounds `c(0.01, 0.99)`
+#'   - `"none"`: No trimming applied
+#'   - `"quantile"`: Quantile-based trimming with default `c(0.01, 0.99)`
+#'   - `"absolute"`: Explicit absolute bounds with default `c(0.01, 0.99)`
+#'   - A numeric vector of length 2: `c(lower, upper)` absolute bounds
+#'   - A single numeric: Symmetric bounds `c(x, 1-x)`
+#'   - A list with `method` ("absolute"/"quantile"/"none") and `bounds`
 #' @param ... Additional arguments passed to internal functions.
 #'
 #' @return An object of class `c("tr_mse", "tr_performance")` containing:
@@ -140,6 +149,7 @@ tr_mse <- function(predictions,
                    n_folds = 5,
                    parallel = FALSE,
                    ncores = NULL,
+                   ps_trim = NULL,
                    ...) {
 
   # Input validation
@@ -147,6 +157,9 @@ tr_mse <- function(predictions,
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
   outcome_type <- match.arg(outcome_type)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
 
@@ -187,6 +200,7 @@ tr_mse <- function(predictions,
         outcome_learner = if (use_ml_outcome) outcome_model else NULL,
         outcome_type = outcome_type,
         parallel = parallel,
+        ps_trim_spec = ps_trim_spec,
         ...
       )
       estimate <- cf_result$estimate
@@ -239,7 +253,8 @@ tr_mse <- function(predictions,
       selection_model = nuisance$selection,
       propensity_model = nuisance$propensity,
       outcome_model = nuisance$outcome,
-      outcome_type = outcome_type
+      outcome_type = outcome_type,
+      ps_trim_spec = ps_trim_spec
     )
   }
 
@@ -274,6 +289,7 @@ tr_mse <- function(predictions,
       stratified = stratified_boot,
       parallel = parallel,
       ncores = ncores,
+      ps_trim = ps_trim,
       ...
     )
     se <- boot_result$se
@@ -292,7 +308,8 @@ tr_mse <- function(predictions,
       estimator = estimator,
       selection_model = nuisance$selection,
       propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
+      outcome_model = nuisance$outcome,
+      ps_trim_spec = ps_trim_spec
     )
     z <- qnorm(1 - (1 - conf_level) / 2)
     ci_lower <- estimate - z * se
@@ -334,11 +351,16 @@ tr_mse <- function(predictions,
 .compute_tr_mse <- function(predictions, outcomes, treatment, source, covariates,
                             treatment_level, analysis, estimator,
                             selection_model, propensity_model, outcome_model,
-                            outcome_type = "binary") {
+                            outcome_type = "binary", ps_trim_spec = NULL) {
 
   n <- length(outcomes)
   n0 <- sum(source == 0)  # Target population size
   loss <- (outcomes - predictions)^2
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   # Indicators
   I_s0 <- source == 0  # Target population
@@ -364,7 +386,7 @@ tr_mse <- function(predictions,
   # Get selection scores P(S=0|X)
   if (!is.null(selection_model)) {
     p_s0 <- predict(selection_model, newdata = covariates, type = "response")
-    p_s0 <- pmax(pmin(p_s0, 0.99), 0.01)
+    p_s0 <- .trim_propensity(p_s0, ps_trim_spec$method, ps_trim_spec$bounds)
     p_s1 <- 1 - p_s0
   }
 
@@ -374,7 +396,7 @@ tr_mse <- function(predictions,
     if (treatment_level == 0) {
       ps <- 1 - ps
     }
-    ps <- pmax(pmin(ps, 0.99), 0.01)
+    ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
   }
 
   # Get outcome model predictions (conditional expected loss)
@@ -494,6 +516,7 @@ tr_mse <- function(predictions,
 #' @param outcome_learner Optional ml_learner for outcome model.
 #' @param outcome_type Either "binary" or "continuous" (default: "binary").
 #' @param parallel Logical for parallel processing.
+#' @param ps_trim_spec Parsed propensity score trimming specification.
 #' @param ... Additional arguments.
 #'
 #' @return List containing cross-fitted nuisance function predictions.
@@ -507,10 +530,16 @@ tr_mse <- function(predictions,
                                            outcome_learner = NULL,
                                            outcome_type = "binary",
                                            parallel = FALSE,
+                                           ps_trim_spec = NULL,
                                            ...) {
 
   n <- length(outcomes)
   loss <- (outcomes - predictions)^2
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -549,7 +578,7 @@ tr_mse <- function(predictions,
       pi_s0_pred <- predict(sel_model, newdata = covariates[val_idx, , drop = FALSE],
                             type = "response")
     }
-    pi_s0_cf[val_idx] <- pmax(pmin(pi_s0_pred, 0.99), 0.01)
+    pi_s0_cf[val_idx] <- .trim_propensity(pi_s0_pred, ps_trim_spec$method, ps_trim_spec$bounds)
 
     # --- Propensity model ---
     if (analysis == "transport") {
@@ -574,7 +603,7 @@ tr_mse <- function(predictions,
     if (treatment_level == 0) {
       ps_pred <- 1 - ps_pred
     }
-    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
+    ps_cf[val_idx] <- .trim_propensity(ps_pred, ps_trim_spec$method, ps_trim_spec$bounds)
 
     # --- Outcome model ---
     # For binary outcomes: model E[Y | X, A=a] and transform to loss
@@ -650,6 +679,7 @@ tr_mse <- function(predictions,
                                       outcome_learner = NULL,
                                       outcome_type = "binary",
                                       parallel = FALSE,
+                                      ps_trim_spec = NULL,
                                       ...) {
 
   n <- length(outcomes)
@@ -671,6 +701,7 @@ tr_mse <- function(predictions,
     outcome_learner = outcome_learner,
     outcome_type = outcome_type,
     parallel = parallel,
+    ps_trim_spec = ps_trim_spec,
     ...
   )
 
@@ -849,9 +880,13 @@ tr_mse <- function(predictions,
 .bootstrap_tr_mse <- function(predictions, outcomes, treatment, source,
                                covariates, treatment_level, analysis,
                                estimator, n_boot, conf_level,
-                               stratified = TRUE, parallel, ncores, ...) {
+                               stratified = TRUE, parallel, ncores,
+                               ps_trim = NULL, ...) {
 
   n <- length(outcomes)
+
+  # Parse propensity score trimming specification
+  ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -917,7 +952,8 @@ tr_mse <- function(predictions,
       estimator = estimator,
       selection_model = nuisance_b$selection,
       propensity_model = nuisance_b$propensity,
-      outcome_model = nuisance_b$outcome
+      outcome_model = nuisance_b$outcome,
+      ps_trim_spec = ps_trim_spec
     )
   }
 
@@ -980,10 +1016,15 @@ tr_mse <- function(predictions,
 .influence_se_tr_mse <- function(predictions, outcomes, treatment, source,
                                   covariates, treatment_level, analysis,
                                   estimator, selection_model, propensity_model,
-                                  outcome_model) {
+                                  outcome_model, ps_trim_spec = NULL) {
 
   n <- length(outcomes)
   n0 <- sum(source == 0)
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
 
   # Compute loss
   loss <- (outcomes - predictions)^2
@@ -1022,16 +1063,16 @@ tr_mse <- function(predictions,
   # Get selection probabilities P(S=0|X)
   pi_s0 <- predict(selection_model, newdata = covariates, type = "response")
   pi_s1 <- 1 - pi_s0
-  # Truncate for stability
-  pi_s0 <- pmax(pmin(pi_s0, 0.99), 0.01)
-  pi_s1 <- pmax(pmin(pi_s1, 0.99), 0.01)
+  # Trim for stability
+  pi_s0 <- .trim_propensity(pi_s0, ps_trim_spec$method, ps_trim_spec$bounds)
+  pi_s1 <- .trim_propensity(pi_s1, ps_trim_spec$method, ps_trim_spec$bounds)
 
   # Get propensity scores
   ps <- predict(propensity_model, newdata = covariates, type = "response")
   if (treatment_level == 0) {
     ps <- 1 - ps
   }
-  ps <- pmax(pmin(ps, 0.99), 0.01)
+  ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
 
   # Get outcome model predictions h_a(X) = E[L|X, A=a]
   # For MSE: h = E[Y|X,A=a] - 2*pred*E[Y|X,A=a] + pred^2

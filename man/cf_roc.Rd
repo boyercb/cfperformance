@@ -41,8 +41,10 @@ cf_roc(
 \item{propensity_model}{Optional fitted propensity score model. If NULL,
 a logistic regression model is fit using the covariates.}
 
-\item{outcome_model}{Optional fitted outcome model. If NULL, a logistic
-regression model is fit using the covariates among treated/untreated.}
+\item{outcome_model}{Optional fitted outcome model. If NULL, a regression
+model is fit using the covariates among treated/untreated. For binary
+outcomes, this should be a model for E[Y|X,A] (binomial family). For
+continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 
 \item{n_thresholds}{Integer specifying the number of thresholds to evaluate.
 Thresholds are evenly spaced between 0 and 1. Default is 201.}
