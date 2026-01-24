@@ -102,7 +102,7 @@ tr_sensitivity <- function(predictions,
                            selection_model = NULL,
                            propensity_model = NULL,
                            outcome_model = NULL,
-                           se_method = c("none", "bootstrap"),
+                           se_method = c("none", "bootstrap", "influence"),
                            n_boot = 200,
                            conf_level = 0.95,
                            stratified_boot = TRUE,
@@ -117,6 +117,11 @@ tr_sensitivity <- function(predictions,
   analysis <- match.arg(analysis)
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Influence function SE requires cross-fitting
+  if (se_method == "influence" && !cross_fit) {
+    stop("Influence function standard errors require cross_fit = TRUE")
+  }
 
   # Parse propensity score trimming specification
   ps_trim_spec <- .parse_ps_trim(ps_trim)
@@ -408,7 +413,7 @@ tr_specificity <- function(predictions,
                            selection_model = NULL,
                            propensity_model = NULL,
                            outcome_model = NULL,
-                           se_method = c("none", "bootstrap"),
+                           se_method = c("none", "bootstrap", "influence"),
                            n_boot = 200,
                            conf_level = 0.95,
                            stratified_boot = TRUE,
@@ -423,6 +428,11 @@ tr_specificity <- function(predictions,
   analysis <- match.arg(analysis)
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Influence function SE requires cross-fitting
+  if (se_method == "influence" && !cross_fit) {
+    stop("Influence function standard errors require cross_fit = TRUE")
+  }
 
   # Parse ps_trim specification
   ps_trim_spec <- .parse_ps_trim(ps_trim)
@@ -695,10 +705,12 @@ tr_fpr <- function(predictions,
                    selection_model = NULL,
                    propensity_model = NULL,
                    outcome_model = NULL,
-                   se_method = c("none", "bootstrap"),
+                   se_method = c("none", "bootstrap", "influence"),
                    n_boot = 200,
                    conf_level = 0.95,
                    stratified_boot = TRUE,
+                   cross_fit = FALSE,
+                   n_folds = 5,
                    ps_trim = NULL,
                    parallel = FALSE,
                    ncores = NULL,
