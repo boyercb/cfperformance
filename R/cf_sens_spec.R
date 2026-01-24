@@ -95,7 +95,7 @@ cf_sensitivity <- function(predictions,
                            estimator = c("dr", "cl", "ipw", "naive"),
                            propensity_model = NULL,
                            outcome_model = NULL,
-                           se_method = c("none", "bootstrap"),
+                           se_method = c("none", "bootstrap", "influence"),
                            n_boot = 200,
                            conf_level = 0.95,
                            cross_fit = FALSE,
@@ -107,6 +107,11 @@ cf_sensitivity <- function(predictions,
 
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Influence function SE requires cross-fitting
+  if (se_method == "influence" && !cross_fit) {
+    stop("Influence function standard errors require cross_fit = TRUE")
+  }
 
   # Parse propensity score trimming specification
   ps_trim_spec <- .parse_ps_trim(ps_trim)
@@ -361,7 +366,7 @@ cf_specificity <- function(predictions,
                            estimator = c("dr", "cl", "ipw", "naive"),
                            propensity_model = NULL,
                            outcome_model = NULL,
-                           se_method = c("none", "bootstrap"),
+                           se_method = c("none", "bootstrap", "influence"),
                            n_boot = 200,
                            conf_level = 0.95,
                            cross_fit = FALSE,
@@ -373,6 +378,11 @@ cf_specificity <- function(predictions,
 
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+
+  # Influence function SE requires cross-fitting
+  if (se_method == "influence" && !cross_fit) {
+    stop("Influence function standard errors require cross_fit = TRUE")
+  }
 
   # Parse propensity score trimming specification
   ps_trim_spec <- .parse_ps_trim(ps_trim)
@@ -614,7 +624,7 @@ cf_fpr <- function(predictions,
                    estimator = c("dr", "cl", "ipw", "naive"),
                    propensity_model = NULL,
                    outcome_model = NULL,
-                   se_method = c("none", "bootstrap"),
+                   se_method = c("none", "bootstrap", "influence"),
                    n_boot = 200,
                    conf_level = 0.95,
                    cross_fit = FALSE,
