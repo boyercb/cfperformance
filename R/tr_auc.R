@@ -132,51 +132,112 @@ tr_auc <- function(predictions,
   ci_lower <- NULL
   ci_upper <- NULL
 
-  # Fit nuisance models if not provided
-  if (estimator != "naive") {
-    nuisance <- .fit_transport_nuisance_auc(
-      treatment = treatment,
+  # Cross-fitting implementation for DR estimator
+  if (cross_fit && estimator == "dr") {
+    # Determine if we need SE from cross-fit function
+    compute_cf_se <- (se_method == "influence")
+
+    # Use cross-fitting for nuisance model estimation
+    cf_result <- .compute_tr_auc_crossfit(
+      predictions = predictions,
       outcomes = outcomes,
+      treatment = treatment,
       source = source,
       covariates = covariates,
       treatment_level = treatment_level,
       analysis = analysis,
-      selection_model = selection_model,
-      propensity_model = propensity_model,
-      outcome_model = outcome_model
+      K = n_folds,
+      selection_learner = selection_model,
+      propensity_learner = propensity_model,
+      outcome_learner = outcome_model,
+      parallel = parallel,
+      return_se = compute_cf_se,
+      ...
     )
+
+    estimate <- cf_result$estimate
+
+    # Store nuisance info for result object
+    nuisance <- list(
+      selection = selection_model,
+      propensity = propensity_model,
+      outcome = outcome_model,
+      cross_fitted = TRUE,
+      n_folds = n_folds,
+      pi_s0 = cf_result$pi_s0,
+      ps = cf_result$ps,
+      q = cf_result$q
+    )
+
+    # Compute naive estimate for comparison
+    naive_estimate <- .compute_tr_auc_naive(
+      predictions = predictions,
+      outcomes = outcomes,
+      treatment = treatment,
+      source = source,
+      treatment_level = treatment_level,
+      analysis = analysis
+    )
+
+    # Compute standard errors
+    if (se_method == "influence") {
+      # Use influence function SE from cross-fitting (Li et al. 2022)
+      se <- cf_result$se
+      z_alpha <- qnorm(1 - (1 - conf_level) / 2)
+      ci_lower <- estimate - z_alpha * se
+      ci_upper <- estimate + z_alpha * se
+    } else if (se_method == "bootstrap") {
+      boot_result <- .bootstrap_tr_auc_crossfit(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        source = source,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        n_folds = n_folds,
+        n_boot = n_boot,
+        conf_level = conf_level,
+        stratified = stratified_boot,
+        selection_learner = selection_model,
+        propensity_learner = propensity_model,
+        outcome_learner = outcome_model,
+        parallel = parallel,
+        ncores = ncores,
+        ...
+      )
+      se <- boot_result$se
+      ci_lower <- boot_result$ci_lower
+      ci_upper <- boot_result$ci_upper
+    }
+
   } else {
-    nuisance <- list(selection = NULL, propensity = NULL, outcome = NULL)
-  }
+    # Non-cross-fitted estimation (original code path)
 
-  # Compute point estimate
-  estimate <- .compute_tr_auc(
-    predictions = predictions,
-    outcomes = outcomes,
-    treatment = treatment,
-    source = source,
-    covariates = covariates,
-    treatment_level = treatment_level,
-    analysis = analysis,
-    estimator = estimator,
-    selection_model = nuisance$selection,
-    propensity_model = nuisance$propensity,
-    outcome_model = nuisance$outcome
-  )
+    # Warn if cross_fit requested for non-DR estimator
+    if (cross_fit && estimator != "dr") {
+      warning("Cross-fitting is only implemented for estimator='dr'. Proceeding without cross-fitting.")
+    }
 
-  # Compute naive estimate for comparison
-  naive_estimate <- .compute_tr_auc_naive(
-    predictions = predictions,
-    outcomes = outcomes,
-    treatment = treatment,
-    source = source,
-    treatment_level = treatment_level,
-    analysis = analysis
-  )
+    # Fit nuisance models if not provided
+    if (estimator != "naive") {
+      nuisance <- .fit_transport_nuisance_auc(
+        treatment = treatment,
+        outcomes = outcomes,
+        source = source,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        selection_model = selection_model,
+        propensity_model = propensity_model,
+        outcome_model = outcome_model
+      )
+    } else {
+      nuisance <- list(selection = NULL, propensity = NULL, outcome = NULL)
+    }
 
-  # Compute standard errors
-  if (se_method == "bootstrap") {
-    boot_result <- .bootstrap_tr_auc(
+    # Compute point estimate
+    estimate <- .compute_tr_auc(
       predictions = predictions,
       outcomes = outcomes,
       treatment = treatment,
@@ -185,22 +246,49 @@ tr_auc <- function(predictions,
       treatment_level = treatment_level,
       analysis = analysis,
       estimator = estimator,
-      n_boot = n_boot,
-      conf_level = conf_level,
-      stratified = stratified_boot,
-      parallel = parallel,
-      ncores = ncores,
-      ...
+      selection_model = nuisance$selection,
+      propensity_model = nuisance$propensity,
+      outcome_model = nuisance$outcome
     )
-    se <- boot_result$se
-    ci_lower <- boot_result$ci_lower
-    ci_upper <- boot_result$ci_upper
-  } else if (se_method == "influence") {
-    # Placeholder for influence function SE
-    warning("Influence function SE not yet implemented for tr_auc; use bootstrap")
-    se <- NA_real_
-    ci_lower <- NA_real_
-    ci_upper <- NA_real_
+
+    # Compute naive estimate for comparison
+    naive_estimate <- .compute_tr_auc_naive(
+      predictions = predictions,
+      outcomes = outcomes,
+      treatment = treatment,
+      source = source,
+      treatment_level = treatment_level,
+      analysis = analysis
+    )
+
+    # Compute standard errors
+    if (se_method == "bootstrap") {
+      boot_result <- .bootstrap_tr_auc(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        source = source,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        estimator = estimator,
+        n_boot = n_boot,
+        conf_level = conf_level,
+        stratified = stratified_boot,
+        parallel = parallel,
+        ncores = ncores,
+        ...
+      )
+      se <- boot_result$se
+      ci_lower <- boot_result$ci_lower
+      ci_upper <- boot_result$ci_upper
+    } else if (se_method == "influence") {
+      # Placeholder for influence function SE
+      warning("Influence function SE not yet implemented for tr_auc; use bootstrap")
+      se <- NA_real_
+      ci_lower <- NA_real_
+      ci_upper <- NA_real_
+    }
   }
 
   # Construct result object
@@ -226,6 +314,471 @@ tr_auc <- function(predictions,
 
   class(result) <- c("tr_auc", "tr_performance")
   return(result)
+}
+
+
+# ==============================================================================
+# Cross-fitting for transportability AUC
+# ==============================================================================
+
+#' Cross-fit nuisance models for transportability AUC
+#'
+#' Implements K-fold cross-fitting for nuisance model estimation in
+#' transportability AUC estimation.
+#'
+#' @inheritParams tr_auc
+#' @param K Number of folds for cross-fitting.
+#' @param selection_learner Optional ml_learner for selection model.
+#' @param propensity_learner Optional ml_learner for propensity model.
+#' @param outcome_learner Optional ml_learner for outcome model.
+#' @param parallel Logical for parallel processing.
+#' @param ... Additional arguments.
+#'
+#' @return List containing cross-fitted nuisance function predictions.
+#'
+#' @keywords internal
+.cross_fit_transport_nuisance_auc <- function(treatment, outcomes, source, covariates,
+                                               treatment_level, analysis,
+                                               K = 5,
+                                               selection_learner = NULL,
+                                               propensity_learner = NULL,
+                                               outcome_learner = NULL,
+                                               parallel = FALSE,
+                                               ...) {
+
+  n <- length(outcomes)
+
+  # Convert covariates to data frame if needed
+  if (!is.data.frame(covariates)) {
+    covariates <- as.data.frame(covariates)
+  }
+
+  # Create fold assignments (stratified by source)
+  folds <- integer(n)
+  idx_s0 <- which(source == 0)
+  idx_s1 <- which(source == 1)
+  folds[idx_s0] <- sample(rep(1:K, length.out = length(idx_s0)))
+  folds[idx_s1] <- sample(rep(1:K, length.out = length(idx_s1)))
+
+  # Initialize output vectors
+  pi_s0_cf <- numeric(n)  # Cross-fitted P(S=0|X)
+  ps_cf <- numeric(n)     # Cross-fitted propensity scores
+  q_cf <- numeric(n)      # Cross-fitted outcome probabilities
+
+  I_a <- as.numeric(treatment == treatment_level)
+  I_s0 <- as.numeric(source == 0)
+  I_s1 <- as.numeric(source == 1)
+
+  for (k in 1:K) {
+    train_idx <- which(folds != k)
+    val_idx <- which(folds == k)
+
+    # --- Selection model: P(S=0|X) ---
+    sel_data <- data.frame(S0 = I_s0[train_idx], covariates[train_idx, , drop = FALSE])
+
+    if (!is.null(selection_learner) && is_ml_learner(selection_learner)) {
+      sel_model <- .fit_ml_learner(selection_learner, S0 ~ .,
+                                    data = sel_data, family = "binomial")
+      pi_s0_pred <- .predict_ml_learner(sel_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      sel_model <- glm(S0 ~ ., data = sel_data, family = binomial())
+      pi_s0_pred <- predict(sel_model, newdata = covariates[val_idx, , drop = FALSE],
+                            type = "response")
+    }
+    pi_s0_cf[val_idx] <- pmax(pmin(pi_s0_pred, 0.99), 0.01)
+
+    # --- Propensity model ---
+    if (analysis == "transport") {
+      # P(A=1|X, S=1) - fit on source population only
+      train_s1 <- train_idx[source[train_idx] == 1]
+      ps_data <- data.frame(A = treatment[train_s1], covariates[train_s1, , drop = FALSE])
+    } else {
+      # P(A=1|X) - fit on all training data
+      ps_data <- data.frame(A = treatment[train_idx], covariates[train_idx, , drop = FALSE])
+    }
+
+    if (!is.null(propensity_learner) && is_ml_learner(propensity_learner)) {
+      ps_model <- .fit_ml_learner(propensity_learner, A ~ .,
+                                   data = ps_data, family = "binomial")
+      ps_pred <- .predict_ml_learner(ps_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      ps_model <- glm(A ~ ., data = ps_data, family = binomial())
+      ps_pred <- predict(ps_model, newdata = covariates[val_idx, , drop = FALSE],
+                         type = "response")
+    }
+
+    if (treatment_level == 0) {
+      ps_pred <- 1 - ps_pred
+    }
+    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
+
+    # --- Outcome model: E[Y | X, A=a, S] ---
+    if (analysis == "transport") {
+      # Model E[Y | X, A=a, S=1] using source data with treatment_level
+      train_s1_a <- train_idx[source[train_idx] == 1 & treatment[train_idx] == treatment_level]
+      om_data <- data.frame(Y = outcomes[train_s1_a], covariates[train_s1_a, , drop = FALSE])
+    } else {
+      # Model E[Y | X, A=a] using all data with treatment_level
+      train_a <- train_idx[treatment[train_idx] == treatment_level]
+      om_data <- data.frame(Y = outcomes[train_a], covariates[train_a, , drop = FALSE])
+    }
+
+    if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
+      om_model <- .fit_ml_learner(outcome_learner, Y ~ .,
+                                   data = om_data, family = "binomial")
+      q_pred <- .predict_ml_learner(om_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      om_model <- glm(Y ~ ., data = om_data, family = binomial())
+      q_pred <- predict(om_model, newdata = covariates[val_idx, , drop = FALSE],
+                        type = "response")
+    }
+    q_cf[val_idx] <- pmax(pmin(q_pred, 0.99), 0.01)
+  }
+
+  list(
+    pi_s0 = pi_s0_cf,
+    ps = ps_cf,
+    q = q_cf,
+    folds = folds
+  )
+}
+
+
+#' Compute transportable AUC with cross-fitting
+#'
+#' Computes the DR transportable AUC estimator using cross-fitted nuisance functions.
+#'
+#' @inheritParams tr_auc
+#' @param K Number of folds for cross-fitting.
+#' @param selection_learner Optional ml_learner for selection model.
+#' @param propensity_learner Optional ml_learner for propensity model.
+#' @param outcome_learner Optional ml_learner for outcome model.
+#' @param parallel Logical for parallel processing.
+#' @param ... Additional arguments.
+#'
+#' @return List with estimate and cross-fitted nuisance values.
+#'
+#' @keywords internal
+.compute_tr_auc_crossfit <- function(predictions, outcomes, treatment, source,
+                                      covariates, treatment_level, analysis,
+                                      K = 5,
+                                      selection_learner = NULL,
+                                      propensity_learner = NULL,
+                                      outcome_learner = NULL,
+                                      parallel = FALSE,
+                                      return_se = FALSE,
+                                      ...) {
+
+  n <- length(outcomes)
+  n0 <- sum(source == 0)
+
+  # Get cross-fitted nuisance functions
+  cf_nuisance <- .cross_fit_transport_nuisance_auc(
+    treatment = treatment,
+    outcomes = outcomes,
+    source = source,
+    covariates = covariates,
+    treatment_level = treatment_level,
+    analysis = analysis,
+    K = K,
+    selection_learner = selection_learner,
+    propensity_learner = propensity_learner,
+    outcome_learner = outcome_learner,
+    parallel = parallel,
+    ...
+  )
+
+  pi_s0 <- cf_nuisance$pi_s0
+  pi_s1 <- 1 - pi_s0
+  ps <- cf_nuisance$ps
+  q_hat <- cf_nuisance$q
+
+  I_a <- as.numeric(treatment == treatment_level)
+  I_s0 <- as.numeric(source == 0)
+  I_s1 <- as.numeric(source == 1)
+
+  # Concordance indicator matrix
+  ind_f <- outer(predictions, predictions, ">")
+
+  # Compute DR AUC using cross-fitted nuisance functions
+  if (analysis == "transport") {
+    result <- .tr_auc_transport_cf(
+      predictions = predictions,
+      outcomes = outcomes,
+      I_a = I_a,
+      I_s0 = I_s0,
+      I_s1 = I_s1,
+      pi_s0 = pi_s0,
+      pi_s1 = pi_s1,
+      ps = ps,
+      q_hat = q_hat,
+      ind_f = ind_f,
+      n0 = n0,
+      return_se = return_se
+    )
+  } else {
+    result <- .tr_auc_joint_cf(
+      predictions = predictions,
+      outcomes = outcomes,
+      I_a = I_a,
+      I_s0 = I_s0,
+      pi_s0 = pi_s0,
+      ps = ps,
+      q_hat = q_hat,
+      ind_f = ind_f,
+      n0 = n0,
+      return_se = return_se
+    )
+  }
+
+  # Handle backward compatibility: result may be scalar or list
+  if (is.list(result)) {
+    estimate <- result$estimate
+    se <- result$se
+  } else {
+    estimate <- result
+    se <- NULL
+  }
+
+  out <- list(
+    estimate = estimate,
+    pi_s0 = pi_s0,
+    ps = ps,
+    q = q_hat,
+    folds = cf_nuisance$folds
+  )
+  if (return_se) {
+    out$se <- se
+  }
+  out
+}
+
+
+#' Transport AUC DR estimator with cross-fitted nuisance
+#' @noRd
+.tr_auc_transport_cf <- function(predictions, outcomes, I_a, I_s0, I_s1,
+                                  pi_s0, pi_s1, ps, q_hat, ind_f, n0,
+                                  return_se = FALSE) {
+
+  n <- length(outcomes)
+
+  # OM component for target
+  w_case <- I_s0 * q_hat
+  w_control <- I_s0 * (1 - q_hat)
+  mat_om0 <- outer(w_case, w_control, "*")
+  mat_om1 <- mat_om0 * ind_f
+
+  # IPW component for source
+  ipw_weight <- I_s1 * I_a * pi_s0 / (pi_s1 * ps)
+  ipw_weight <- pmin(ipw_weight, quantile(ipw_weight[ipw_weight > 0], 0.99, na.rm = TRUE))
+  ipw_weight[!is.finite(ipw_weight)] <- 0
+
+  # Augmentation: IPW applied to (Y - q_hat)
+  aug_case <- ipw_weight * (outcomes - q_hat)
+  aug_control <- ipw_weight * ((1 - outcomes) - (1 - q_hat))
+
+  # Cross terms for DR
+  mat_aug0_case <- outer(aug_case, w_control, "*")
+  mat_aug0_control <- outer(w_case, aug_control, "*")
+  mat_aug1_case <- mat_aug0_case * ind_f
+  mat_aug1_control <- mat_aug0_control * ind_f
+
+  # Combine
+  num <- sum(mat_om1) + sum(mat_aug1_case) + sum(mat_aug1_control)
+  denom <- sum(mat_om0) + sum(mat_aug0_case) + sum(mat_aug0_control)
+
+  if (denom == 0 || !is.finite(denom)) {
+    if (return_se) {
+      return(list(estimate = NA_real_, se = NA_real_))
+    }
+    return(NA_real_)
+  }
+
+  estimate <- num / denom
+
+  if (!return_se) {
+    return(estimate)
+  }
+
+  # Influence function-based SE using Hajek projection (Li et al. 2022)
+  # For the DR AUC estimator, we use the DeLong-like approach with DR weights
+  #
+  # The key insight is that for each "effective case" i and "effective control" j,
+
+  # we compute the weighted placement values and then use their variances.
+  #
+  # Effective case weight: w_i = q_hat_i * I_S0_i + (Y_i - q_hat_i) * ipw_weight_i
+  # Effective control weight: w_j = (1-q_hat_j) * I_S0_j + ((1-Y_j) - (1-q_hat_j)) * ipw_weight_j
+
+  # Combined effective weights for case and control
+  eff_case <- w_case + aug_case  # q_hat*I_s0 + (Y - q_hat)*ipw
+  eff_control <- w_control + aug_control  # (1-q_hat)*I_s0 + ((1-Y) - (1-q_hat))*ipw
+
+  # For variance: compute weighted placement values
+  # V10_i: weighted proportion of controls with lower prediction than case i
+  # V01_j: weighted proportion of cases with higher prediction than control j
+
+  # Row-wise computation: for each i, V10_i = sum_j w_j * I(pred_i > pred_j) / sum_j w_j
+  # Column-wise computation: for each j, V01_j = sum_i w_i * I(pred_i > pred_j) / sum_i w_i
+
+  # First compute the normalizing constants
+  sum_eff_case <- sum(eff_case)
+  sum_eff_control <- sum(eff_control)
+
+  if (sum_eff_case == 0 || sum_eff_control == 0) {
+    return(list(estimate = estimate, se = NA_real_))
+  }
+
+  # Compute weighted placement values for each observation
+  # V10: for observation i contributing as a case
+  V10 <- numeric(n)
+  V01 <- numeric(n)
+
+  for (i in seq_len(n)) {
+    if (eff_case[i] > 0) {
+      # Weighted proportion of controls with lower prediction
+      V10[i] <- sum(eff_control * ind_f[i, ]) / sum_eff_control
+    }
+    if (eff_control[i] > 0) {
+      # Weighted proportion of cases with higher prediction
+      V01[i] <- sum(eff_case * ind_f[, i]) / sum_eff_case
+    }
+  }
+
+  # DeLong-like variance: weighted variance of placement values
+  # Weight by effective contribution
+  cases_idx <- which(eff_case > 0)
+  controls_idx <- which(eff_control > 0)
+
+  n1_eff <- length(cases_idx)
+  n0_eff <- length(controls_idx)
+
+  if (n1_eff <= 1 || n0_eff <= 1) {
+    return(list(estimate = estimate, se = NA_real_))
+  }
+
+  # Weighted variance of V10 among effective cases
+  V10_cases <- V10[cases_idx]
+  w_cases <- eff_case[cases_idx]
+  w_cases_norm <- w_cases / sum(w_cases)
+  mean_V10 <- sum(w_cases_norm * V10_cases)
+  S10 <- sum(w_cases_norm * (V10_cases - mean_V10)^2) * n1_eff / (n1_eff - 1)
+
+  # Weighted variance of V01 among effective controls
+  V01_controls <- V01[controls_idx]
+  w_controls <- eff_control[controls_idx]
+  w_controls_norm <- w_controls / sum(w_controls)
+  mean_V01 <- sum(w_controls_norm * V01_controls)
+  S01 <- sum(w_controls_norm * (V01_controls - mean_V01)^2) * n0_eff / (n0_eff - 1)
+
+  # DeLong variance estimate
+  se <- sqrt(S10 / n1_eff + S01 / n0_eff)
+
+  list(estimate = estimate, se = se)
+}
+
+
+#' Joint AUC DR estimator with cross-fitted nuisance
+#' @noRd
+.tr_auc_joint_cf <- function(predictions, outcomes, I_a, I_s0,
+                              pi_s0, ps, q_hat, ind_f, n0,
+                              return_se = FALSE) {
+
+  n <- length(outcomes)
+
+  # OM component for target
+  w_case <- I_s0 * q_hat
+  w_control <- I_s0 * (1 - q_hat)
+  mat_om0 <- outer(w_case, w_control, "*")
+  mat_om1 <- mat_om0 * ind_f
+
+  # IPW component for all with treatment
+  ipw_weight <- I_a * pi_s0 / ps
+  ipw_weight <- pmin(ipw_weight, quantile(ipw_weight[ipw_weight > 0], 0.99, na.rm = TRUE))
+  ipw_weight[!is.finite(ipw_weight)] <- 0
+
+  # Augmentation
+  aug_case <- ipw_weight * (outcomes - q_hat)
+  aug_control <- ipw_weight * ((1 - outcomes) - (1 - q_hat))
+
+  # Cross terms for DR
+  mat_aug0_case <- outer(aug_case, w_control, "*")
+  mat_aug0_control <- outer(w_case, aug_control, "*")
+  mat_aug1_case <- mat_aug0_case * ind_f
+  mat_aug1_control <- mat_aug0_control * ind_f
+
+  # Combine
+  num <- sum(mat_om1) + sum(mat_aug1_case) + sum(mat_aug1_control)
+  denom <- sum(mat_om0) + sum(mat_aug0_case) + sum(mat_aug0_control)
+
+  if (denom == 0 || !is.finite(denom)) {
+    if (return_se) {
+      return(list(estimate = NA_real_, se = NA_real_))
+    }
+    return(NA_real_)
+  }
+
+  estimate <- num / denom
+
+  if (!return_se) {
+    return(estimate)
+  }
+
+  # Influence function-based SE using Hajek projection (Li et al. 2022)
+  # Same approach as transport version
+
+  # Combined effective weights
+  eff_case <- w_case + aug_case
+  eff_control <- w_control + aug_control
+
+  sum_eff_case <- sum(eff_case)
+  sum_eff_control <- sum(eff_control)
+
+  if (sum_eff_case == 0 || sum_eff_control == 0) {
+    return(list(estimate = estimate, se = NA_real_))
+  }
+
+  # Compute weighted placement values
+  V10 <- numeric(n)
+  V01 <- numeric(n)
+
+  for (i in seq_len(n)) {
+    if (eff_case[i] > 0) {
+      V10[i] <- sum(eff_control * ind_f[i, ]) / sum_eff_control
+    }
+    if (eff_control[i] > 0) {
+      V01[i] <- sum(eff_case * ind_f[, i]) / sum_eff_case
+    }
+  }
+
+  cases_idx <- which(eff_case > 0)
+  controls_idx <- which(eff_control > 0)
+
+  n1_eff <- length(cases_idx)
+  n0_eff <- length(controls_idx)
+
+  if (n1_eff <= 1 || n0_eff <= 1) {
+    return(list(estimate = estimate, se = NA_real_))
+  }
+
+  # Weighted variance of V10 among effective cases
+  V10_cases <- V10[cases_idx]
+  w_cases <- eff_case[cases_idx]
+  w_cases_norm <- w_cases / sum(w_cases)
+  mean_V10 <- sum(w_cases_norm * V10_cases)
+  S10 <- sum(w_cases_norm * (V10_cases - mean_V10)^2) * n1_eff / (n1_eff - 1)
+
+  # Weighted variance of V01 among effective controls
+  V01_controls <- V01[controls_idx]
+  w_controls <- eff_control[controls_idx]
+  w_controls_norm <- w_controls / sum(w_controls)
+  mean_V01 <- sum(w_controls_norm * V01_controls)
+  S01 <- sum(w_controls_norm * (V01_controls - mean_V01)^2) * n0_eff / (n0_eff - 1)
+
+  # DeLong variance estimate
+  se <- sqrt(S10 / n1_eff + S01 / n0_eff)
+
+  list(estimate = estimate, se = se)
 }
 
 
@@ -638,6 +1191,106 @@ tr_auc <- function(predictions,
         propensity_model = nuisance_boot$propensity,
         outcome_model = nuisance_boot$outcome
       )
+    }, error = function(e) NA_real_)
+  }
+
+  if (parallel && requireNamespace("parallel", quietly = TRUE)) {
+    if (is.null(ncores)) {
+      ncores <- max(1, parallel::detectCores() - 1)
+    }
+    boot_estimates <- parallel::mclapply(
+      1:n_boot,
+      function(b) {
+        set.seed(b)
+        idx <- get_boot_idx()
+        boot_fn(idx)
+      },
+      mc.cores = ncores
+    )
+    boot_estimates <- unlist(boot_estimates)
+  } else {
+    boot_estimates <- numeric(n_boot)
+    for (b in 1:n_boot) {
+      idx <- get_boot_idx()
+      boot_estimates[b] <- boot_fn(idx)
+    }
+  }
+
+  # Remove NA values
+  boot_estimates <- boot_estimates[!is.na(boot_estimates)]
+
+  if (length(boot_estimates) < n_boot * 0.5) {
+    warning("More than 50% of bootstrap samples failed")
+  }
+
+  se <- sd(boot_estimates, na.rm = TRUE)
+  alpha <- 1 - conf_level
+  ci_lower <- quantile(boot_estimates, alpha / 2, na.rm = TRUE)
+  ci_upper <- quantile(boot_estimates, 1 - alpha / 2, na.rm = TRUE)
+
+  list(
+    se = se,
+    ci_lower = unname(ci_lower),
+    ci_upper = unname(ci_upper),
+    boot_estimates = boot_estimates
+  )
+}
+
+
+#' Bootstrap for cross-fitted transportable AUC
+#'
+#' @inheritParams .bootstrap_tr_auc
+#' @param n_folds Number of folds for cross-fitting.
+#' @param selection_learner Optional ml_learner for selection model.
+#' @param propensity_learner Optional ml_learner for propensity model.
+#' @param outcome_learner Optional ml_learner for outcome model.
+#'
+#' @return List with se, ci_lower, ci_upper, boot_estimates.
+#' @keywords internal
+.bootstrap_tr_auc_crossfit <- function(predictions, outcomes, treatment, source, covariates,
+                                        treatment_level, analysis, n_folds,
+                                        n_boot, conf_level, stratified = TRUE,
+                                        selection_learner = NULL,
+                                        propensity_learner = NULL,
+                                        outcome_learner = NULL,
+                                        parallel, ncores, ...) {
+
+  n <- length(outcomes)
+
+  # Indices for source and target
+  idx_source <- which(source == 1)
+  idx_target <- which(source == 0)
+  n_source <- length(idx_source)
+  n_target <- length(idx_target)
+
+  # Function to generate bootstrap indices
+  get_boot_idx <- function() {
+    if (stratified) {
+      boot_source <- sample(idx_source, n_source, replace = TRUE)
+      boot_target <- sample(idx_target, n_target, replace = TRUE)
+      c(boot_source, boot_target)
+    } else {
+      sample(n, n, replace = TRUE)
+    }
+  }
+
+  boot_fn <- function(idx) {
+    tryCatch({
+      .compute_tr_auc_crossfit(
+        predictions = predictions[idx],
+        outcomes = outcomes[idx],
+        treatment = treatment[idx],
+        source = source[idx],
+        covariates = covariates[idx, , drop = FALSE],
+        treatment_level = treatment_level,
+        analysis = analysis,
+        K = n_folds,
+        selection_learner = selection_learner,
+        propensity_learner = propensity_learner,
+        outcome_learner = outcome_learner,
+        parallel = FALSE,
+        ...
+      )$estimate
     }, error = function(e) NA_real_)
   }
 

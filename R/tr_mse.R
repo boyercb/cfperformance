@@ -22,7 +22,13 @@
 #' @param propensity_model Optional fitted propensity score model for P(A=1|X,S=1).
 #'   If NULL, a logistic regression model is fit using source data.
 #' @param outcome_model Optional fitted outcome model for E\[L(Y,g)|X,A,S\].
-#'   If NULL, a regression model is fit using the relevant data.
+#'   If NULL, a regression model is fit using the relevant data. For binary
+#'   outcomes, this should be a model for E\[Y|X,A\] (binomial family). For
+#'   continuous outcomes, this should be a model for E\[L|X,A\] (gaussian family).
+#' @param outcome_type Character string specifying the outcome type:
+#'   - `"auto"`: Auto-detect from data (default)
+#'   - `"binary"`: Binary outcome (0/1) - uses efficient transformation
+#'   - `"continuous"`: Continuous outcome - models loss directly
 #' @param se_method Method for standard error estimation:
 #'   - `"bootstrap"`: Bootstrap standard errors (default)
 #'   - `"influence"`: Influence function-based standard errors
@@ -125,6 +131,7 @@ tr_mse <- function(predictions,
                    selection_model = NULL,
                    propensity_model = NULL,
                    outcome_model = NULL,
+                   outcome_type = c("auto", "binary", "continuous"),
                    se_method = c("bootstrap", "influence", "none"),
                    n_boot = 500,
                    conf_level = 0.95,
@@ -139,6 +146,7 @@ tr_mse <- function(predictions,
   analysis <- match.arg(analysis)
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+  outcome_type <- match.arg(outcome_type)
 
   .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
 
@@ -146,43 +154,94 @@ tr_mse <- function(predictions,
   n_target <- sum(source == 0)
   n_source <- sum(source == 1)
 
+  # Auto-detect outcome type if not specified
+  if (outcome_type == "auto") {
+    outcome_type <- if (all(outcomes %in% c(0, 1))) "binary" else "continuous"
+  }
+
   # Initialize SE variables
   se <- NULL
   ci_lower <- NULL
   ci_upper <- NULL
 
-  # Fit nuisance models if not provided
+  # Detect if ml_learners are provided
+  use_ml_selection <- is_ml_learner(selection_model)
+  use_ml_propensity <- is_ml_learner(propensity_model)
+  use_ml_outcome <- is_ml_learner(outcome_model)
+
+  # Fit nuisance models or use cross-fitting
   if (estimator != "naive") {
-    nuisance <- .fit_transport_nuisance(
-      treatment = treatment,
-      outcomes = outcomes,
-      source = source,
-      covariates = covariates,
-      predictions = predictions,
-      treatment_level = treatment_level,
-      analysis = analysis,
-      selection_model = selection_model,
-      propensity_model = propensity_model,
-      outcome_model = outcome_model
-    )
+    if (cross_fit && estimator == "dr") {
+      # Use cross-fitting for DR estimator
+      cf_result <- .compute_tr_mse_crossfit(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        source = source,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        K = n_folds,
+        selection_learner = if (use_ml_selection) selection_model else NULL,
+        propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+        outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        outcome_type = outcome_type,
+        parallel = parallel,
+        ...
+      )
+      estimate <- cf_result$estimate
+      nuisance <- list(selection = NULL, propensity = NULL, outcome = NULL,
+                       cross_fitted = TRUE,
+                       pi_s0 = cf_result$pi_s0,
+                       ps = cf_result$ps,
+                       h = cf_result$h,
+                       folds = cf_result$folds)
+
+      # SE from cross-fitting
+      if (se_method == "influence") {
+        se <- cf_result$se
+        z <- qnorm(1 - (1 - conf_level) / 2)
+        ci_lower <- estimate - z * se
+        ci_upper <- estimate + z * se
+      }
+    } else {
+      nuisance <- .fit_transport_nuisance(
+        treatment = treatment,
+        outcomes = outcomes,
+        source = source,
+        covariates = covariates,
+        predictions = predictions,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        selection_model = selection_model,
+        propensity_model = propensity_model,
+        outcome_model = outcome_model,
+        outcome_type = outcome_type
+      )
+      estimate <- NULL
+    }
   } else {
     nuisance <- list(selection = NULL, propensity = NULL, outcome = NULL)
+    estimate <- NULL
   }
 
-  # Compute point estimate
-  estimate <- .compute_tr_mse(
-    predictions = predictions,
-    outcomes = outcomes,
-    treatment = treatment,
-    source = source,
-    covariates = covariates,
-    treatment_level = treatment_level,
-    analysis = analysis,
-    estimator = estimator,
-    selection_model = nuisance$selection,
-    propensity_model = nuisance$propensity,
-    outcome_model = nuisance$outcome
-  )
+  # Compute point estimate (if not already computed via cross-fitting)
+  if (is.null(estimate)) {
+    estimate <- .compute_tr_mse(
+      predictions = predictions,
+      outcomes = outcomes,
+      treatment = treatment,
+      source = source,
+      covariates = covariates,
+      treatment_level = treatment_level,
+      analysis = analysis,
+      estimator = estimator,
+      selection_model = nuisance$selection,
+      propensity_model = nuisance$propensity,
+      outcome_model = nuisance$outcome,
+      outcome_type = outcome_type
+    )
+  }
 
   # Compute naive estimate for comparison (among target with treatment_level)
   naive_estimate <- .compute_tr_mse(
@@ -220,7 +279,8 @@ tr_mse <- function(predictions,
     se <- boot_result$se
     ci_lower <- boot_result$ci_lower
     ci_upper <- boot_result$ci_upper
-  } else if (se_method == "influence") {
+  } else if (se_method == "influence" && !isTRUE(nuisance$cross_fitted)) {
+    # Only compute influence SE if not already computed via cross-fitting
     se <- .influence_se_tr_mse(
       predictions = predictions,
       outcomes = outcomes,
@@ -273,7 +333,8 @@ tr_mse <- function(predictions,
 #' @noRd
 .compute_tr_mse <- function(predictions, outcomes, treatment, source, covariates,
                             treatment_level, analysis, estimator,
-                            selection_model, propensity_model, outcome_model) {
+                            selection_model, propensity_model, outcome_model,
+                            outcome_type = "binary") {
 
   n <- length(outcomes)
   n0 <- sum(source == 0)  # Target population size
@@ -318,7 +379,17 @@ tr_mse <- function(predictions,
 
   # Get outcome model predictions (conditional expected loss)
   if (!is.null(outcome_model)) {
-    h <- predict(outcome_model, newdata = covariates, type = "response")
+    # For binary outcomes, the outcome model predicts E[Y|X,A] = pY
+    # and we transform to E[L|X,A] = pY - 2*pred*pY + pred^2
+    # For continuous outcomes, the model directly predicts E[L|X,A]
+    pY <- predict(outcome_model, newdata = covariates, type = "response")
+    if (outcome_type == "binary") {
+      # E[(Y - pred)^2 | X] = E[Y | X] - 2*pred*E[Y | X] + pred^2
+      # since Y^2 = Y for binary Y
+      h <- pY - 2 * predictions * pY + predictions^2
+    } else {
+      h <- pY
+    }
   }
 
   # Compute estimator based on analysis type
@@ -402,6 +473,257 @@ tr_mse <- function(predictions,
 
 
 # =============================================================================
+# Cross-fitting for transportability
+# =============================================================================
+
+#' Cross-fit nuisance models for transportability analysis
+#'
+#' Implements K-fold cross-fitting for nuisance model estimation in
+#' transportability settings.
+#'
+#' @param treatment Numeric vector of treatment indicators.
+#' @param outcomes Numeric vector of observed outcomes.
+#' @param source Numeric vector indicating source (1) or target (0) population.
+#' @param covariates Matrix or data frame of covariates.
+#' @param predictions Numeric vector of model predictions.
+#' @param treatment_level Counterfactual treatment level.
+#' @param analysis Either "transport" or "joint".
+#' @param K Number of folds for cross-fitting (default: 5).
+#' @param selection_learner Optional ml_learner for selection model.
+#' @param propensity_learner Optional ml_learner for propensity model.
+#' @param outcome_learner Optional ml_learner for outcome model.
+#' @param outcome_type Either "binary" or "continuous" (default: "binary").
+#' @param parallel Logical for parallel processing.
+#' @param ... Additional arguments.
+#'
+#' @return List containing cross-fitted nuisance function predictions.
+#'
+#' @keywords internal
+.cross_fit_transport_nuisance <- function(treatment, outcomes, source, covariates,
+                                           predictions, treatment_level, analysis,
+                                           K = 5,
+                                           selection_learner = NULL,
+                                           propensity_learner = NULL,
+                                           outcome_learner = NULL,
+                                           outcome_type = "binary",
+                                           parallel = FALSE,
+                                           ...) {
+
+  n <- length(outcomes)
+  loss <- (outcomes - predictions)^2
+
+  # Convert covariates to data frame if needed
+  if (!is.data.frame(covariates)) {
+    covariates <- as.data.frame(covariates)
+  }
+
+  # Create fold assignments (stratified by source)
+  folds <- integer(n)
+  idx_s0 <- which(source == 0)
+  idx_s1 <- which(source == 1)
+  folds[idx_s0] <- sample(rep(1:K, length.out = length(idx_s0)))
+  folds[idx_s1] <- sample(rep(1:K, length.out = length(idx_s1)))
+
+  # Initialize output vectors
+  pi_s0_cf <- numeric(n)  # Cross-fitted P(S=0|X)
+  ps_cf <- numeric(n)     # Cross-fitted propensity scores
+  h_cf <- numeric(n)      # Cross-fitted conditional loss predictions
+
+  I_a <- as.numeric(treatment == treatment_level)
+  I_s0 <- as.numeric(source == 0)
+  I_s1 <- as.numeric(source == 1)
+
+  for (k in 1:K) {
+    train_idx <- which(folds != k)
+    val_idx <- which(folds == k)
+
+    # --- Selection model: P(S=0|X) ---
+    sel_data <- data.frame(S0 = I_s0[train_idx], covariates[train_idx, , drop = FALSE])
+
+    if (!is.null(selection_learner) && is_ml_learner(selection_learner)) {
+      sel_model <- .fit_ml_learner(selection_learner, S0 ~ .,
+                                    data = sel_data, family = "binomial")
+      pi_s0_pred <- .predict_ml_learner(sel_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      sel_model <- glm(S0 ~ ., data = sel_data, family = binomial())
+      pi_s0_pred <- predict(sel_model, newdata = covariates[val_idx, , drop = FALSE],
+                            type = "response")
+    }
+    pi_s0_cf[val_idx] <- pmax(pmin(pi_s0_pred, 0.99), 0.01)
+
+    # --- Propensity model ---
+    if (analysis == "transport") {
+      # P(A=1|X, S=1) - fit on source population only
+      train_s1 <- train_idx[source[train_idx] == 1]
+      ps_data <- data.frame(A = treatment[train_s1], covariates[train_s1, , drop = FALSE])
+    } else {
+      # P(A=1|X) - fit on all training data
+      ps_data <- data.frame(A = treatment[train_idx], covariates[train_idx, , drop = FALSE])
+    }
+
+    if (!is.null(propensity_learner) && is_ml_learner(propensity_learner)) {
+      ps_model <- .fit_ml_learner(propensity_learner, A ~ .,
+                                   data = ps_data, family = "binomial")
+      ps_pred <- .predict_ml_learner(ps_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      ps_model <- glm(A ~ ., data = ps_data, family = binomial())
+      ps_pred <- predict(ps_model, newdata = covariates[val_idx, , drop = FALSE],
+                         type = "response")
+    }
+
+    if (treatment_level == 0) {
+      ps_pred <- 1 - ps_pred
+    }
+    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
+
+    # --- Outcome model ---
+    # For binary outcomes: model E[Y | X, A=a] and transform to loss
+    # For continuous outcomes: model E[L | X, A=a] directly
+    if (analysis == "transport") {
+      train_subset <- train_idx[source[train_idx] == 1 & treatment[train_idx] == treatment_level]
+    } else {
+      train_subset <- train_idx[treatment[train_idx] == treatment_level]
+    }
+
+    if (outcome_type == "binary") {
+      # Model E[Y | X, A=a]
+      om_data <- data.frame(Y = outcomes[train_subset], covariates[train_subset, , drop = FALSE])
+
+      if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
+        om_model <- .fit_ml_learner(outcome_learner, Y ~ .,
+                                     data = om_data, family = "binomial")
+        pY <- .predict_ml_learner(om_model, covariates[val_idx, , drop = FALSE])
+      } else {
+        om_model <- glm(Y ~ ., data = om_data, family = binomial())
+        pY <- predict(om_model, newdata = covariates[val_idx, , drop = FALSE],
+                      type = "response")
+      }
+      # Transform to conditional expected loss: E[(Y - pred)^2 | X] = pY - 2*pred*pY + pred^2
+      h_cf[val_idx] <- pY - 2 * predictions[val_idx] * pY + predictions[val_idx]^2
+    } else {
+      # Model E[L | X, A=a] directly for continuous outcomes
+      om_data <- data.frame(L = loss[train_subset], covariates[train_subset, , drop = FALSE])
+
+      if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
+        om_model <- .fit_ml_learner(outcome_learner, L ~ .,
+                                     data = om_data, family = "gaussian")
+        h_pred <- .predict_ml_learner(om_model, covariates[val_idx, , drop = FALSE])
+      } else {
+        om_model <- glm(L ~ ., data = om_data, family = gaussian())
+        h_pred <- predict(om_model, newdata = covariates[val_idx, , drop = FALSE],
+                          type = "response")
+      }
+      h_cf[val_idx] <- h_pred
+    }
+  }
+
+  list(
+    pi_s0 = pi_s0_cf,
+    ps = ps_cf,
+    h = h_cf,
+    folds = folds
+  )
+}
+
+
+#' Compute transportable MSE with cross-fitting
+#'
+#' Computes the DR transportable MSE estimator using cross-fitted nuisance functions.
+#'
+#' @inheritParams tr_mse
+#' @param K Number of folds for cross-fitting.
+#' @param selection_learner Optional ml_learner for selection model.
+#' @param propensity_learner Optional ml_learner for propensity model.
+#' @param outcome_learner Optional ml_learner for outcome model.
+#' @param outcome_type Either "binary" or "continuous".
+#' @param parallel Logical for parallel processing.
+#' @param ... Additional arguments.
+#'
+#' @return List with estimate, SE, and cross-fitted nuisance values.
+#'
+#' @keywords internal
+.compute_tr_mse_crossfit <- function(predictions, outcomes, treatment, source,
+                                      covariates, treatment_level, analysis,
+                                      K = 5,
+                                      selection_learner = NULL,
+                                      propensity_learner = NULL,
+                                      outcome_learner = NULL,
+                                      outcome_type = "binary",
+                                      parallel = FALSE,
+                                      ...) {
+
+  n <- length(outcomes)
+  n0 <- sum(source == 0)
+  loss <- (outcomes - predictions)^2
+
+  # Get cross-fitted nuisance functions
+  cf_nuisance <- .cross_fit_transport_nuisance(
+    treatment = treatment,
+    outcomes = outcomes,
+    source = source,
+    covariates = covariates,
+    predictions = predictions,
+    treatment_level = treatment_level,
+    analysis = analysis,
+    K = K,
+    selection_learner = selection_learner,
+    propensity_learner = propensity_learner,
+    outcome_learner = outcome_learner,
+    outcome_type = outcome_type,
+    parallel = parallel,
+    ...
+  )
+
+  pi_s0 <- cf_nuisance$pi_s0
+  pi_s1 <- 1 - pi_s0
+  ps <- cf_nuisance$ps
+  h <- cf_nuisance$h
+
+  I_a <- as.numeric(treatment == treatment_level)
+  I_s0 <- as.numeric(source == 0)
+  I_s1 <- as.numeric(source == 1)
+
+  # Compute DR estimate
+  if (analysis == "transport") {
+    # Transport DR: E_{S=0}[h(X)] + E_{S=1,A=a}[w(X)(L - h(X))]
+    # where w(X) = P(S=0|X) / (P(S=1|X) * P(A=a|X,S=1))
+    term1 <- sum(I_s0 * h)
+    weights <- I_s1 * I_a * pi_s0 / (pi_s1 * ps)
+    term2 <- sum(weights * (loss - h))
+    estimate <- (term1 + term2) / n0
+  } else {
+    # Joint DR: E_{S=0}[h(X)] + E_{A=a}[w(X)(L - h(X))]
+    # where w(X) = P(S=0|X) / P(A=a|X)
+    term1 <- sum(I_s0 * h)
+    weights <- I_a * pi_s0 / ps
+    term2 <- sum(weights * (loss - h))
+    estimate <- (term1 + term2) / n0
+  }
+
+  # Influence function for SE
+  if (analysis == "transport") {
+    ipw_weight <- I_s1 * I_a * pi_s0 / (pi_s1 * ps)
+    augmentation <- ipw_weight * (loss - h)
+    phi <- (I_s0 * h + augmentation - estimate * I_s0) / mean(I_s0)
+  } else {
+    ipw_weight <- I_a * pi_s0 / ps
+    augmentation <- ipw_weight * (loss - h)
+    phi <- (I_s0 * h + augmentation - estimate * I_s0) / mean(I_s0)
+  }
+  se <- sqrt(var(phi) / n)
+
+  list(
+    estimate = estimate,
+    se = se,
+    pi_s0 = pi_s0,
+    ps = ps,
+    h = h,
+    folds = cf_nuisance$folds
+  )
+}
+
+
+# =============================================================================
 # Nuisance model fitting for transportability
 # =============================================================================
 
@@ -410,7 +732,7 @@ tr_mse <- function(predictions,
 .fit_transport_nuisance <- function(treatment, outcomes, source, covariates,
                                      predictions, treatment_level, analysis,
                                      selection_model, propensity_model,
-                                     outcome_model) {
+                                     outcome_model, outcome_type = "binary") {
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -423,9 +745,6 @@ tr_mse <- function(predictions,
   I_s0 <- source == 0
   I_s1 <- source == 1
   I_a <- treatment == treatment_level
-
-  # Compute loss for outcome modeling
-  loss <- (outcomes - predictions)^2
 
   # --- Selection model: P(S=0|X) ---
   if (is.null(selection_model)) {
@@ -446,15 +765,24 @@ tr_mse <- function(predictions,
     }
   }
 
-  # --- Outcome model: E[L(Y, g(X)) | X, A=a, S] ---
+  # --- Outcome model ---
+  # For binary outcomes: model E[Y | X, A=a, S] and transform to loss later
+  # For continuous outcomes: model E[L | X, A=a, S] directly
   if (is.null(outcome_model)) {
     if (analysis == "transport") {
-      # Model E[L | X, A=a, S=1] using source data
-      om_data <- cbind(L = loss, covariates)[I_s1 & I_a, ]
-      outcome_model <- glm(L ~ ., data = om_data, family = gaussian())
+      subset_idx <- I_s1 & I_a
     } else {
-      # Model E[L | X, A=a] using all data with treatment_level
-      om_data <- cbind(L = loss, covariates)[I_a, ]
+      subset_idx <- I_a
+    }
+
+    if (outcome_type == "binary") {
+      # Model E[Y | X, A=a] - the transformation to loss happens in .compute_tr_mse
+      om_data <- cbind(Y = outcomes, covariates)[subset_idx, ]
+      outcome_model <- glm(Y ~ ., data = om_data, family = binomial())
+    } else {
+      # Model E[L | X, A=a] directly for continuous outcomes
+      loss <- (outcomes - predictions)^2
+      om_data <- cbind(L = loss, covariates)[subset_idx, ]
       outcome_model <- glm(L ~ ., data = om_data, family = gaussian())
     }
   }

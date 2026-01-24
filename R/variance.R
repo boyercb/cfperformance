@@ -79,8 +79,8 @@ NULL
     return(se)
 
   } else if (estimator == "ipw") {
-    # IPW estimator - use weighted variance
-    psi_hat <- sum(I_a / ps * loss) / sum(I_a)
+    # IPW estimator (Horvitz-Thompson style)
+    psi_hat <- mean(I_a / ps * loss)
     phi <- I_a / ps * loss - psi_hat
     se <- sqrt(var(phi) / n)
     return(se)
@@ -508,10 +508,12 @@ NULL
                                  outcome_formula = NULL,
                                  propensity_learner = NULL,
                                  outcome_learner = NULL,
+                                 outcome_type = "binary",
                                  parallel = FALSE,
                                  ...) {
 
   n <- length(outcomes)
+  loss <- (outcomes - predictions)^2
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
@@ -559,33 +561,60 @@ NULL
     ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
 
     # Fit outcome model on training fold (among treated)
+    # For binary outcomes: model E[Y | X, A=a] and transform to loss
+    # For continuous outcomes: model E[L | X, A=a] directly
     subset_train <- train_idx[treatment[train_idx] == treatment_level]
-    outcome_data <- cbind(Y = outcomes[subset_train],
-                          covariates[subset_train, , drop = FALSE])
 
-    if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
-      # Use ML learner
-      out_formula <- if (!is.null(outcome_formula)) outcome_formula else Y ~ .
-      outcome_model <- .fit_ml_learner(outcome_learner, out_formula,
-                                        data = outcome_data, family = "binomial")
-      pY <- .predict_ml_learner(outcome_model, covariates[val_idx, , drop = FALSE])
-    } else if (is.null(outcome_formula)) {
-      outcome_model <- glm(Y ~ ., data = outcome_data, family = binomial())
-      pY <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
-                    type = "response")
+    if (outcome_type == "binary") {
+      # Model E[Y | X, A=a]
+      outcome_data <- cbind(Y = outcomes[subset_train],
+                            covariates[subset_train, , drop = FALSE])
+
+      if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
+        out_formula <- if (!is.null(outcome_formula)) outcome_formula else Y ~ .
+        outcome_model <- .fit_ml_learner(outcome_learner, out_formula,
+                                          data = outcome_data, family = "binomial")
+        pY <- .predict_ml_learner(outcome_model, covariates[val_idx, , drop = FALSE])
+      } else if (is.null(outcome_formula)) {
+        outcome_model <- glm(Y ~ ., data = outcome_data, family = binomial())
+        pY <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
+                      type = "response")
+      } else {
+        outcome_model <- glm(outcome_formula, data = outcome_data, family = binomial())
+        pY <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
+                      type = "response")
+      }
+
+      # Store outcome probability (q_hat) for AUC
+      # Truncate to avoid extreme values that cause instability in DR estimator
+      q_cf[val_idx] <- pmax(pmin(pY, 0.99), 0.01)
+
+      # Transform to conditional expected loss: E[(Y - pred)^2 | X] = pY - 2*pred*pY + pred^2
+      h_cf[val_idx] <- pY - 2 * predictions[val_idx] * pY + predictions[val_idx]^2
     } else {
-      outcome_model <- glm(outcome_formula, data = outcome_data, family = binomial())
-      pY <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
-                    type = "response")
+      # Model E[L | X, A=a] directly for continuous outcomes
+      outcome_data <- cbind(L = loss[subset_train],
+                            covariates[subset_train, , drop = FALSE])
+
+      if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
+        out_formula <- if (!is.null(outcome_formula)) outcome_formula else L ~ .
+        outcome_model <- .fit_ml_learner(outcome_learner, out_formula,
+                                          data = outcome_data, family = "gaussian")
+        h_pred <- .predict_ml_learner(outcome_model, covariates[val_idx, , drop = FALSE])
+      } else if (is.null(outcome_formula)) {
+        outcome_model <- glm(L ~ ., data = outcome_data, family = gaussian())
+        h_pred <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
+                          type = "response")
+      } else {
+        outcome_model <- glm(outcome_formula, data = outcome_data, family = gaussian())
+        h_pred <- predict(outcome_model, newdata = covariates[val_idx, , drop = FALSE],
+                          type = "response")
+      }
+
+      # q_cf not meaningful for continuous outcomes, but fill to avoid errors
+      q_cf[val_idx] <- NA_real_
+      h_cf[val_idx] <- h_pred
     }
-
-    # Store outcome probability (q_hat) for AUC
-    # Truncate to avoid extreme values that cause instability in DR estimator
-    q_cf[val_idx] <- pmax(pmin(pY, 0.99), 0.01)
-
-    # Compute conditional loss: E[(Y - pred)^2 | X, A=a] = p(1-p) + (p - pred)^2
-    # For binary Y: E[Y^2] = p, so E[(Y - pred)^2] = p - 2*p*pred + pred^2
-    h_cf[val_idx] <- pY - 2 * predictions[val_idx] * pY + predictions[val_idx]^2
   }
 
   list(
@@ -603,6 +632,7 @@ NULL
 #'
 #' @inheritParams cf_mse
 #' @param K Number of folds for cross-fitting.
+#' @param outcome_type Either "binary" or "continuous".
 #'
 #' @return Doubly robust MSE estimate with cross-fitting.
 #'
@@ -611,6 +641,7 @@ NULL
                                    treatment_level, K = 5,
                                    propensity_learner = NULL,
                                    outcome_learner = NULL,
+                                   outcome_type = "binary",
                                    parallel = FALSE,
                                    ...) {
 
@@ -627,6 +658,7 @@ NULL
     K = K,
     propensity_learner = propensity_learner,
     outcome_learner = outcome_learner,
+    outcome_type = outcome_type,
     parallel = parallel,
     ...
   )

@@ -15,8 +15,14 @@
 #'   - `"dr"`: Doubly robust estimator (default)
 #' @param propensity_model Optional fitted propensity score model. If NULL,
 #'   a logistic regression model is fit using the covariates.
-#' @param outcome_model Optional fitted outcome model. If NULL, a logistic
-#'   regression model is fit using the covariates among treated/untreated.
+#' @param outcome_model Optional fitted outcome model. If NULL, a regression
+#'   model is fit using the covariates among treated/untreated. For binary
+#'   outcomes, this should be a model for E\[Y|X,A\] (binomial family). For
+#'   continuous outcomes, this should be a model for E\[L|X,A\] (gaussian family).
+#' @param outcome_type Character string specifying the outcome type:
+#'   - `"auto"`: Auto-detect from data (default)
+#'   - `"binary"`: Binary outcome (0/1) - uses efficient transformation
+#'   - `"continuous"`: Continuous outcome - models loss directly
 #' @param se_method Method for standard error estimation:
 #'   - `"bootstrap"`: Bootstrap standard errors (default)
 #'   - `"influence"`: Influence function-based standard errors
@@ -99,6 +105,7 @@ cf_mse <- function(predictions,
                    estimator = c("dr", "cl", "ipw", "naive"),
                    propensity_model = NULL,
                    outcome_model = NULL,
+                   outcome_type = c("auto", "binary", "continuous"),
                    se_method = c("bootstrap", "influence", "none"),
                    n_boot = 500,
                    conf_level = 0.95,
@@ -112,12 +119,18 @@ cf_mse <- function(predictions,
   # Input validation
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+  outcome_type <- match.arg(outcome_type)
 
   # Validate inputs
 
   .validate_inputs(predictions, outcomes, treatment, covariates)
 
   n <- length(outcomes)
+
+  # Auto-detect outcome type if not specified
+  if (outcome_type == "auto") {
+    outcome_type <- if (all(outcomes %in% c(0, 1))) "binary" else "continuous"
+  }
 
   # Initialize SE variables
   se <- NULL
@@ -141,6 +154,7 @@ cf_mse <- function(predictions,
         K = n_folds,
         propensity_learner = if (use_ml_propensity) propensity_model else NULL,
         outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        outcome_type = outcome_type,
         parallel = parallel,
         ...
       )
@@ -165,7 +179,10 @@ cf_mse <- function(predictions,
         covariates = covariates,
         treatment_level = treatment_level,
         propensity_model = propensity_model,
-        outcome_model = outcome_model
+        outcome_model = outcome_model,
+        estimator = estimator,
+        outcome_type = outcome_type,
+        predictions = predictions
       )
       estimate <- NULL
     }
@@ -184,7 +201,8 @@ cf_mse <- function(predictions,
       treatment_level = treatment_level,
       estimator = estimator,
       propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
+      outcome_model = nuisance$outcome,
+      outcome_type = outcome_type
     )
   }
 
@@ -262,7 +280,7 @@ cf_mse <- function(predictions,
 # Internal function to compute MSE
 .compute_mse <- function(predictions, outcomes, treatment, covariates,
                          treatment_level, estimator, propensity_model,
-                         outcome_model) {
+                         outcome_model, outcome_type = "binary") {
 
   n <- length(outcomes)
   loss <- (outcomes - predictions)^2
@@ -288,9 +306,17 @@ cf_mse <- function(predictions,
 
   # Get outcome predictions (conditional loss) for ALL observations
   if (!is.null(outcome_model)) {
-    # For binary outcomes with squared error loss
+    # For binary outcomes, the outcome model predicts E[Y|X,A] = pY
+    # and we transform to E[L|X,A] = pY - 2*pred*pY + pred^2
+    # For continuous outcomes, the model directly predicts E[L|X,A]
     pY <- .predict_nuisance(outcome_model, covariates)
-    h <- pY - 2 * predictions * pY + predictions^2
+    if (outcome_type == "binary") {
+      # E[(Y - pred)^2 | X] = E[Y | X] - 2*pred*E[Y | X] + pred^2
+      # since Y^2 = Y for binary Y
+      h <- pY - 2 * predictions * pY + predictions^2
+    } else {
+      h <- pY
+    }
   }
 
   # Indicator for counterfactual treatment
@@ -301,9 +327,9 @@ cf_mse <- function(predictions,
     return(mean(h))
 
   } else if (estimator == "ipw") {
-    # IPW estimator
+    # IPW estimator (Horvitz-Thompson style)
     weights <- I_a / ps
-    return(sum(weights * loss) / sum(I_a))
+    return(mean(weights * loss))
 
   } else if (estimator == "dr") {
     # Doubly robust estimator
@@ -316,15 +342,17 @@ cf_mse <- function(predictions,
 # Internal function to fit nuisance models
 .fit_nuisance_models <- function(treatment, outcomes, covariates,
                                   treatment_level, propensity_model,
-                                  outcome_model) {
+                                  outcome_model, estimator = "dr",
+                                  outcome_type = "binary",
+                                  predictions = NULL) {
 
   # Convert covariates to data frame if needed
   if (!is.data.frame(covariates)) {
     covariates <- as.data.frame(covariates)
   }
 
-  # Fit propensity model if not provided
-  if (is.null(propensity_model)) {
+  # Fit propensity model if not provided (needed for ipw and dr)
+  if (estimator %in% c("ipw", "dr") && is.null(propensity_model)) {
     ps_data <- cbind(A = treatment, covariates)
     propensity_model <- glm(A ~ ., data = ps_data, family = binomial())
   } else if (is_ml_learner(propensity_model)) {
@@ -337,11 +365,22 @@ cf_mse <- function(predictions,
                                          data = ps_data, family = "binomial")
   }
 
-  # Fit outcome model if not provided (among those with counterfactual treatment)
-  if (is.null(outcome_model)) {
+  # Fit outcome model if not provided (needed for cl and dr only)
+  # For binary outcomes: model E[Y | X, A=a] and transform to loss later
+  # For continuous outcomes: model E[L | X, A=a] directly
+  if (estimator %in% c("cl", "dr") && is.null(outcome_model)) {
     subset_idx <- treatment == treatment_level
-    outcome_data <- cbind(Y = outcomes, covariates)[subset_idx, ]
-    outcome_model <- glm(Y ~ ., data = outcome_data, family = binomial())
+
+    if (outcome_type == "binary") {
+      # Model E[Y | X, A=a] - the transformation to loss happens in .compute_mse
+      outcome_data <- cbind(Y = outcomes, covariates)[subset_idx, ]
+      outcome_model <- glm(Y ~ ., data = outcome_data, family = binomial())
+    } else {
+      # Model E[L | X, A=a] directly for continuous outcomes
+      loss <- (outcomes - predictions)^2
+      outcome_data <- cbind(L = loss, covariates)[subset_idx, ]
+      outcome_model <- glm(L ~ ., data = outcome_data, family = gaussian())
+    }
     # Store the full data for prediction
     attr(outcome_model, "full_data") <- cbind(Y = outcomes, covariates)
   } else if (is_ml_learner(outcome_model)) {
@@ -350,9 +389,17 @@ cf_mse <- function(predictions,
             "Using cross_fit=TRUE is recommended for ML learners.",
             call. = FALSE)
     subset_idx <- treatment == treatment_level
-    outcome_data <- cbind(Y = outcomes, covariates)[subset_idx, ]
-    outcome_model <- .fit_ml_learner(outcome_model, Y ~ .,
-                                      data = outcome_data, family = "binomial")
+
+    if (outcome_type == "binary") {
+      outcome_data <- cbind(Y = outcomes, covariates)[subset_idx, ]
+      outcome_model <- .fit_ml_learner(outcome_model, Y ~ .,
+                                        data = outcome_data, family = "binomial")
+    } else {
+      loss <- (outcomes - predictions)^2
+      outcome_data <- cbind(L = loss, covariates)[subset_idx, ]
+      outcome_model <- .fit_ml_learner(outcome_model, L ~ .,
+                                        data = outcome_data, family = "gaussian")
+    }
   }
 
   list(propensity = propensity_model, outcome = outcome_model)

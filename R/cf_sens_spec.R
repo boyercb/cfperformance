@@ -122,60 +122,154 @@ cf_sensitivity <- function(predictions,
   ci_lower <- NULL
   ci_upper <- NULL
 
-  # Fit nuisance models if needed
-  if (estimator != "naive") {
-    nuisance <- .fit_nuisance_models(
+  # Cross-fitting implementation for DR estimator
+  if (cross_fit && estimator == "dr") {
+    # Detect if ml_learners are provided
+    use_ml_propensity <- is_ml_learner(propensity_model)
+    use_ml_outcome <- is_ml_learner(outcome_model)
+
+    # Cross-fit nuisance models
+    cf_nuisance <- .cross_fit_nuisance_sens_spec(
       treatment = treatment,
       outcomes = outcomes,
       covariates = covariates,
       treatment_level = treatment_level,
-      propensity_model = propensity_model,
-      outcome_model = outcome_model
+      K = n_folds,
+      propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+      outcome_learner = if (use_ml_outcome) outcome_model else NULL
     )
+
+    # Compute point estimates and optionally SE using cross-fitted nuisance
+    if (se_method == "influence") {
+      # Compute estimate and SE together via influence function
+      results <- lapply(threshold, function(c) {
+        .compute_cf_sensitivity_crossfit(
+          predictions = predictions,
+          outcomes = outcomes,
+          treatment = treatment,
+          threshold = c,
+          treatment_level = treatment_level,
+          ps = cf_nuisance$ps,
+          m_hat = cf_nuisance$m,
+          return_se = TRUE
+        )
+      })
+      estimate <- sapply(results, function(x) x$estimate)
+      se <- sapply(results, function(x) x$se)
+      z <- qnorm(1 - (1 - conf_level) / 2)
+      ci_lower <- estimate - z * se
+      ci_upper <- estimate + z * se
+    } else {
+      # Just compute point estimates
+      estimate <- sapply(threshold, function(c) {
+        .compute_cf_sensitivity_crossfit(
+          predictions = predictions,
+          outcomes = outcomes,
+          treatment = treatment,
+          threshold = c,
+          treatment_level = treatment_level,
+          ps = cf_nuisance$ps,
+          m_hat = cf_nuisance$m,
+          return_se = FALSE
+        )
+      })
+    }
+
+    nuisance <- list(
+      propensity = propensity_model,
+      outcome = outcome_model,
+      cross_fitted = TRUE,
+      n_folds = n_folds,
+      ps = cf_nuisance$ps,
+      m = cf_nuisance$m
+    )
+
+    # Bootstrap SE for cross-fitted estimates (if requested)
+    if (se_method == "bootstrap") {
+      boot_result <- .bootstrap_cf_sens_spec_crossfit(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        covariates = covariates,
+        threshold = threshold,
+        treatment_level = treatment_level,
+        metric = "sensitivity",
+        n_folds = n_folds,
+        n_boot = n_boot,
+        conf_level = conf_level,
+        propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+        outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        parallel = parallel,
+        ncores = ncores
+      )
+      se <- boot_result$se
+      ci_lower <- boot_result$ci_lower
+      ci_upper <- boot_result$ci_upper
+    }
+
   } else {
-    nuisance <- list(propensity = NULL, outcome = NULL)
+    # Non-cross-fitted estimation (original code path)
+
+    # Warn if cross_fit requested for non-DR estimator
+    if (cross_fit && estimator != "dr") {
+      warning("Cross-fitting is only implemented for estimator='dr'. Proceeding without cross-fitting.")
+    }
+
+    # Fit nuisance models if needed
+    if (estimator != "naive") {
+      nuisance <- .fit_nuisance_models(
+        treatment = treatment,
+        outcomes = outcomes,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        propensity_model = propensity_model,
+        outcome_model = outcome_model
+      )
+    } else {
+      nuisance <- list(propensity = NULL, outcome = NULL)
+    }
+
+    # Compute point estimates for all thresholds
+    estimate <- sapply(threshold, function(c) {
+      .compute_cf_sensitivity(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        covariates = covariates,
+        threshold = c,
+        treatment_level = treatment_level,
+        estimator = estimator,
+        propensity_model = nuisance$propensity,
+        outcome_model = nuisance$outcome
+      )
+    })
+
+    # Bootstrap standard errors
+    if (se_method == "bootstrap") {
+      boot_result <- .bootstrap_cf_sens_spec(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        covariates = covariates,
+        threshold = threshold,
+        treatment_level = treatment_level,
+        estimator = estimator,
+        metric = "sensitivity",
+        n_boot = n_boot,
+        conf_level = conf_level,
+        parallel = parallel,
+        ncores = ncores
+      )
+      se <- boot_result$se
+      ci_lower <- boot_result$ci_lower
+      ci_upper <- boot_result$ci_upper
+    }
   }
 
-  # Compute point estimates for all thresholds
-  estimate <- sapply(threshold, function(c) {
-    .compute_cf_sensitivity(
-      predictions = predictions,
-      outcomes = outcomes,
-      treatment = treatment,
-      covariates = covariates,
-      threshold = c,
-      treatment_level = treatment_level,
-      estimator = estimator,
-      propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
-    )
-  })
-
-  # Naive estimate
+  # Naive estimate (always compute for comparison)
   naive_estimate <- sapply(threshold, function(c) {
     .compute_cf_sens_spec_naive(predictions, outcomes, c, "sensitivity")
   })
-
-  # Bootstrap standard errors
-  if (se_method == "bootstrap") {
-    boot_result <- .bootstrap_cf_sens_spec(
-      predictions = predictions,
-      outcomes = outcomes,
-      treatment = treatment,
-      covariates = covariates,
-      threshold = threshold,
-      treatment_level = treatment_level,
-      estimator = estimator,
-      metric = "sensitivity",
-      n_boot = n_boot,
-      conf_level = conf_level,
-      parallel = parallel,
-      ncores = ncores
-    )
-    se <- boot_result$se
-    ci_lower <- boot_result$ci_lower
-    ci_upper <- boot_result$ci_upper
-  }
 
   # Build result object
   result <- list(
@@ -289,60 +383,154 @@ cf_specificity <- function(predictions,
   ci_lower <- NULL
   ci_upper <- NULL
 
-  # Fit nuisance models if needed
-  if (estimator != "naive") {
-    nuisance <- .fit_nuisance_models(
+  # Cross-fitting implementation for DR estimator
+  if (cross_fit && estimator == "dr") {
+    # Detect if ml_learners are provided
+    use_ml_propensity <- is_ml_learner(propensity_model)
+    use_ml_outcome <- is_ml_learner(outcome_model)
+
+    # Cross-fit nuisance models
+    cf_nuisance <- .cross_fit_nuisance_sens_spec(
       treatment = treatment,
       outcomes = outcomes,
       covariates = covariates,
       treatment_level = treatment_level,
-      propensity_model = propensity_model,
-      outcome_model = outcome_model
+      K = n_folds,
+      propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+      outcome_learner = if (use_ml_outcome) outcome_model else NULL
     )
+
+    # Compute point estimates and optionally SE using cross-fitted nuisance
+    if (se_method == "influence") {
+      # Compute estimate and SE together via influence function
+      results <- lapply(threshold, function(c) {
+        .compute_cf_specificity_crossfit(
+          predictions = predictions,
+          outcomes = outcomes,
+          treatment = treatment,
+          threshold = c,
+          treatment_level = treatment_level,
+          ps = cf_nuisance$ps,
+          m_hat = cf_nuisance$m,
+          return_se = TRUE
+        )
+      })
+      estimate <- sapply(results, function(x) x$estimate)
+      se <- sapply(results, function(x) x$se)
+      z <- qnorm(1 - (1 - conf_level) / 2)
+      ci_lower <- estimate - z * se
+      ci_upper <- estimate + z * se
+    } else {
+      # Just compute point estimates
+      estimate <- sapply(threshold, function(c) {
+        .compute_cf_specificity_crossfit(
+          predictions = predictions,
+          outcomes = outcomes,
+          treatment = treatment,
+          threshold = c,
+          treatment_level = treatment_level,
+          ps = cf_nuisance$ps,
+          m_hat = cf_nuisance$m,
+          return_se = FALSE
+        )
+      })
+    }
+
+    nuisance <- list(
+      propensity = propensity_model,
+      outcome = outcome_model,
+      cross_fitted = TRUE,
+      n_folds = n_folds,
+      ps = cf_nuisance$ps,
+      m = cf_nuisance$m
+    )
+
+    # Bootstrap SE for cross-fitted estimates (if requested)
+    if (se_method == "bootstrap") {
+      boot_result <- .bootstrap_cf_sens_spec_crossfit(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        covariates = covariates,
+        threshold = threshold,
+        treatment_level = treatment_level,
+        metric = "specificity",
+        n_folds = n_folds,
+        n_boot = n_boot,
+        conf_level = conf_level,
+        propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+        outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        parallel = parallel,
+        ncores = ncores
+      )
+      se <- boot_result$se
+      ci_lower <- boot_result$ci_lower
+      ci_upper <- boot_result$ci_upper
+    }
+
   } else {
-    nuisance <- list(propensity = NULL, outcome = NULL)
+    # Non-cross-fitted estimation (original code path)
+
+    # Warn if cross_fit requested for non-DR estimator
+    if (cross_fit && estimator != "dr") {
+      warning("Cross-fitting is only implemented for estimator='dr'. Proceeding without cross-fitting.")
+    }
+
+    # Fit nuisance models if needed
+    if (estimator != "naive") {
+      nuisance <- .fit_nuisance_models(
+        treatment = treatment,
+        outcomes = outcomes,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        propensity_model = propensity_model,
+        outcome_model = outcome_model
+      )
+    } else {
+      nuisance <- list(propensity = NULL, outcome = NULL)
+    }
+
+    # Compute point estimates for all thresholds
+    estimate <- sapply(threshold, function(c) {
+      .compute_cf_specificity(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        covariates = covariates,
+        threshold = c,
+        treatment_level = treatment_level,
+        estimator = estimator,
+        propensity_model = nuisance$propensity,
+        outcome_model = nuisance$outcome
+      )
+    })
+
+    # Bootstrap standard errors
+    if (se_method == "bootstrap") {
+      boot_result <- .bootstrap_cf_sens_spec(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        covariates = covariates,
+        threshold = threshold,
+        treatment_level = treatment_level,
+        estimator = estimator,
+        metric = "specificity",
+        n_boot = n_boot,
+        conf_level = conf_level,
+        parallel = parallel,
+        ncores = ncores
+      )
+      se <- boot_result$se
+      ci_lower <- boot_result$ci_lower
+      ci_upper <- boot_result$ci_upper
+    }
   }
 
-  # Compute point estimates for all thresholds
-  estimate <- sapply(threshold, function(c) {
-    .compute_cf_specificity(
-      predictions = predictions,
-      outcomes = outcomes,
-      treatment = treatment,
-      covariates = covariates,
-      threshold = c,
-      treatment_level = treatment_level,
-      estimator = estimator,
-      propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
-    )
-  })
-
-  # Naive estimate
+  # Naive estimate (always compute for comparison)
   naive_estimate <- sapply(threshold, function(c) {
     .compute_cf_sens_spec_naive(predictions, outcomes, c, "specificity")
   })
-
-  # Bootstrap standard errors
-  if (se_method == "bootstrap") {
-    boot_result <- .bootstrap_cf_sens_spec(
-      predictions = predictions,
-      outcomes = outcomes,
-      treatment = treatment,
-      covariates = covariates,
-      threshold = threshold,
-      treatment_level = treatment_level,
-      estimator = estimator,
-      metric = "specificity",
-      n_boot = n_boot,
-      conf_level = conf_level,
-      parallel = parallel,
-      ncores = ncores
-    )
-    se <- boot_result$se
-    ci_lower <- boot_result$ci_lower
-    ci_upper <- boot_result$ci_upper
-  }
 
   # Build result object
   result <- list(
@@ -472,6 +660,313 @@ cf_tpr <- cf_sensitivity
 #' @rdname cf_specificity
 #' @export
 cf_tnr <- cf_specificity
+
+
+# ==============================================================================
+# Cross-fitting for counterfactual sensitivity/specificity
+# ==============================================================================
+
+#' Cross-fit nuisance models for counterfactual sens/spec
+#'
+#' Implements K-fold cross-fitting for nuisance model estimation.
+#'
+#' @inheritParams cf_sensitivity
+#' @param K Number of folds for cross-fitting.
+#' @param propensity_learner Optional ml_learner for propensity model.
+#' @param outcome_learner Optional ml_learner for outcome model.
+#'
+#' @return List containing cross-fitted nuisance function predictions.
+#'
+#' @keywords internal
+.cross_fit_nuisance_sens_spec <- function(treatment, outcomes, covariates,
+                                           treatment_level, K = 5,
+                                           propensity_learner = NULL,
+                                           outcome_learner = NULL) {
+
+  n <- length(outcomes)
+
+  # Convert covariates to data frame if needed
+  if (!is.data.frame(covariates)) {
+    covariates <- as.data.frame(covariates)
+  }
+
+  # Create fold assignments
+  folds <- sample(rep(1:K, length.out = n))
+
+  # Initialize output vectors
+  ps_cf <- numeric(n)    # Cross-fitted propensity scores P(A=a|X)
+  m_cf <- numeric(n)     # Cross-fitted outcome probabilities P(Y=1|X,A=a)
+
+  for (k in 1:K) {
+    train_idx <- which(folds != k)
+    val_idx <- which(folds == k)
+
+    # --- Propensity model: P(A=1|X) ---
+    ps_data <- data.frame(A = treatment[train_idx], covariates[train_idx, , drop = FALSE])
+
+    if (!is.null(propensity_learner) && is_ml_learner(propensity_learner)) {
+      ps_model <- .fit_ml_learner(propensity_learner, A ~ .,
+                                   data = ps_data, family = "binomial")
+      ps_pred <- .predict_ml_learner(ps_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      ps_model <- glm(A ~ ., data = ps_data, family = binomial())
+      ps_pred <- predict(ps_model, newdata = covariates[val_idx, , drop = FALSE],
+                         type = "response")
+    }
+
+    # Convert to P(A=treatment_level|X)
+    if (treatment_level == 0) {
+      ps_pred <- 1 - ps_pred
+    }
+    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.99), 0.01)
+
+    # --- Outcome model: E[Y | X, A=a] ---
+    train_a <- train_idx[treatment[train_idx] == treatment_level]
+    om_data <- data.frame(Y = outcomes[train_a], covariates[train_a, , drop = FALSE])
+
+    if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
+      om_model <- .fit_ml_learner(outcome_learner, Y ~ .,
+                                   data = om_data, family = "binomial")
+      m_pred <- .predict_ml_learner(om_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      om_model <- glm(Y ~ ., data = om_data, family = binomial())
+      m_pred <- predict(om_model, newdata = covariates[val_idx, , drop = FALSE],
+                        type = "response")
+    }
+    m_cf[val_idx] <- pmax(pmin(m_pred, 0.99), 0.01)
+  }
+
+  list(
+    ps = ps_cf,
+    m = m_cf,
+    folds = folds
+  )
+}
+
+
+#' Compute DR sensitivity with cross-fitted nuisance
+#'
+#' Computes the doubly robust sensitivity estimator using cross-fitted
+#' nuisance functions and returns both point estimate and influence
+#' function-based standard error.
+#'
+#' @inheritParams cf_sensitivity
+#' @param ps Cross-fitted propensity scores.
+#' @param m_hat Cross-fitted outcome probabilities.
+#' @param return_se Logical; if TRUE, returns list with estimate and SE.
+#'
+#' @return If return_se=FALSE, numeric estimate. If TRUE, list with estimate and se.
+#' @keywords internal
+.compute_cf_sensitivity_crossfit <- function(predictions, outcomes, treatment,
+                                              threshold, treatment_level,
+                                              ps, m_hat, return_se = FALSE) {
+
+  n <- length(outcomes)
+
+  # Indicators
+  I_a <- as.numeric(treatment == treatment_level)
+  I_pos <- as.numeric(predictions > threshold)
+  I_case <- as.numeric(outcomes == 1)
+
+  # IPW weights
+  ipw_weight <- I_a / ps
+
+  # Numerator: DR for P(pred > c, Y=1) = E[I(pred>c) * Y^a]
+  # DR estimator: E[m(X)*I(pred>c)] + E[(I_a/ps)*(I(pred>c)*Y - m(X)*I(pred>c))]
+  num_cl <- mean(I_pos * m_hat)
+  num_ipw <- mean(ipw_weight * I_pos * I_case)
+  num_aug <- mean(ipw_weight * I_pos * m_hat)
+  mu_1 <- num_cl + num_ipw - num_aug
+
+  # Denominator: DR for P(Y=1) = E[Y^a]
+  denom_cl <- mean(m_hat)
+  denom_ipw <- mean(ipw_weight * I_case)
+  denom_aug <- mean(ipw_weight * m_hat)
+  mu_0 <- denom_cl + denom_ipw - denom_aug
+
+  if (mu_0 <= 0) {
+    if (return_se) return(list(estimate = NA_real_, se = NA_real_))
+    return(NA_real_)
+  }
+
+  estimate <- mu_1 / mu_0
+
+  if (!return_se) return(estimate)
+
+  # Influence function for ratio estimator: phi = (phi_1 - psi * phi_0) / mu_0
+  # phi_1: influence function for numerator (DR for joint probability)
+  # phi_0: influence function for denominator (DR for marginal)
+
+  # phi_1_i = I(pred>c)*m(X) + (I_a/ps)*(I(pred>c)*Y - I(pred>c)*m(X)) - mu_1
+  phi_1 <- I_pos * m_hat + ipw_weight * (I_pos * I_case - I_pos * m_hat) - mu_1
+
+  # phi_0_i = m(X) + (I_a/ps)*(Y - m(X)) - mu_0
+  phi_0 <- m_hat + ipw_weight * (I_case - m_hat) - mu_0
+
+  # Influence function for ratio (delta method)
+  phi <- (phi_1 - estimate * phi_0) / mu_0
+
+  se <- sqrt(var(phi) / n)
+
+  list(estimate = estimate, se = se)
+}
+
+
+#' Compute DR specificity with cross-fitted nuisance
+#'
+#' Computes the doubly robust specificity estimator using cross-fitted
+#' nuisance functions and returns both point estimate and influence
+#' function-based standard error.
+#'
+#' @inheritParams cf_specificity
+#' @param ps Cross-fitted propensity scores.
+#' @param m_hat Cross-fitted outcome probabilities.
+#' @param return_se Logical; if TRUE, returns list with estimate and SE.
+#'
+#' @return If return_se=FALSE, numeric estimate. If TRUE, list with estimate and se.
+#' @keywords internal
+.compute_cf_specificity_crossfit <- function(predictions, outcomes, treatment,
+                                              threshold, treatment_level,
+                                              ps, m_hat, return_se = FALSE) {
+
+  n <- length(outcomes)
+
+  # For specificity, we need P(Y=0|X) = 1 - m_hat
+  m_hat_neg <- 1 - m_hat
+
+  # Indicators
+  I_a <- as.numeric(treatment == treatment_level)
+  I_neg <- as.numeric(predictions <= threshold)
+  I_control <- as.numeric(outcomes == 0)
+
+  # IPW weights
+  ipw_weight <- I_a / ps
+
+  # Numerator: DR for P(pred <= c, Y=0) = E[I(pred<=c) * (1-Y^a)]
+  num_cl <- mean(I_neg * m_hat_neg)
+  num_ipw <- mean(ipw_weight * I_neg * I_control)
+  num_aug <- mean(ipw_weight * I_neg * m_hat_neg)
+  mu_1 <- num_cl + num_ipw - num_aug
+
+  # Denominator: DR for P(Y=0) = E[1-Y^a]
+  denom_cl <- mean(m_hat_neg)
+  denom_ipw <- mean(ipw_weight * I_control)
+  denom_aug <- mean(ipw_weight * m_hat_neg)
+  mu_0 <- denom_cl + denom_ipw - denom_aug
+
+  if (mu_0 <= 0) {
+    if (return_se) return(list(estimate = NA_real_, se = NA_real_))
+    return(NA_real_)
+  }
+
+  estimate <- mu_1 / mu_0
+
+  if (!return_se) return(estimate)
+
+  # Influence function for ratio estimator
+  # phi_1: influence function for numerator
+  phi_1 <- I_neg * m_hat_neg + ipw_weight * (I_neg * I_control - I_neg * m_hat_neg) - mu_1
+
+  # phi_0: influence function for denominator
+  phi_0 <- m_hat_neg + ipw_weight * (I_control - m_hat_neg) - mu_0
+
+  # Influence function for ratio (delta method)
+  phi <- (phi_1 - estimate * phi_0) / mu_0
+
+  se <- sqrt(var(phi) / n)
+
+  list(estimate = estimate, se = se)
+}
+
+
+#' Bootstrap for cross-fitted sens/spec
+#' @keywords internal
+.bootstrap_cf_sens_spec_crossfit <- function(predictions, outcomes, treatment,
+                                              covariates, threshold,
+                                              treatment_level, metric,
+                                              n_folds, n_boot, conf_level,
+                                              propensity_learner = NULL,
+                                              outcome_learner = NULL,
+                                              parallel, ncores) {
+
+  n <- length(outcomes)
+  n_thresholds <- length(threshold)
+  alpha <- 1 - conf_level
+
+  boot_fn <- function(idx) {
+    # Cross-fit on bootstrap sample
+    cf_nuisance <- tryCatch({
+      .cross_fit_nuisance_sens_spec(
+        treatment = treatment[idx],
+        outcomes = outcomes[idx],
+        covariates = covariates[idx, , drop = FALSE],
+        treatment_level = treatment_level,
+        K = n_folds,
+        propensity_learner = propensity_learner,
+        outcome_learner = outcome_learner
+      )
+    }, error = function(e) NULL)
+
+    if (is.null(cf_nuisance)) return(rep(NA_real_, n_thresholds))
+
+    sapply(threshold, function(c) {
+      if (metric == "sensitivity") {
+        .compute_cf_sensitivity_crossfit(
+          predictions = predictions[idx],
+          outcomes = outcomes[idx],
+          treatment = treatment[idx],
+          threshold = c,
+          treatment_level = treatment_level,
+          ps = cf_nuisance$ps,
+          m_hat = cf_nuisance$m
+        )
+      } else {
+        .compute_cf_specificity_crossfit(
+          predictions = predictions[idx],
+          outcomes = outcomes[idx],
+          treatment = treatment[idx],
+          threshold = c,
+          treatment_level = treatment_level,
+          ps = cf_nuisance$ps,
+          m_hat = cf_nuisance$m
+        )
+      }
+    })
+  }
+
+  if (parallel && requireNamespace("parallel", quietly = TRUE)) {
+    if (is.null(ncores)) {
+      ncores <- max(1, parallel::detectCores() - 1)
+    }
+    boot_results <- parallel::mclapply(
+      1:n_boot,
+      function(b) {
+        set.seed(b)
+        idx <- sample(n, n, replace = TRUE)
+        boot_fn(idx)
+      },
+      mc.cores = ncores
+    )
+    boot_matrix <- do.call(rbind, boot_results)
+  } else {
+    boot_matrix <- matrix(NA_real_, nrow = n_boot, ncol = n_thresholds)
+    for (b in 1:n_boot) {
+      idx <- sample(n, n, replace = TRUE)
+      boot_matrix[b, ] <- boot_fn(idx)
+    }
+  }
+
+  # Compute SEs and CIs
+  se <- apply(boot_matrix, 2, sd, na.rm = TRUE)
+  ci_lower <- apply(boot_matrix, 2, quantile, probs = alpha / 2, na.rm = TRUE)
+  ci_upper <- apply(boot_matrix, 2, quantile, probs = 1 - alpha / 2, na.rm = TRUE)
+
+  list(
+    se = se,
+    ci_lower = unname(ci_lower),
+    ci_upper = unname(ci_upper)
+  )
+}
 
 
 # ==============================================================================

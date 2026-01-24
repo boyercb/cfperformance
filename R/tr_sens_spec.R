@@ -106,6 +106,8 @@ tr_sensitivity <- function(predictions,
                            n_boot = 200,
                            conf_level = 0.95,
                            stratified_boot = TRUE,
+                           cross_fit = FALSE,
+                           n_folds = 5,
                            parallel = FALSE,
                            ncores = NULL,
                            ...) {
@@ -136,40 +138,127 @@ tr_sensitivity <- function(predictions,
   ci_lower <- NULL
   ci_upper <- NULL
 
-  # Fit nuisance models if not provided
+  # Detect if ml_learners are provided
+  use_ml_selection <- is_ml_learner(selection_model)
+  use_ml_propensity <- is_ml_learner(propensity_model)
+  use_ml_outcome <- is_ml_learner(outcome_model)
+
+  # Fit nuisance models or use cross-fitting
   if (estimator != "naive") {
-    nuisance <- .fit_transport_nuisance_sens_spec(
-      treatment = treatment,
-      outcomes = outcomes,
-      source = source,
-      covariates = covariates,
-      treatment_level = treatment_level,
-      analysis = analysis,
-      selection_model = selection_model,
-      propensity_model = propensity_model,
-      outcome_model = outcome_model
-    )
+    if (cross_fit && estimator == "dr") {
+      # Use cross-fitting for DR estimator
+      cf_nuisance <- .cross_fit_transport_nuisance_sens_spec(
+        treatment = treatment,
+        outcomes = outcomes,
+        source = source,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        K = n_folds,
+        selection_learner = if (use_ml_selection) selection_model else NULL,
+        propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+        outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        parallel = parallel,
+        ...
+      )
+      nuisance <- list(selection = NULL, propensity = NULL, outcome = NULL,
+                       cross_fitted = TRUE,
+                       pi_s0 = cf_nuisance$pi_s0,
+                       ps = cf_nuisance$ps,
+                       m_hat = cf_nuisance$m_hat,
+                       folds = cf_nuisance$folds)
+
+      # Compute point estimates and SE using cross-fitted nuisance
+      if (se_method == "influence") {
+        # Compute estimate and SE together via influence function
+        results <- lapply(threshold, function(c) {
+          .compute_tr_sensitivity_crossfit(
+            predictions = predictions,
+            outcomes = outcomes,
+            treatment = treatment,
+            source = source,
+            threshold = c,
+            treatment_level = treatment_level,
+            analysis = analysis,
+            pi_s0 = nuisance$pi_s0,
+            ps = nuisance$ps,
+            m_hat = nuisance$m_hat,
+            return_se = TRUE
+          )
+        })
+        estimate <- sapply(results, function(x) x$estimate)
+        se <- sapply(results, function(x) x$se)
+        z <- qnorm(1 - (1 - conf_level) / 2)
+        ci_lower <- estimate - z * se
+        ci_upper <- estimate + z * se
+      } else {
+        # Just compute point estimates
+        estimate <- sapply(threshold, function(c) {
+          .compute_tr_sensitivity_crossfit(
+            predictions = predictions,
+            outcomes = outcomes,
+            treatment = treatment,
+            source = source,
+            threshold = c,
+            treatment_level = treatment_level,
+            analysis = analysis,
+            pi_s0 = nuisance$pi_s0,
+            ps = nuisance$ps,
+            m_hat = nuisance$m_hat,
+            return_se = FALSE
+          )
+        })
+      }
+    } else {
+      nuisance <- .fit_transport_nuisance_sens_spec(
+        treatment = treatment,
+        outcomes = outcomes,
+        source = source,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        selection_model = selection_model,
+        propensity_model = propensity_model,
+        outcome_model = outcome_model
+      )
+      # Compute point estimates for non-crossfit case
+      estimate <- sapply(threshold, function(c) {
+        .compute_tr_sensitivity(
+          predictions = predictions,
+          outcomes = outcomes,
+          treatment = treatment,
+          source = source,
+          covariates = covariates,
+          threshold = c,
+          treatment_level = treatment_level,
+          analysis = analysis,
+          estimator = estimator,
+          selection_model = nuisance$selection,
+          propensity_model = nuisance$propensity,
+          outcome_model = nuisance$outcome
+        )
+      })
+    }
   } else {
     nuisance <- list(selection = NULL, propensity = NULL, outcome = NULL)
+    # Compute naive estimate
+    estimate <- sapply(threshold, function(c) {
+      .compute_tr_sensitivity(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        source = source,
+        covariates = covariates,
+        threshold = c,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        estimator = "naive",
+        selection_model = NULL,
+        propensity_model = NULL,
+        outcome_model = NULL
+      )
+    })
   }
-
-  # Compute point estimate(s) - vectorized over thresholds
-  estimate <- sapply(threshold, function(c) {
-    .compute_tr_sensitivity(
-      predictions = predictions,
-      outcomes = outcomes,
-      treatment = treatment,
-      source = source,
-      covariates = covariates,
-      threshold = c,
-      treatment_level = treatment_level,
-      analysis = analysis,
-      estimator = estimator,
-      selection_model = nuisance$selection,
-      propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
-    )
-  })
 
   # Compute naive estimate for comparison
   naive_estimate <- sapply(threshold, function(c) {
@@ -317,6 +406,8 @@ tr_specificity <- function(predictions,
                            n_boot = 200,
                            conf_level = 0.95,
                            stratified_boot = TRUE,
+                           cross_fit = FALSE,
+                           n_folds = 5,
                            parallel = FALSE,
                            ncores = NULL,
                            ...) {
@@ -347,40 +438,127 @@ tr_specificity <- function(predictions,
   ci_lower <- NULL
   ci_upper <- NULL
 
-  # Fit nuisance models if not provided
+  # Detect if ml_learners are provided
+  use_ml_selection <- is_ml_learner(selection_model)
+  use_ml_propensity <- is_ml_learner(propensity_model)
+  use_ml_outcome <- is_ml_learner(outcome_model)
+
+  # Fit nuisance models or use cross-fitting
   if (estimator != "naive") {
-    nuisance <- .fit_transport_nuisance_sens_spec(
-      treatment = treatment,
-      outcomes = outcomes,
-      source = source,
-      covariates = covariates,
-      treatment_level = treatment_level,
-      analysis = analysis,
-      selection_model = selection_model,
-      propensity_model = propensity_model,
-      outcome_model = outcome_model
-    )
+    if (cross_fit && estimator == "dr") {
+      # Use cross-fitting for DR estimator
+      cf_nuisance <- .cross_fit_transport_nuisance_sens_spec(
+        treatment = treatment,
+        outcomes = outcomes,
+        source = source,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        K = n_folds,
+        selection_learner = if (use_ml_selection) selection_model else NULL,
+        propensity_learner = if (use_ml_propensity) propensity_model else NULL,
+        outcome_learner = if (use_ml_outcome) outcome_model else NULL,
+        parallel = parallel,
+        ...
+      )
+      nuisance <- list(selection = NULL, propensity = NULL, outcome = NULL,
+                       cross_fitted = TRUE,
+                       pi_s0 = cf_nuisance$pi_s0,
+                       ps = cf_nuisance$ps,
+                       m_hat = cf_nuisance$m_hat,
+                       folds = cf_nuisance$folds)
+
+      # Compute point estimates and SE using cross-fitted nuisance
+      if (se_method == "influence") {
+        # Compute estimate and SE together via influence function
+        results <- lapply(threshold, function(c) {
+          .compute_tr_specificity_crossfit(
+            predictions = predictions,
+            outcomes = outcomes,
+            treatment = treatment,
+            source = source,
+            threshold = c,
+            treatment_level = treatment_level,
+            analysis = analysis,
+            pi_s0 = nuisance$pi_s0,
+            ps = nuisance$ps,
+            m_hat = nuisance$m_hat,
+            return_se = TRUE
+          )
+        })
+        estimate <- sapply(results, function(x) x$estimate)
+        se <- sapply(results, function(x) x$se)
+        z <- qnorm(1 - (1 - conf_level) / 2)
+        ci_lower <- estimate - z * se
+        ci_upper <- estimate + z * se
+      } else {
+        # Just compute point estimates
+        estimate <- sapply(threshold, function(c) {
+          .compute_tr_specificity_crossfit(
+            predictions = predictions,
+            outcomes = outcomes,
+            treatment = treatment,
+            source = source,
+            threshold = c,
+            treatment_level = treatment_level,
+            analysis = analysis,
+            pi_s0 = nuisance$pi_s0,
+            ps = nuisance$ps,
+            m_hat = nuisance$m_hat,
+            return_se = FALSE
+          )
+        })
+      }
+    } else {
+      nuisance <- .fit_transport_nuisance_sens_spec(
+        treatment = treatment,
+        outcomes = outcomes,
+        source = source,
+        covariates = covariates,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        selection_model = selection_model,
+        propensity_model = propensity_model,
+        outcome_model = outcome_model
+      )
+      # Compute point estimates for non-crossfit case
+      estimate <- sapply(threshold, function(c) {
+        .compute_tr_specificity(
+          predictions = predictions,
+          outcomes = outcomes,
+          treatment = treatment,
+          source = source,
+          covariates = covariates,
+          threshold = c,
+          treatment_level = treatment_level,
+          analysis = analysis,
+          estimator = estimator,
+          selection_model = nuisance$selection,
+          propensity_model = nuisance$propensity,
+          outcome_model = nuisance$outcome
+        )
+      })
+    }
   } else {
     nuisance <- list(selection = NULL, propensity = NULL, outcome = NULL)
+    # Compute naive estimate
+    estimate <- sapply(threshold, function(c) {
+      .compute_tr_specificity(
+        predictions = predictions,
+        outcomes = outcomes,
+        treatment = treatment,
+        source = source,
+        covariates = covariates,
+        threshold = c,
+        treatment_level = treatment_level,
+        analysis = analysis,
+        estimator = "naive",
+        selection_model = NULL,
+        propensity_model = NULL,
+        outcome_model = NULL
+      )
+    })
   }
-
-  # Compute point estimate(s) - vectorized over thresholds
-  estimate <- sapply(threshold, function(c) {
-    .compute_tr_specificity(
-      predictions = predictions,
-      outcomes = outcomes,
-      treatment = treatment,
-      source = source,
-      covariates = covariates,
-      threshold = c,
-      treatment_level = treatment_level,
-      analysis = analysis,
-      estimator = estimator,
-      selection_model = nuisance$selection,
-      propensity_model = nuisance$propensity,
-      outcome_model = nuisance$outcome
-    )
-  })
 
   # Compute naive estimate for comparison
   naive_estimate <- sapply(threshold, function(c) {
@@ -552,6 +730,318 @@ tr_fpr <- function(predictions,
   class(spec_result) <- c("tr_fpr", "tr_performance")
 
   return(spec_result)
+}
+
+
+# ==============================================================================
+# Internal Functions: Cross-Fitting for Nuisance Models
+# ==============================================================================
+
+#' Cross-fit nuisance models for transportability sensitivity/specificity
+#'
+#' Implements K-fold cross-fitting for nuisance model estimation in
+#' transportability settings for sensitivity and specificity estimation.
+#'
+#' @param treatment Numeric vector of treatment indicators.
+#' @param outcomes Numeric vector of observed outcomes.
+#' @param source Numeric vector indicating source (1) or target (0) population.
+#' @param covariates Matrix or data frame of covariates.
+#' @param treatment_level Counterfactual treatment level.
+#' @param analysis Either "transport" or "joint".
+#' @param K Number of folds for cross-fitting (default: 5).
+#' @param selection_learner Optional ml_learner for selection model.
+#' @param propensity_learner Optional ml_learner for propensity model.
+#' @param outcome_learner Optional ml_learner for outcome model.
+#' @param parallel Logical for parallel processing.
+#' @param ... Additional arguments.
+#'
+#' @return List containing cross-fitted nuisance function predictions.
+#'
+#' @keywords internal
+.cross_fit_transport_nuisance_sens_spec <- function(treatment, outcomes, source,
+                                                     covariates, treatment_level,
+                                                     analysis, K = 5,
+                                                     selection_learner = NULL,
+                                                     propensity_learner = NULL,
+                                                     outcome_learner = NULL,
+                                                     parallel = FALSE,
+                                                     ...) {
+
+  n <- length(outcomes)
+
+  # Convert covariates to data frame if needed
+  if (!is.data.frame(covariates)) {
+    covariates <- as.data.frame(covariates)
+  }
+
+  # Create fold assignments (stratified by source)
+  folds <- integer(n)
+  idx_s0 <- which(source == 0)
+  idx_s1 <- which(source == 1)
+  folds[idx_s0] <- sample(rep(1:K, length.out = length(idx_s0)))
+  folds[idx_s1] <- sample(rep(1:K, length.out = length(idx_s1)))
+
+  # Initialize output vectors
+  pi_s0_cf <- numeric(n)  # Cross-fitted P(S=0|X)
+  ps_cf <- numeric(n)     # Cross-fitted propensity scores
+  m_hat_cf <- numeric(n)  # Cross-fitted outcome probabilities P(Y=1|X,A=a)
+
+  I_a <- as.numeric(treatment == treatment_level)
+  I_s0 <- as.numeric(source == 0)
+  I_s1 <- as.numeric(source == 1)
+
+  for (k in 1:K) {
+    train_idx <- which(folds != k)
+    val_idx <- which(folds == k)
+
+    # --- Selection model: P(S=0|X) ---
+    sel_data <- data.frame(S0 = I_s0[train_idx], covariates[train_idx, , drop = FALSE])
+
+    if (!is.null(selection_learner) && is_ml_learner(selection_learner)) {
+      sel_model <- .fit_ml_learner(selection_learner, S0 ~ .,
+                                    data = sel_data, family = "binomial")
+      pi_s0_pred <- .predict_ml_learner(sel_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      sel_model <- glm(S0 ~ ., data = sel_data, family = binomial())
+      pi_s0_pred <- predict(sel_model, newdata = covariates[val_idx, , drop = FALSE],
+                            type = "response")
+    }
+    pi_s0_cf[val_idx] <- pmax(pmin(pi_s0_pred, 0.99), 0.01)
+
+    # --- Propensity model ---
+    if (analysis == "transport") {
+      # P(A=1|X, S=1) - fit on source population only
+      train_s1 <- train_idx[source[train_idx] == 1]
+      ps_data <- data.frame(A = treatment[train_s1], covariates[train_s1, , drop = FALSE])
+    } else {
+      # P(A=1|X) - fit on all training data
+      ps_data <- data.frame(A = treatment[train_idx], covariates[train_idx, , drop = FALSE])
+    }
+
+    if (!is.null(propensity_learner) && is_ml_learner(propensity_learner)) {
+      ps_model <- .fit_ml_learner(propensity_learner, A ~ .,
+                                   data = ps_data, family = "binomial")
+      ps_pred <- .predict_ml_learner(ps_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      ps_model <- glm(A ~ ., data = ps_data, family = binomial())
+      ps_pred <- predict(ps_model, newdata = covariates[val_idx, , drop = FALSE],
+                         type = "response")
+    }
+
+    if (treatment_level == 0) {
+      ps_pred <- 1 - ps_pred
+    }
+    ps_cf[val_idx] <- pmax(pmin(ps_pred, 0.975), 0.025)
+
+    # --- Outcome model: P(Y=1|X, A=a) ---
+    if (analysis == "transport") {
+      # Model on source data with treatment_level
+      train_s1_a <- train_idx[source[train_idx] == 1 & treatment[train_idx] == treatment_level]
+      om_data <- data.frame(Y = outcomes[train_s1_a], covariates[train_s1_a, , drop = FALSE])
+    } else {
+      # Model on all data with treatment_level
+      train_a <- train_idx[treatment[train_idx] == treatment_level]
+      om_data <- data.frame(Y = outcomes[train_a], covariates[train_a, , drop = FALSE])
+    }
+
+    if (!is.null(outcome_learner) && is_ml_learner(outcome_learner)) {
+      om_model <- .fit_ml_learner(outcome_learner, Y ~ .,
+                                   data = om_data, family = "binomial")
+      m_pred <- .predict_ml_learner(om_model, covariates[val_idx, , drop = FALSE])
+    } else {
+      om_model <- glm(Y ~ ., data = om_data, family = binomial())
+      m_pred <- predict(om_model, newdata = covariates[val_idx, , drop = FALSE],
+                        type = "response")
+    }
+    m_hat_cf[val_idx] <- pmax(pmin(m_pred, 0.99), 0.01)
+  }
+
+  list(
+    pi_s0 = pi_s0_cf,
+    ps = ps_cf,
+    m_hat = m_hat_cf,
+    folds = folds
+  )
+}
+
+
+#' Compute transportable sensitivity with cross-fitted nuisance functions
+#'
+#' Computes the DR transportable sensitivity estimator using cross-fitted
+#' nuisance functions and returns both point estimate and influence
+#' function-based standard error.
+#'
+#' @param predictions Numeric vector of model predictions.
+#' @param outcomes Numeric vector of observed outcomes.
+#' @param treatment Numeric vector of treatment indicators.
+#' @param source Numeric vector indicating source (1) or target (0) population.
+#' @param threshold Classification threshold.
+#' @param treatment_level Counterfactual treatment level.
+#' @param analysis Either "transport" or "joint".
+#' @param pi_s0 Cross-fitted P(S=0|X).
+#' @param ps Cross-fitted propensity scores.
+#' @param m_hat Cross-fitted outcome probabilities P(Y=1|X,A=a).
+#' @param return_se Logical; if TRUE, returns list with estimate and SE.
+#'
+#' @return If return_se=FALSE, numeric estimate. If TRUE, list with estimate and se.
+#' @noRd
+.compute_tr_sensitivity_crossfit <- function(predictions, outcomes, treatment, source,
+                                              threshold, treatment_level, analysis,
+                                              pi_s0, ps, m_hat, return_se = FALSE) {
+
+  n <- length(outcomes)
+  n0 <- sum(source == 0)
+
+  I_a <- as.numeric(treatment == treatment_level)
+  I_s0 <- as.numeric(source == 0)
+  I_s1 <- as.numeric(source == 1)
+  I_pos <- as.numeric(predictions > threshold)  # Positive predictions
+  I_y1 <- as.numeric(outcomes == 1)             # Cases
+
+  pi_s1 <- 1 - pi_s0
+
+  # DR estimator for sensitivity: P(pred > c | Y=1, target)
+  # = P(pred > c, Y=1 | target) / P(Y=1 | target)
+
+  if (analysis == "transport") {
+    # Transport DR estimator
+    # w(X) = I(S=1) * I(A=a) * P(S=0|X) / (P(S=1|X) * P(A=a|X,S=1))
+    w <- I_s1 * I_a * pi_s0 / (pi_s1 * ps)
+
+    # Numerator: E[I(pred>c) * m(X) | S=0] + IPW augmentation
+    term1_num <- sum(I_s0 * I_pos * m_hat)
+    term2_num <- sum(w * (I_pos * I_y1 - I_pos * m_hat))
+    mu_1 <- (term1_num + term2_num) / n0
+
+    # Denominator: E[m(X) | S=0] + IPW augmentation
+    term1_den <- sum(I_s0 * m_hat)
+    term2_den <- sum(w * (I_y1 - m_hat))
+    mu_0 <- (term1_den + term2_den) / n0
+
+  } else {
+    # Joint DR estimator
+    w <- I_a * pi_s0 / ps
+
+    term1_num <- sum(I_s0 * I_pos * m_hat)
+    term2_num <- sum(w * (I_pos * I_y1 - I_pos * m_hat))
+    mu_1 <- (term1_num + term2_num) / n0
+
+    term1_den <- sum(I_s0 * m_hat)
+    term2_den <- sum(w * (I_y1 - m_hat))
+    mu_0 <- (term1_den + term2_den) / n0
+  }
+
+  # Handle edge cases
+  if (mu_0 <= 0) {
+    if (return_se) return(list(estimate = NA_real_, se = NA_real_))
+    return(NA_real_)
+  }
+
+  estimate <- mu_1 / mu_0
+
+  if (!return_se) return(estimate)
+
+  # Influence function for ratio estimator: phi = (phi_1 - psi * phi_0) / mu_0
+  # phi_1: influence function for numerator (transportability DR)
+  # phi_0: influence function for denominator (transportability DR)
+
+  # For transportability: phi_i = (1/n0) * [I(S=0)*g(X) + w(X)*(obs - g(X)) - psi*I(S=0)]
+  # where g(X) is outcome model, obs is observed quantity
+
+  # phi_1_i: numerator influence function
+  phi_1 <- (I_s0 * I_pos * m_hat + w * (I_pos * I_y1 - I_pos * m_hat) - mu_1 * I_s0) / mean(I_s0)
+
+  # phi_0_i: denominator influence function
+  phi_0 <- (I_s0 * m_hat + w * (I_y1 - m_hat) - mu_0 * I_s0) / mean(I_s0)
+
+  # Influence function for ratio (delta method)
+  phi <- (phi_1 - estimate * phi_0) / mu_0
+
+  se <- sqrt(var(phi) / n)
+
+  list(estimate = estimate, se = se)
+}
+
+
+#' Compute transportable specificity with cross-fitted nuisance functions
+#'
+#' Computes the DR transportable specificity estimator using cross-fitted
+#' nuisance functions and returns both point estimate and influence
+#' function-based standard error.
+#'
+#' @inheritParams .compute_tr_sensitivity_crossfit
+#' @param return_se Logical; if TRUE, returns list with estimate and SE.
+#'
+#' @return If return_se=FALSE, numeric estimate. If TRUE, list with estimate and se.
+#' @noRd
+.compute_tr_specificity_crossfit <- function(predictions, outcomes, treatment, source,
+                                              threshold, treatment_level, analysis,
+                                              pi_s0, ps, m_hat, return_se = FALSE) {
+
+  n <- length(outcomes)
+  n0 <- sum(source == 0)
+
+  I_a <- as.numeric(treatment == treatment_level)
+  I_s0 <- as.numeric(source == 0)
+  I_s1 <- as.numeric(source == 1)
+  I_neg <- as.numeric(predictions <= threshold)  # Negative predictions
+  I_y0 <- as.numeric(outcomes == 0)              # Non-cases
+
+  pi_s1 <- 1 - pi_s0
+  one_minus_m <- 1 - m_hat  # P(Y=0|X)
+
+  # DR estimator for specificity: P(pred <= c | Y=0, target)
+
+  if (analysis == "transport") {
+    # Transport DR estimator
+    w <- I_s1 * I_a * pi_s0 / (pi_s1 * ps)
+
+    # Numerator: E[I(pred <= c) * (1-m(X)) | S=0] + IPW augmentation
+    term1_num <- sum(I_s0 * I_neg * one_minus_m)
+    term2_num <- sum(w * (I_neg * I_y0 - I_neg * one_minus_m))
+    mu_1 <- (term1_num + term2_num) / n0
+
+    # Denominator: E[1-m(X) | S=0] + IPW augmentation
+    term1_den <- sum(I_s0 * one_minus_m)
+    term2_den <- sum(w * (I_y0 - one_minus_m))
+    mu_0 <- (term1_den + term2_den) / n0
+
+  } else {
+    # Joint DR estimator
+    w <- I_a * pi_s0 / ps
+
+    term1_num <- sum(I_s0 * I_neg * one_minus_m)
+    term2_num <- sum(w * (I_neg * I_y0 - I_neg * one_minus_m))
+    mu_1 <- (term1_num + term2_num) / n0
+
+    term1_den <- sum(I_s0 * one_minus_m)
+    term2_den <- sum(w * (I_y0 - one_minus_m))
+    mu_0 <- (term1_den + term2_den) / n0
+  }
+
+  # Handle edge cases
+  if (mu_0 <= 0) {
+    if (return_se) return(list(estimate = NA_real_, se = NA_real_))
+    return(NA_real_)
+  }
+
+  estimate <- mu_1 / mu_0
+
+  if (!return_se) return(estimate)
+
+  # Influence function for ratio estimator
+  # phi_1_i: numerator influence function
+  phi_1 <- (I_s0 * I_neg * one_minus_m + w * (I_neg * I_y0 - I_neg * one_minus_m) - mu_1 * I_s0) / mean(I_s0)
+
+  # phi_0_i: denominator influence function
+  phi_0 <- (I_s0 * one_minus_m + w * (I_y0 - one_minus_m) - mu_0 * I_s0) / mean(I_s0)
+
+  # Influence function for ratio (delta method)
+  phi <- (phi_1 - estimate * phi_0) / mu_0
+
+  se <- sqrt(var(phi) / n)
+
+  list(estimate = estimate, se = se)
 }
 
 
