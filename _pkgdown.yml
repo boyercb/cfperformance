@@ -38,12 +38,20 @@ reference:
       - cf_mse
       - cf_auc
       - cf_calibration
+      - cf_sensitivity
+      - cf_specificity
+      - cf_fpr
+      - cf_roc
   - title: Transportability (Two Populations)
     desc: Transport prediction model performance from source to target population
     contents:
       - tr_mse
       - tr_auc
       - tr_calibration
+      - tr_sensitivity
+      - tr_specificity
+      - tr_fpr
+      - tr_roc
   - title: Model Selection
     desc: Cross-validation and model comparison
     contents:
@@ -61,6 +69,7 @@ reference:
   - title: S3 Methods
     desc: Methods for result objects
     contents:
+      - as.data.frame.tr_roc
       - coef.cf_performance
       - coef.tr_performance
       - confint.cf_performance
@@ -68,6 +77,7 @@ reference:
       - plot.cf_auc
       - plot.cf_calibration
       - plot.tr_calibration
+      - plot.tr_roc
       - print.cf_compare
       - print.cf_cv
       - print.cf_nuisance
