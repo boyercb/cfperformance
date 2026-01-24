@@ -16,6 +16,7 @@ functions.
   propensity_learner = NULL,
   outcome_learner = NULL,
   parallel = FALSE,
+  ps_trim_spec = NULL,
   ...
 )
 ```
@@ -57,6 +58,10 @@ functions.
 - parallel:
 
   Logical for parallel processing (not yet implemented).
+
+- ps_trim_spec:
+
+  Parsed propensity score trimming specification from .parse_ps_trim().
 
 - ...:
 

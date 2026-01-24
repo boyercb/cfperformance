@@ -17,7 +17,9 @@ valid inference with flexible machine learning estimators.
   outcome_formula = NULL,
   propensity_learner = NULL,
   outcome_learner = NULL,
+  outcome_type = "binary",
   parallel = FALSE,
+  ps_trim_spec = NULL,
   ...
 )
 ```

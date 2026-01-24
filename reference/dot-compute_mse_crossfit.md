@@ -15,7 +15,9 @@ functions.
   K = 5,
   propensity_learner = NULL,
   outcome_learner = NULL,
+  outcome_type = "binary",
   parallel = FALSE,
+  ps_trim_spec = NULL,
   ...
 )
 ```
@@ -46,10 +48,18 @@ functions.
 
   Number of folds for cross-fitting.
 
+- outcome_type:
+
+  Either "binary" or "continuous".
+
 - parallel:
 
   Logical indicating whether to use parallel processing for bootstrap
   (default: FALSE).
+
+- ps_trim_spec:
+
+  Parsed propensity score trimming specification from .parse_ps_trim().
 
 - ...:
 

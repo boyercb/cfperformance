@@ -21,6 +21,7 @@ cf_calibration(
   se_method = c("none", "bootstrap"),
   n_boot = 200,
   conf_level = 0.95,
+  ps_trim = NULL,
   ...
 )
 ```
@@ -66,8 +67,11 @@ cf_calibration(
 
 - outcome_model:
 
-  Optional fitted outcome model. If NULL, a logistic regression model is
-  fit using the covariates among treated/untreated.
+  Optional fitted outcome model. If NULL, a regression model is fit
+  using the covariates among treated/untreated. For binary outcomes,
+  this should be a model for E\[Y\|X,A\] (binomial family). For
+  continuous outcomes, this should be a model for E\[L\|X,A\] (gaussian
+  family).
 
 - smoother:
 
@@ -100,6 +104,25 @@ cf_calibration(
 - conf_level:
 
   Confidence level for intervals (default: 0.95).
+
+- ps_trim:
+
+  Propensity score trimming specification. Controls how extreme
+  propensity scores are handled. Can be:
+
+  - `NULL` (default): Uses absolute bounds `c(0.01, 0.99)`
+
+  - `"none"`: No trimming applied
+
+  - `"quantile"`: Quantile-based trimming with default `c(0.01, 0.99)`
+
+  - `"absolute"`: Explicit absolute bounds with default `c(0.01, 0.99)`
+
+  - A numeric vector of length 2: `c(lower, upper)` absolute bounds
+
+  - A single numeric: Symmetric bounds `c(x, 1-x)`
+
+  - A list with `method` ("absolute"/"quantile"/"none") and `bounds`
 
 - ...:
 

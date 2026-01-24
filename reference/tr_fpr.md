@@ -24,6 +24,7 @@ tr_fpr(
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
+  ps_trim = NULL,
   parallel = FALSE,
   ncores = NULL,
   ...
@@ -96,7 +97,10 @@ tr_fpr(
 - outcome_model:
 
   Optional fitted outcome model for E\[L(Y,g)\|X,A,S\]. If NULL, a
-  regression model is fit using the relevant data.
+  regression model is fit using the relevant data. For binary outcomes,
+  this should be a model for E\[Y\|X,A\] (binomial family). For
+  continuous outcomes, this should be a model for E\[L\|X,A\] (gaussian
+  family).
 
 - se_method:
 
@@ -121,6 +125,25 @@ tr_fpr(
   Logical indicating whether to use stratified bootstrap that preserves
   the source/target ratio (default: TRUE). Recommended for
   transportability analysis.
+
+- ps_trim:
+
+  Propensity score trimming specification. Controls how extreme
+  propensity scores are handled. Can be:
+
+  - `NULL` (default): Uses absolute bounds `c(0.01, 0.99)`
+
+  - `"none"`: No trimming applied
+
+  - `"quantile"`: Quantile-based trimming with default `c(0.01, 0.99)`
+
+  - `"absolute"`: Explicit absolute bounds with default `c(0.01, 0.99)`
+
+  - A numeric vector of length 2: `c(lower, upper)` absolute bounds
+
+  - A single numeric: Symmetric bounds `c(x, 1-x)`
+
+  - A list with `method` ("absolute"/"quantile"/"none") and `bounds`
 
 - parallel:
 

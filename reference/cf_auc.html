@@ -66,6 +66,7 @@ set to a specific level.</p>
 <span>  n_folds <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  parallel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  ncores <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  ps_trim <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -108,8 +109,10 @@ a logistic regression model is fit using the covariates.</p></dd>
 
 
 <dt id="arg-outcome-model">outcome_model<a class="anchor" aria-label="anchor" href="#arg-outcome-model"></a></dt>
-<dd><p>Optional fitted outcome model. If NULL, a logistic
-regression model is fit using the covariates among treated/untreated.</p></dd>
+<dd><p>Optional fitted outcome model. If NULL, a regression
+model is fit using the covariates among treated/untreated. For binary
+outcomes, this should be a model for E[Y|X,A] (binomial family). For
+continuous outcomes, this should be a model for E[L|X,A] (gaussian family).</p></dd>
 
 
 <dt id="arg-se-method">se_method<a class="anchor" aria-label="anchor" href="#arg-se-method"></a></dt>
@@ -145,6 +148,18 @@ for bootstrap (default: FALSE).</p></dd>
 <dt id="arg-ncores">ncores<a class="anchor" aria-label="anchor" href="#arg-ncores"></a></dt>
 <dd><p>Number of cores for parallel processing (default: NULL,
 which uses all available cores minus one).</p></dd>
+
+
+<dt id="arg-ps-trim">ps_trim<a class="anchor" aria-label="anchor" href="#arg-ps-trim"></a></dt>
+<dd><p>Propensity score trimming specification. Controls how
+extreme propensity scores are handled. Can be:</p><ul><li><p><code>NULL</code> (default): Uses absolute bounds <code>c(0.01, 0.99)</code></p></li>
+<li><p><code>"none"</code>: No trimming applied</p></li>
+<li><p><code>"quantile"</code>: Quantile-based trimming with default <code>c(0.01, 0.99)</code></p></li>
+<li><p><code>"absolute"</code>: Explicit absolute bounds with default <code>c(0.01, 0.99)</code></p></li>
+<li><p>A numeric vector of length 2: <code>c(lower, upper)</code> absolute bounds</p></li>
+<li><p>A single numeric: Symmetric bounds <code>c(x, 1-x)</code></p></li>
+<li><p>A list with <code>method</code> ("absolute"/"quantile"/"none") and <code>bounds</code></p></li>
+</ul></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

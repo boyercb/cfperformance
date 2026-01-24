@@ -101,8 +101,10 @@ a logistic regression model is fit using the covariates.</p></dd>
 
 
 <dt id="arg-outcome-model">outcome_model<a class="anchor" aria-label="anchor" href="#arg-outcome-model"></a></dt>
-<dd><p>Optional fitted outcome model. If NULL, a logistic
-regression model is fit using the covariates among treated/untreated.</p></dd>
+<dd><p>Optional fitted outcome model. If NULL, a regression
+model is fit using the covariates among treated/untreated. For binary
+outcomes, this should be a model for E[Y|X,A] (binomial family). For
+continuous outcomes, this should be a model for E[L|X,A] (gaussian family).</p></dd>
 
 
 <dt id="arg-n-thresholds">n_thresholds<a class="anchor" aria-label="anchor" href="#arg-n-thresholds"></a></dt>

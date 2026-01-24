@@ -14,7 +14,8 @@ functions.
   treatment_level,
   estimator,
   propensity_model,
-  outcome_model
+  outcome_model,
+  ps_trim_spec = NULL
 )
 ```
 

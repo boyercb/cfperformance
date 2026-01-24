@@ -85,7 +85,10 @@ tr_roc(
 - outcome_model:
 
   Optional fitted outcome model for E\[L(Y,g)\|X,A,S\]. If NULL, a
-  regression model is fit using the relevant data.
+  regression model is fit using the relevant data. For binary outcomes,
+  this should be a model for E\[Y\|X,A\] (binomial family). For
+  continuous outcomes, this should be a model for E\[L\|X,A\] (gaussian
+  family).
 
 - n_thresholds:
 

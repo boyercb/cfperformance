@@ -19,6 +19,7 @@ tr_mse(
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
+  outcome_type = c("auto", "binary", "continuous"),
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
@@ -27,6 +28,7 @@ tr_mse(
   n_folds = 5,
   parallel = FALSE,
   ncores = NULL,
+  ps_trim = NULL,
   ...
 )
 ```
@@ -90,7 +92,20 @@ tr_mse(
 - outcome_model:
 
   Optional fitted outcome model for E\[L(Y,g)\|X,A,S\]. If NULL, a
-  regression model is fit using the relevant data.
+  regression model is fit using the relevant data. For binary outcomes,
+  this should be a model for E\[Y\|X,A\] (binomial family). For
+  continuous outcomes, this should be a model for E\[L\|X,A\] (gaussian
+  family).
+
+- outcome_type:
+
+  Character string specifying the outcome type:
+
+  - `"auto"`: Auto-detect from data (default)
+
+  - `"binary"`: Binary outcome (0/1) - uses efficient transformation
+
+  - `"continuous"`: Continuous outcome - models loss directly
 
 - se_method:
 
@@ -134,6 +149,25 @@ tr_mse(
 
   Number of cores for parallel processing (default: NULL, which uses all
   available cores minus one).
+
+- ps_trim:
+
+  Propensity score trimming specification. Controls how extreme
+  propensity scores are handled. Can be:
+
+  - `NULL` (default): Uses absolute bounds `c(0.01, 0.99)`
+
+  - `"none"`: No trimming applied
+
+  - `"quantile"`: Quantile-based trimming with default `c(0.01, 0.99)`
+
+  - `"absolute"`: Explicit absolute bounds with default `c(0.01, 0.99)`
+
+  - A numeric vector of length 2: `c(lower, upper)` absolute bounds
+
+  - A single numeric: Symmetric bounds `c(x, 1-x)`
+
+  - A list with `method` ("absolute"/"quantile"/"none") and `bounds`
 
 - ...:
 

@@ -1,0 +1,82 @@
+# Cross-fit nuisance models for transportability AUC
+
+Implements K-fold cross-fitting for nuisance model estimation in
+transportability AUC estimation.
+
+## Usage
+
+``` r
+.cross_fit_transport_nuisance_auc(
+  treatment,
+  outcomes,
+  source,
+  covariates,
+  treatment_level,
+  analysis,
+  K = 5,
+  selection_learner = NULL,
+  propensity_learner = NULL,
+  outcome_learner = NULL,
+  parallel = FALSE,
+  ps_trim_spec = NULL,
+  ...
+)
+```
+
+## Arguments
+
+- treatment:
+
+  Numeric vector of treatment indicators (0/1).
+
+- outcomes:
+
+  Numeric vector of observed outcomes.
+
+- source:
+
+  Numeric vector of population indicators (1=source/RCT, 0=target).
+
+- covariates:
+
+  A matrix or data frame of baseline covariates.
+
+- treatment_level:
+
+  The treatment level of interest (default: 0).
+
+- analysis:
+
+  Character string specifying the type of analysis:
+
+  - `"transport"`: Use source outcomes for target estimation (default)
+
+  - `"joint"`: Pool source and target data
+
+- K:
+
+  Number of folds for cross-fitting.
+
+- selection_learner:
+
+  Optional ml_learner for selection model.
+
+- propensity_learner:
+
+  Optional ml_learner for propensity model.
+
+- outcome_learner:
+
+  Optional ml_learner for outcome model.
+
+- parallel:
+
+  Logical for parallel processing.
+
+- ...:
+
+  Additional arguments.
+
+## Value
+
+List containing cross-fitted nuisance function predictions.

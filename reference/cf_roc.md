@@ -63,8 +63,11 @@ cf_roc(
 
 - outcome_model:
 
-  Optional fitted outcome model. If NULL, a logistic regression model is
-  fit using the covariates among treated/untreated.
+  Optional fitted outcome model. If NULL, a regression model is fit
+  using the covariates among treated/untreated. For binary outcomes,
+  this should be a model for E\[Y\|X,A\] (binomial family). For
+  continuous outcomes, this should be a model for E\[L\|X,A\] (gaussian
+  family).
 
 - n_thresholds:
 
