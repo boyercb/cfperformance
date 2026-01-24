@@ -41,10 +41,12 @@ Suggests:
     grf,
     knitr,
     patchwork,
+    pROC,
     ranger,
     rmarkdown,
     SuperLearner,
     testthat (>= 3.0.0),
+    WeightedROC,
     xgboost
 VignetteBuilder: knitr
 Config/testthat/edition: 3
