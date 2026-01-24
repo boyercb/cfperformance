@@ -37,7 +37,7 @@ ml_learner(
     [`grf::probability_forest()`](https://rdrr.io/pkg/grf/man/probability_forest.html)
 
   - `"glmnet"`: Regularized regression via
-    [`glmnet::cv.glmnet()`](https://glmnet.stanford.edu/reference/cv.glmnet.html)
+    [`glmnet::cv.glmnet()`](https://rdrr.io/pkg/glmnet/man/cv.glmnet.html)
 
   - `"superlearner"`: Ensemble via
     [`SuperLearner::SuperLearner()`](https://rdrr.io/pkg/SuperLearner/man/SuperLearner.html)
