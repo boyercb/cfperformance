@@ -1,8 +1,10 @@
-# Estimate (Counterfactual) Sensitivity in the Target Population
+# Estimate Transportable Sensitivity in the Target Population
 
 Estimates the sensitivity (true positive rate) of a binary classifier at
 one or more thresholds in a target population using data transported
-from a source population (typically an RCT).
+from a source population. Supports both **counterfactual** (under
+hypothetical intervention) and **factual** (observational) prediction
+model transportability.
 
 ## Usage
 
@@ -10,17 +12,17 @@ from a source population (typically an RCT).
 tr_sensitivity(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
@@ -35,17 +37,17 @@ tr_sensitivity(
 tr_tpr(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
@@ -70,7 +72,9 @@ tr_tpr(
 
 - treatment:
 
-  Numeric vector of treatment indicators (0/1).
+  Numeric vector of treatment indicators (0/1), or `NULL` for factual
+  prediction model transportability (no treatment/intervention). When
+  `NULL`, only the selection model is used for weighting.
 
 - source:
 
@@ -89,7 +93,9 @@ tr_tpr(
 
 - treatment_level:
 
-  The treatment level of interest (default: 0).
+  The treatment level of interest (default: `NULL`). Required when
+  `treatment` is provided; should be `NULL` when `treatment` is `NULL`
+  (factual mode).
 
 - analysis:
 
@@ -241,16 +247,27 @@ An object of class `c("tr_sensitivity", "tr_performance")` containing:
 
 - treatment_level:
 
-  Treatment level
+  Treatment level (NULL for factual mode)
 
 ## Details
 
 Sensitivity (also known as true positive rate or recall) is defined as:
 \$\$Sensitivity(c) = P(\hat{Y} \> c \| Y = 1)\$\$
 
-In the transportability setting, we estimate sensitivity in the target
-population using outcome data from the source population. The function
-implements three estimators following Steingrimsson et al. (2024):
+### Counterfactual Mode (treatment provided)
+
+When `treatment` is specified, estimates sensitivity for counterfactual
+outcomes under a hypothetical intervention. Requires selection,
+propensity, and outcome models.
+
+### Factual Mode (treatment = NULL)
+
+When `treatment` is `NULL`, estimates sensitivity for observed outcomes
+in the target population using only the selection model for inverse-odds
+weighting. This is appropriate for factual prediction model
+transportability.
+
+### Estimators
 
 **Outcome Model (OM) Estimator**: \$\$\hat{\psi}\_{sens,om} =
 \frac{\sum_i I(S_i=0) I(\hat{h}(X_i) \> c) \hat{m}(X_i)}{\sum_i I(S_i=0)
@@ -264,6 +281,11 @@ I(\hat{h}(X_i) \> c, Y_i=1, R_i=1) \hat{w}(X_i)}{\sum_i I(Y_i=1, R_i=1)
 against misspecification of either model.
 
 ## References
+
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model
+for Use in a New Target Population." *American Journal of Epidemiology*,
+192(2), 296-304.
+[doi:10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
 
 Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 "Interpretable meta-analysis of model or marker performance." *arXiv
@@ -335,13 +357,13 @@ print(result_multi)
 #> 
 #> Estimator: DR 
 #> Analysis: transport 
-#> Treatment level: 0 
+#> Treatment level: 1 
 #> N (source): 624 
 #> N (target): 376 
 #> 
 #> Results by threshold:
 #>  Threshold Estimate  Naive
-#>        0.3   0.7073 0.6197
-#>        0.5   0.2177 0.2254
-#>        0.7   0.0504 0.0423
+#>        0.3   0.8167 0.7097
+#>        0.5   0.3252 0.2903
+#>        0.7   0.0756 0.0484
 ```

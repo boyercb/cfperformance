@@ -1,8 +1,9 @@
-# Estimate (Counterfactual) Mean Squared Error in the Target Population
+# Estimate Transportable Mean Squared Error in the Target Population
 
 Estimates the mean squared error (MSE) of a prediction model in a target
-population using data transported from a source population (typically an
-RCT).
+population using data transported from a source population. Supports
+both **counterfactual** (under hypothetical intervention) and
+**factual** (observational) prediction model transportability.
 
 ## Usage
 
@@ -10,10 +11,10 @@ RCT).
 tr_mse(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
@@ -23,6 +24,7 @@ tr_mse(
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
+  boot_ci_type = c("percentile", "normal", "basic"),
   stratified_boot = TRUE,
   cross_fit = FALSE,
   n_folds = 5,
@@ -45,7 +47,9 @@ tr_mse(
 
 - treatment:
 
-  Numeric vector of treatment indicators (0/1).
+  Numeric vector of treatment indicators (0/1), or `NULL` for factual
+  prediction model transportability (no treatment/intervention). When
+  `NULL`, only the selection model is used for weighting.
 
 - source:
 
@@ -57,7 +61,9 @@ tr_mse(
 
 - treatment_level:
 
-  The treatment level of interest (default: 0).
+  The treatment level of interest (default: `NULL`). Required when
+  `treatment` is provided; should be `NULL` when `treatment` is `NULL`
+  (factual mode).
 
 - analysis:
 
@@ -124,6 +130,16 @@ tr_mse(
 - conf_level:
 
   Confidence level for intervals (default: 0.95).
+
+- boot_ci_type:
+
+  Type of bootstrap confidence interval to compute:
+
+  - `"percentile"`: Percentile method (default)
+
+  - `"normal"`: Normal approximation using bootstrap SE
+
+  - `"basic"`: Basic bootstrap interval
 
 - stratified_boot:
 
@@ -215,32 +231,60 @@ An object of class `c("tr_mse", "tr_performance")` containing:
 
 - treatment_level:
 
-  Treatment level
+  Treatment level (NULL for factual mode)
 
 ## Details
 
 This function implements estimators for transporting prediction model
-performance from a source population (typically an RCT) to a target
-population.
+performance from a source population to a target population. It supports
+two modes:
 
-**Transportability Analysis**: Uses outcome data from the source/RCT
-population to estimate performance in the target population. Requires:
+### Counterfactual Mode (treatment provided)
+
+When `treatment` is specified, estimates the counterfactual MSE under a
+hypothetical intervention, EL(Y^a, g(X)) \| S=0. This requires:
 
 - Selection model: P(S=0\|X)
 
-- Propensity model in source: P(A=1\|X, S=1)
+- Propensity model in source: P(A=a\|X, S=1)
 
 - Outcome model trained on source data
 
-**Joint Analysis**: Pools source and target data to estimate performance
-in the target population. More efficient when both populations have
-outcome data.
+### Factual Mode (treatment = NULL)
+
+When `treatment` is `NULL`, estimates the MSE of observed outcomes,
+EL(Y, g(X)) \| S=0. This is appropriate for factual prediction model
+transportability (no causal/counterfactual interpretation). Only
+requires:
+
+- Selection model: P(S=0\|X)
+
+- Outcome model trained on source data
+
+### Analysis Types
+
+**Transportability Analysis** (`analysis = "transport"`): Uses outcome
+data from the source population to estimate performance in the target
+population.
+
+**Joint Analysis** (`analysis = "joint"`): Pools source and target data
+to estimate performance in the target population. More efficient when
+both populations have outcome data.
 
 For observational analysis (single population), use
 [`cf_mse()`](https://boyercb.github.io/cfperformance/reference/cf_mse.md)
 instead.
 
 ## References
+
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model
+for Use in a New Target Population." *American Journal of Epidemiology*,
+192(2), 296-304.
+[doi:10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
+
+Li, S., et al. (2023). "Efficient estimation of the expected prediction
+error under covariate shift." *Biometrics*, 79(1), 295-307.
+[doi:10.1111/biom.13583](https://doi.org/10.1111/biom.13583)
 
 Voter, S. R., et al. (2025). "Transportability of machine learning-based
 counterfactual prediction models with application to CASS." *Diagnostic
@@ -290,7 +334,7 @@ result <- tr_mse(
 )
 print(result)
 #> 
-#> Transportable MSE Estimation
+#> Counterfactual Transportable MSE Estimation
 #> --------------------------------------------- 
 #> Analysis: transport 
 #> Estimator: dr 
@@ -301,4 +345,15 @@ print(result)
 #> 
 #> Naive estimate: 0.1577 
 #> 
+
+# Factual prediction model transportability (no treatment)
+result_trad <- tr_mse(
+  predictions = pred,
+  outcomes = y,
+  source = s,
+  covariates = data.frame(x = x),
+  analysis = "transport",
+  estimator = "dr",
+  se_method = "none"
+)
 ```

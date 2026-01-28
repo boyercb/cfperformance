@@ -27,7 +27,9 @@ transportability AUC estimation.
 
 - treatment:
 
-  Numeric vector of treatment indicators (0/1).
+  Numeric vector of treatment indicators (0/1), or `NULL` for factual
+  prediction model transportability (no treatment/intervention). When
+  `NULL`, only the selection model is used for weighting.
 
 - outcomes:
 
@@ -43,7 +45,9 @@ transportability AUC estimation.
 
 - treatment_level:
 
-  The treatment level of interest (default: 0).
+  The treatment level of interest (default: `NULL`). Required when
+  `treatment` is provided; should be `NULL` when `treatment` is `NULL`
+  (factual mode).
 
 - analysis:
 

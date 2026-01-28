@@ -1,8 +1,10 @@
-# Estimate (Counterfactual) Specificity in the Target Population
+# Estimate Transportable Specificity in the Target Population
 
 Estimates the specificity (true negative rate) of a binary classifier at
 one or more thresholds in a target population using data transported
-from a source population (typically an RCT).
+from a source population. Supports both **counterfactual** (under
+hypothetical intervention) and **factual** (observational) prediction
+model transportability.
 
 ## Usage
 
@@ -10,17 +12,17 @@ from a source population (typically an RCT).
 tr_specificity(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
@@ -35,17 +37,17 @@ tr_specificity(
 tr_tnr(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
@@ -70,7 +72,9 @@ tr_tnr(
 
 - treatment:
 
-  Numeric vector of treatment indicators (0/1).
+  Numeric vector of treatment indicators (0/1), or `NULL` for factual
+  prediction model transportability (no treatment/intervention). When
+  `NULL`, only the selection model is used for weighting.
 
 - source:
 
@@ -89,7 +93,9 @@ tr_tnr(
 
 - treatment_level:
 
-  The treatment level of interest (default: 0).
+  The treatment level of interest (default: `NULL`). Required when
+  `treatment` is provided; should be `NULL` when `treatment` is `NULL`
+  (factual mode).
 
 - analysis:
 
@@ -241,19 +247,24 @@ An object of class `c("tr_specificity", "tr_performance")` containing:
 
 - treatment_level:
 
-  Treatment level
+  Treatment level (NULL for factual mode)
 
 ## Details
 
 Specificity (also known as true negative rate) is defined as:
 \$\$Specificity(c) = P(\hat{Y} \le c \| Y = 0)\$\$
 
-In the transportability setting, we estimate specificity in the target
-population using outcome data from the source population. The estimators
-mirror those for sensitivity (see
-[`tr_sensitivity()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md)).
+See
+[`tr_sensitivity()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md)
+for details on counterfactual vs factual modes and the available
+estimators. The estimators for specificity mirror those for sensitivity.
 
 ## References
+
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model
+for Use in a New Target Population." *American Journal of Epidemiology*,
+192(2), 296-304.
+[doi:10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
 
 Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 "Interpretable meta-analysis of model or marker performance." *arXiv

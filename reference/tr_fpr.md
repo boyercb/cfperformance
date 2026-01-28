@@ -1,8 +1,10 @@
-# Estimate (Counterfactual) False Positive Rate in the Target Population
+# Estimate Transportable False Positive Rate in the Target Population
 
 Estimates the false positive rate (1 - specificity) of a binary
 classifier. This is a convenience wrapper around
 [`tr_specificity()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md).
+Supports both **counterfactual** and **factual** prediction model
+transportability.
 
 ## Usage
 
@@ -10,20 +12,22 @@ classifier. This is a convenience wrapper around
 tr_fpr(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
+  cross_fit = FALSE,
+  n_folds = 5,
   ps_trim = NULL,
   parallel = FALSE,
   ncores = NULL,
@@ -43,7 +47,9 @@ tr_fpr(
 
 - treatment:
 
-  Numeric vector of treatment indicators (0/1).
+  Numeric vector of treatment indicators (0/1), or `NULL` for factual
+  prediction model transportability (no treatment/intervention). When
+  `NULL`, only the selection model is used for weighting.
 
 - source:
 
@@ -62,7 +68,9 @@ tr_fpr(
 
 - treatment_level:
 
-  The treatment level of interest (default: 0).
+  The treatment level of interest (default: `NULL`). Required when
+  `treatment` is provided; should be `NULL` when `treatment` is `NULL`
+  (factual mode).
 
 - analysis:
 
@@ -125,6 +133,15 @@ tr_fpr(
   Logical indicating whether to use stratified bootstrap that preserves
   the source/target ratio (default: TRUE). Recommended for
   transportability analysis.
+
+- cross_fit:
+
+  Logical indicating whether to use cross-fitting for nuisance model
+  estimation (default: FALSE).
+
+- n_folds:
+
+  Number of folds for cross-fitting (default: 5).
 
 - ps_trim:
 
@@ -194,11 +211,11 @@ print(result)
 #> 
 #> Estimator: DR 
 #> Analysis: transport 
-#> Treatment level: 0 
+#> Treatment level: 1 
 #> N (source): 312 
 #> N (target): 188 
 #> 
 #> Threshold: 0.5 
-#> Estimate: 0.0782 
-#> Naive estimate: 0.0833 
+#> Estimate: 0.0388 
+#> Naive estimate: 0.0351 
 ```

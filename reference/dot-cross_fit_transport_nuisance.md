@@ -1,7 +1,8 @@
 # Cross-fit nuisance models for transportability analysis
 
 Implements K-fold cross-fitting for nuisance model estimation in
-transportability settings.
+transportability settings. Supports both counterfactual mode (with
+treatment) and factual mode (without treatment).
 
 ## Usage
 
@@ -29,7 +30,7 @@ transportability settings.
 
 - treatment:
 
-  Numeric vector of treatment indicators.
+  Numeric vector of treatment indicators (NULL for factual mode).
 
 - outcomes:
 
@@ -49,7 +50,7 @@ transportability settings.
 
 - treatment_level:
 
-  Counterfactual treatment level.
+  Counterfactual treatment level (NULL for factual mode).
 
 - analysis:
 
@@ -65,7 +66,7 @@ transportability settings.
 
 - propensity_learner:
 
-  Optional ml_learner for propensity model.
+  Optional ml_learner for propensity model (ignored in factual mode).
 
 - outcome_learner:
 

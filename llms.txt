@@ -286,22 +286,20 @@ Estimate prediction model performance under counterfactual interventions
 Transport prediction model performance from source to target population
 
 - [`tr_mse()`](https://boyercb.github.io/cfperformance/reference/tr_mse.md)
-  : Estimate (Counterfactual) Mean Squared Error in the Target
-  Population
+  : Estimate Transportable Mean Squared Error in the Target Population
 - [`tr_auc()`](https://boyercb.github.io/cfperformance/reference/tr_auc.md)
-  : Estimate (Counterfactual) Area Under the ROC Curve in the Target
+  : Estimate Transportable Area Under the ROC Curve in the Target
   Population
 - [`tr_calibration()`](https://boyercb.github.io/cfperformance/reference/tr_calibration.md)
-  : Estimate (Counterfactual) Calibration in the Target Population
+  : Estimate Transportable Calibration in the Target Population
 - [`tr_sensitivity()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md)
   [`tr_tpr()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md)
-  : Estimate (Counterfactual) Sensitivity in the Target Population
+  : Estimate Transportable Sensitivity in the Target Population
 - [`tr_specificity()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md)
   [`tr_tnr()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md)
-  : Estimate (Counterfactual) Specificity in the Target Population
+  : Estimate Transportable Specificity in the Target Population
 - [`tr_fpr()`](https://boyercb.github.io/cfperformance/reference/tr_fpr.md)
-  : Estimate (Counterfactual) False Positive Rate in the Target
-  Population
+  : Estimate Transportable False Positive Rate in the Target Population
 - [`tr_roc()`](https://boyercb.github.io/cfperformance/reference/tr_roc.md)
   : Compute Transportable ROC Curve
 

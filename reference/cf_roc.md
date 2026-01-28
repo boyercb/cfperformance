@@ -12,7 +12,7 @@ cf_roc(
   treatment,
   covariates,
   treatment_level = 0,
-  estimator = c("dr", "cl", "ipw", "naive"),
+  estimator = c("dr", "om", "ipw", "naive"),
   propensity_model = NULL,
   outcome_model = NULL,
   n_thresholds = 201,

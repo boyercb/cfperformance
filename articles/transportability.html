@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,7 +61,7 @@
                         <h4 data-toc-skip class="author">Christopher
 Boyer</h4>
             
-            <h4 data-toc-skip class="date">2026-01-24</h4>
+            <h4 data-toc-skip class="date">2026-01-28</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/boyercb/cfperformance/blob/main/vignettes/transportability.Rmd" class="external-link"><code>vignettes/transportability.Rmd</code></a></small>
       <div class="d-none name"><code>transportability.Rmd</code></div>
@@ -184,7 +184,7 @@ useful when:</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mse_result</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Transportable MSE Estimation</span></span>
+<span><span class="co">#&gt; Counterfactual Transportable MSE Estimation</span></span>
 <span><span class="co">#&gt; --------------------------------------------- </span></span>
 <span><span class="co">#&gt; Analysis: transport </span></span>
 <span><span class="co">#&gt; Estimator: dr </span></span>
@@ -260,7 +260,7 @@ IPW</li>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">auc_result</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Transportable AUC Estimation</span></span>
+<span><span class="co">#&gt; Counterfactual Transportable AUC Estimation</span></span>
 <span><span class="co">#&gt; --------------------------------------------- </span></span>
 <span><span class="co">#&gt; Analysis: transport </span></span>
 <span><span class="co">#&gt; Estimator: dr </span></span>
@@ -315,7 +315,7 @@ distribution shift between source and target populations.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">calib_result</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Transportable CALIBRATION Estimation</span></span>
+<span><span class="co">#&gt; Counterfactual Transportable CALIBRATION Estimation</span></span>
 <span><span class="co">#&gt; --------------------------------------------- </span></span>
 <span><span class="co">#&gt; Analysis: transport </span></span>
 <span><span class="co">#&gt; Estimator: ipw </span></span>
@@ -361,10 +361,138 @@ both populations.</p>
 <span><span class="co">#&gt; Joint MSE: 0.2223</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="factual-prediction-model-transportability">Factual Prediction Model Transportability<a class="anchor" aria-label="anchor" href="#factual-prediction-model-transportability"></a>
+</h2>
+<p>The examples above use <strong>counterfactual</strong>
+transportability, which estimates performance under a hypothetical
+treatment intervention. However, many prediction models are developed
+without a causal/counterfactual interpretation.</p>
+<p>For <strong>factual prediction model transportability</strong> —
+estimating how well a model predicts observed outcomes in the target
+population — you can omit the <code>treatment</code> and
+<code>treatment_level</code> arguments:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Factual transportability (no treatment/intervention)</span></span>
+<span><span class="va">mse_factual</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_mse.html">tr_mse</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  source <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">source</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">transport_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"biomarker"</span>, <span class="st">"smoking"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  <span class="co"># treatment = NULL (default),</span></span>
+<span>  <span class="co"># treatment_level = NULL (default),</span></span>
+<span>  analysis <span class="op">=</span> <span class="st">"transport"</span>,</span>
+<span>  estimator <span class="op">=</span> <span class="st">"dr"</span>,</span>
+<span>  se_method <span class="op">=</span> <span class="st">"none"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mse_factual</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Factual Transportable MSE Estimation</span></span>
+<span><span class="co">#&gt; --------------------------------------------- </span></span>
+<span><span class="co">#&gt; Analysis: transport </span></span>
+<span><span class="co">#&gt; Estimator: dr </span></span>
+<span><span class="co">#&gt; N target: 1224  | N source: 1276 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Estimate: 0.1892</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Naive estimate: 0.1948</span></span></code></pre></div>
+<p>Notice the output shows “Factual Transportable” to indicate this
+mode.</p>
+<div class="section level3">
+<h3 id="factual-vs-counterfactual-mode">Factual vs Counterfactual Mode<a class="anchor" aria-label="anchor" href="#factual-vs-counterfactual-mode"></a>
+</h3>
+<p><strong>Factual mode</strong> (<code>treatment = NULL</code>):</p>
+<ul>
+<li>Estimates E[L(Y, g(X)) | S=0] — performance on <em>observed</em>
+outcomes</li>
+<li>Uses only the selection model P(S=0|X) for inverse-odds
+weighting</li>
+<li>No propensity score model needed</li>
+<li>Appropriate for standard prediction models without causal
+interpretation</li>
+</ul>
+<p><strong>Counterfactual mode</strong> (<code>treatment</code>
+provided):</p>
+<ul>
+<li>Estimates E[L(Y^a, g(X)) | S=0] — performance on
+<em>counterfactual</em> outcomes</li>
+<li>Uses both selection model P(S=0|X) and propensity model P(A=a|X,
+S=1)</li>
+<li>Appropriate when the prediction target is a counterfactual
+outcome</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="factual-transportability-for-auc-and-other-metrics">Factual Transportability for AUC and Other Metrics<a class="anchor" aria-label="anchor" href="#factual-transportability-for-auc-and-other-metrics"></a>
+</h3>
+<p>All <code>tr_*</code> functions support factual mode:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Factual AUC</span></span>
+<span><span class="va">auc_factual</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_auc.html">tr_auc</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  source <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">source</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">transport_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"biomarker"</span>, <span class="st">"smoking"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  analysis <span class="op">=</span> <span class="st">"transport"</span>,</span>
+<span>  estimator <span class="op">=</span> <span class="st">"dr"</span>,</span>
+<span>  se_method <span class="op">=</span> <span class="st">"none"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">auc_factual</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Factual Transportable AUC Estimation</span></span>
+<span><span class="co">#&gt; --------------------------------------------- </span></span>
+<span><span class="co">#&gt; Analysis: transport </span></span>
+<span><span class="co">#&gt; Estimator: dr </span></span>
+<span><span class="co">#&gt; N target: 1224  | N source: 1276 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Estimate: 0.6009</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Naive estimate: 0.6126</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Factual sensitivity at threshold 0.3</span></span>
+<span><span class="va">sens_factual</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_sensitivity.html">tr_sensitivity</a></span><span class="op">(</span></span>
+<span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
+<span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  source <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">source</span>,</span>
+<span>  covariates <span class="op">=</span> <span class="va">transport_sim</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"biomarker"</span>, <span class="st">"smoking"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fl">0.3</span>,</span>
+<span>  analysis <span class="op">=</span> <span class="st">"transport"</span>,</span>
+<span>  estimator <span class="op">=</span> <span class="st">"dr"</span>,</span>
+<span>  se_method <span class="op">=</span> <span class="st">"none"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">sens_factual</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Factual Transportable Sensitivity Estimate</span></span>
+<span><span class="co">#&gt; ===================================</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Estimator: DR </span></span>
+<span><span class="co">#&gt; Analysis: transport </span></span>
+<span><span class="co">#&gt; N (source): 1276 </span></span>
+<span><span class="co">#&gt; N (target): 1224 </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Threshold: 0.3 </span></span>
+<span><span class="co">#&gt; Estimate: 0.5573 </span></span>
+<span><span class="co">#&gt; Naive estimate: 0.4538</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="references-for-factual-transportability">References for Factual Transportability<a class="anchor" aria-label="anchor" href="#references-for-factual-transportability"></a>
+</h3>
+<p>The factual transportability approach is based on:</p>
+<p>Steingrimsson, J. A., et al. (2023). “Transporting a Prediction Model
+for Use in a New Target Population.” <em>American Journal of
+Epidemiology</em>, 192(2), 296-304. <a href="https://doi.org/10.1093/aje/kwac128" class="external-link">doi:10.1093/aje/kwac128</a></p>
+<p>Li, S., et al. (2023). “Efficient estimation of the expected
+prediction error under covariate shift.” <em>Biometrics</em>, 79(1),
+295-307. <a href="https://doi.org/10.1111/biom.13583" class="external-link">doi:10.1111/biom.13583</a></p>
+</div>
+</div>
+<div class="section level2">
 <h2 id="bootstrap-standard-errors">Bootstrap Standard Errors<a class="anchor" aria-label="anchor" href="#bootstrap-standard-errors"></a>
 </h2>
 <p>For inference, use bootstrap standard errors:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mse_with_se</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tr_mse.html">tr_mse</a></span><span class="op">(</span></span>
 <span>  predictions <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">risk_score</span>,</span>
 <span>  outcomes <span class="op">=</span> <span class="va">transport_sim</span><span class="op">$</span><span class="va">event</span>,</span>
@@ -381,7 +509,7 @@ both populations.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mse_with_se</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Summary: Transportable MSE Estimation</span></span>
+<span><span class="co">#&gt; Summary: Counterfactual Transportable MSE Estimation</span></span>
 <span><span class="co">#&gt; ======================================================= </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Call:</span></span>
@@ -392,6 +520,7 @@ both populations.</p>
 <span><span class="co">#&gt;     se_method = "bootstrap", n_boot = 500, stratified_boot = TRUE)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Settings:</span></span>
+<span><span class="co">#&gt;   Mode: Counterfactual </span></span>
 <span><span class="co">#&gt;   Analysis type: transport </span></span>
 <span><span class="co">#&gt;   Estimator: dr </span></span>
 <span><span class="co">#&gt;   Treatment level: 0 </span></span>
@@ -527,6 +656,12 @@ CASS.” <em>Diagnostic and Prognostic Research</em>, 9(4). <a href="https://doi
 <p>Boyer, C. B., Dahabreh, I. J., &amp; Steingrimsson, J. A. (2025).
 “Estimating and evaluating counterfactual prediction models.”
 <em>Statistics in Medicine</em>, 44(23-24), e70287. <a href="https://doi.org/10.1002/sim.70287" class="external-link">doi:10.1002/sim.70287</a></p>
+<p>Steingrimsson, J. A., et al. (2023). “Transporting a Prediction Model
+for Use in a New Target Population.” <em>American Journal of
+Epidemiology</em>, 192(2), 296-304. <a href="https://doi.org/10.1093/aje/kwac128" class="external-link">doi:10.1093/aje/kwac128</a></p>
+<p>Li, S., et al. (2023). “Efficient estimation of the expected
+prediction error under covariate shift.” <em>Biometrics</em>, 79(1),
+295-307. <a href="https://doi.org/10.1111/biom.13583" class="external-link">doi:10.1111/biom.13583</a></p>
 <p>Dahabreh, I. J., Robertson, S. E., Tchetgen, E. J., Stuart, E. A.,
 &amp; Hernán, M. A. (2019). “Generalizing causal inferences from
 randomized trials: counterfactual and graphical identification.”

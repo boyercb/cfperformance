@@ -11,7 +11,7 @@ while properly accounting for treatment effects."><meta property="og:image" cont
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,7 @@ while properly accounting for treatment effects.</p>
 <span>  treatment_level <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  nuisance_covariates <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mse"</span>, <span class="st">"auc"</span>, <span class="st">"both"</span><span class="op">)</span>,</span>
-<span>  estimator <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dr"</span>, <span class="st">"cl"</span>, <span class="st">"ipw"</span>, <span class="st">"naive"</span><span class="op">)</span>,</span>
+<span>  estimator <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dr"</span>, <span class="st">"cl"</span>, <span class="st">"om"</span>, <span class="st">"ipw"</span>, <span class="st">"naive"</span><span class="op">)</span>,</span>
 <span>  K <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  repeats <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  stratify <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -99,7 +99,8 @@ models. If NULL, uses all predictors from the formula.</p></dd>
 
 <dt id="arg-estimator">estimator<a class="anchor" aria-label="anchor" href="#arg-estimator"></a></dt>
 <dd><p>Character string specifying the estimator:
-<code>"dr"</code> (default), <code>"cl"</code>, <code>"ipw"</code>, or <code>"naive"</code>.</p></dd>
+<code>"dr"</code> (default), <code>"cl"</code> (conditional loss, for MSE), <code>"om"</code> (outcome model, for AUC),
+<code>"ipw"</code>, or <code>"naive"</code>. Note: <code>"cl"</code> is automatically mapped to <code>"om"</code> for AUC metrics.</p></dd>
 
 
 <dt id="arg-k">K<a class="anchor" aria-label="anchor" href="#arg-k"></a></dt>

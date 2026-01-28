@@ -9,7 +9,7 @@ transportability AUC estimation."><meta property="og:image" content="https://boy
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,7 +69,9 @@ transportability AUC estimation.</p>
 
 
 <dl><dt id="arg-treatment">treatment<a class="anchor" aria-label="anchor" href="#arg-treatment"></a></dt>
-<dd><p>Numeric vector of treatment indicators (0/1).</p></dd>
+<dd><p>Numeric vector of treatment indicators (0/1), or <code>NULL</code> for
+factual prediction model transportability (no treatment/intervention).
+When <code>NULL</code>, only the selection model is used for weighting.</p></dd>
 
 
 <dt id="arg-outcomes">outcomes<a class="anchor" aria-label="anchor" href="#arg-outcomes"></a></dt>
@@ -85,7 +87,9 @@ transportability AUC estimation.</p>
 
 
 <dt id="arg-treatment-level">treatment_level<a class="anchor" aria-label="anchor" href="#arg-treatment-level"></a></dt>
-<dd><p>The treatment level of interest (default: 0).</p></dd>
+<dd><p>The treatment level of interest (default: <code>NULL</code>).
+Required when <code>treatment</code> is provided; should be <code>NULL</code> when <code>treatment</code>
+is <code>NULL</code> (factual mode).</p></dd>
 
 
 <dt id="arg-analysis">analysis<a class="anchor" aria-label="anchor" href="#arg-analysis"></a></dt>

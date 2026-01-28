@@ -13,12 +13,13 @@ cf_auc(
   treatment,
   covariates,
   treatment_level = 0,
-  estimator = c("dr", "cl", "ipw", "naive"),
+  estimator = c("dr", "om", "ipw", "naive"),
   propensity_model = NULL,
   outcome_model = NULL,
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
+  boot_ci_type = c("percentile", "normal", "basic"),
   cross_fit = FALSE,
   n_folds = 5,
   parallel = FALSE,
@@ -92,6 +93,16 @@ cf_auc(
 - conf_level:
 
   Confidence level for intervals (default: 0.95).
+
+- boot_ci_type:
+
+  Type of bootstrap confidence interval to compute:
+
+  - `"percentile"`: Percentile method (default)
+
+  - `"normal"`: Normal approximation using bootstrap SE
+
+  - `"basic"`: Basic bootstrap interval
 
 - cross_fit:
 
@@ -181,7 +192,7 @@ individual without the outcome.
 
 The function implements three estimators:
 
-**Outcome Model (OM/CL) Estimator**: Weights concordant pairs by the
+**Outcome Model (OM) Estimator**: Weights concordant pairs by the
 predicted probability of case/non-case status under the counterfactual.
 
 **IPW Estimator**: Weights concordant pairs by the inverse probability

@@ -1,8 +1,10 @@
-# Estimate (Counterfactual) Area Under the ROC Curve in the Target Population
+# Estimate Transportable Area Under the ROC Curve in the Target Population
 
 Estimates the area under the receiver operating characteristic curve
 (AUC) of a prediction model in a target population using data
-transported from a source population (typically an RCT).
+transported from a source population. Supports both **counterfactual**
+(under hypothetical intervention) and **factual** (observational)
+prediction model transportability.
 
 ## Usage
 
@@ -10,10 +12,10 @@ transported from a source population (typically an RCT).
 tr_auc(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
@@ -22,6 +24,7 @@ tr_auc(
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
+  boot_ci_type = c("percentile", "normal", "basic"),
   stratified_boot = TRUE,
   cross_fit = FALSE,
   n_folds = 5,
@@ -44,7 +47,9 @@ tr_auc(
 
 - treatment:
 
-  Numeric vector of treatment indicators (0/1).
+  Numeric vector of treatment indicators (0/1), or `NULL` for factual
+  prediction model transportability (no treatment/intervention). When
+  `NULL`, only the selection model is used for weighting.
 
 - source:
 
@@ -56,7 +61,9 @@ tr_auc(
 
 - treatment_level:
 
-  The treatment level of interest (default: 0).
+  The treatment level of interest (default: `NULL`). Required when
+  `treatment` is provided; should be `NULL` when `treatment` is `NULL`
+  (factual mode).
 
 - analysis:
 
@@ -113,6 +120,16 @@ tr_auc(
 - conf_level:
 
   Confidence level for intervals (default: 0.95).
+
+- boot_ci_type:
+
+  Type of bootstrap confidence interval to compute:
+
+  - `"percentile"`: Percentile method (default)
+
+  - `"normal"`: Normal approximation using bootstrap SE
+
+  - `"basic"`: Basic bootstrap interval
 
 - stratified_boot:
 
@@ -204,37 +221,61 @@ An object of class `c("tr_auc", "tr_performance")` containing:
 
 - treatment_level:
 
-  Treatment level
+  Treatment level (NULL for factual mode)
 
 ## Details
 
 This function implements estimators for transporting prediction model
-AUC from a source population (typically an RCT) to a target population.
-The AUC is defined as the probability that a randomly selected case has
-a higher predicted risk than a randomly selected non-case.
+AUC from a source population to a target population. It supports two
+modes:
 
-**Transportability Analysis**: Uses outcome data from the source/RCT
-population to estimate AUC in the target population. Requires:
+### Counterfactual Mode (treatment provided)
+
+When `treatment` is specified, estimates the counterfactual AUC under a
+hypothetical intervention. The AUC represents the probability that a
+randomly selected case (Y^a = 1) has a higher predicted risk than a
+randomly selected non-case (Y^a = 0) in the target population. This
+requires:
 
 - Selection model: P(S=0\|X)
 
-- Propensity model in source: P(A=1\|X, S=1)
+- Propensity model in source: P(A=a\|X, S=1)
 
-- Outcome model trained on source data: E\[Y\|X, A, S=1\]
+- Outcome model: EY\|X, A, S=1
 
-**Joint Analysis**: Pools source and target data to estimate AUC in the
-target population. More efficient when both populations have outcome
-data.
+### Factual Mode (treatment = NULL)
+
+When `treatment` is `NULL`, estimates the AUC of observed outcomes in
+the target population. This is appropriate for factual prediction model
+transportability without causal interpretation. Only requires:
+
+- Selection model: P(S=0\|X)
+
+- Outcome model: EY\|X, S=1
+
+### Analysis Types
+
+**Transportability Analysis** (`analysis = "transport"`): Uses outcome
+data from the source population to estimate AUC in the target
+population.
+
+**Joint Analysis** (`analysis = "joint"`): Pools source and target data
+to estimate AUC. More efficient when both populations have outcome data.
 
 For observational analysis (single population), use
 [`cf_auc()`](https://boyercb.github.io/cfperformance/reference/cf_auc.md)
 instead.
 
-The estimators use U-statistic formulations that weight concordant pairs
-by their estimated probabilities of occurring in the target population
-under the counterfactual treatment.
-
 ## References
+
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model
+for Use in a New Target Population." *American Journal of Epidemiology*,
+192(2), 296-304.
+[doi:10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
+
+Li, S., et al. (2023). "Efficient estimation of the expected prediction
+error under covariate shift." *Biometrics*, 79(1), 295-307.
+[doi:10.1111/biom.13583](https://doi.org/10.1111/biom.13583)
 
 Voter, S. R., et al. (2025). "Transportability of machine learning-based
 counterfactual prediction models with application to CASS." *Diagnostic
@@ -288,7 +329,7 @@ result <- tr_auc(
 )
 print(result)
 #> 
-#> Transportable AUC Estimation
+#> Counterfactual Transportable AUC Estimation
 #> --------------------------------------------- 
 #> Analysis: transport 
 #> Estimator: dr 

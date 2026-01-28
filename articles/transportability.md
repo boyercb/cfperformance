@@ -101,7 +101,7 @@ mse_result <- tr_mse(
 
 print(mse_result)
 #> 
-#> Transportable MSE Estimation
+#> Counterfactual Transportable MSE Estimation
 #> --------------------------------------------- 
 #> Analysis: transport 
 #> Estimator: dr 
@@ -172,7 +172,7 @@ auc_result <- tr_auc(
 
 print(auc_result)
 #> 
-#> Transportable AUC Estimation
+#> Counterfactual Transportable AUC Estimation
 #> --------------------------------------------- 
 #> Analysis: transport 
 #> Estimator: dr 
@@ -231,7 +231,7 @@ calib_result <- tr_calibration(
 
 print(calib_result)
 #> 
-#> Transportable CALIBRATION Estimation
+#> Counterfactual Transportable CALIBRATION Estimation
 #> --------------------------------------------- 
 #> Analysis: transport 
 #> Estimator: ipw 
@@ -278,6 +278,134 @@ cat("Joint MSE:", round(mse_joint$estimate, 4), "\n")
 #> Joint MSE: 0.2223
 ```
 
+## Factual Prediction Model Transportability
+
+The examples above use **counterfactual** transportability, which
+estimates performance under a hypothetical treatment intervention.
+However, many prediction models are developed without a
+causal/counterfactual interpretation.
+
+For **factual prediction model transportability** — estimating how well
+a model predicts observed outcomes in the target population — you can
+omit the `treatment` and `treatment_level` arguments:
+
+``` r
+# Factual transportability (no treatment/intervention)
+mse_factual <- tr_mse(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  # treatment = NULL (default),
+  # treatment_level = NULL (default),
+  analysis = "transport",
+  estimator = "dr",
+  se_method = "none"
+)
+
+print(mse_factual)
+#> 
+#> Factual Transportable MSE Estimation
+#> --------------------------------------------- 
+#> Analysis: transport 
+#> Estimator: dr 
+#> N target: 1224  | N source: 1276 
+#> 
+#> Estimate: 0.1892
+#> 
+#> Naive estimate: 0.1948
+```
+
+Notice the output shows “Factual Transportable” to indicate this mode.
+
+### Factual vs Counterfactual Mode
+
+**Factual mode** (`treatment = NULL`):
+
+- Estimates E\[L(Y, g(X)) \| S=0\] — performance on *observed* outcomes
+- Uses only the selection model P(S=0\|X) for inverse-odds weighting
+- No propensity score model needed
+- Appropriate for standard prediction models without causal
+  interpretation
+
+**Counterfactual mode** (`treatment` provided):
+
+- Estimates E\[L(Y^a, g(X)) \| S=0\] — performance on *counterfactual*
+  outcomes
+- Uses both selection model P(S=0\|X) and propensity model P(A=a\|X,
+  S=1)
+- Appropriate when the prediction target is a counterfactual outcome
+
+### Factual Transportability for AUC and Other Metrics
+
+All `tr_*` functions support factual mode:
+
+``` r
+# Factual AUC
+auc_factual <- tr_auc(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  analysis = "transport",
+  estimator = "dr",
+  se_method = "none"
+)
+
+print(auc_factual)
+#> 
+#> Factual Transportable AUC Estimation
+#> --------------------------------------------- 
+#> Analysis: transport 
+#> Estimator: dr 
+#> N target: 1224  | N source: 1276 
+#> 
+#> Estimate: 0.6009
+#> 
+#> Naive estimate: 0.6126
+```
+
+``` r
+# Factual sensitivity at threshold 0.3
+sens_factual <- tr_sensitivity(
+  predictions = transport_sim$risk_score,
+  outcomes = transport_sim$event,
+  source = transport_sim$source,
+  covariates = transport_sim[, c("age", "biomarker", "smoking")],
+  threshold = 0.3,
+  analysis = "transport",
+  estimator = "dr",
+  se_method = "none"
+)
+
+print(sens_factual)
+#> 
+#> Factual Transportable Sensitivity Estimate
+#> ===================================
+#> 
+#> Estimator: DR 
+#> Analysis: transport 
+#> N (source): 1276 
+#> N (target): 1224 
+#> 
+#> Threshold: 0.3 
+#> Estimate: 0.5573 
+#> Naive estimate: 0.4538
+```
+
+### References for Factual Transportability
+
+The factual transportability approach is based on:
+
+Steingrimsson, J. A., et al. (2023). “Transporting a Prediction Model
+for Use in a New Target Population.” *American Journal of Epidemiology*,
+192(2), 296-304.
+[doi:10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
+
+Li, S., et al. (2023). “Efficient estimation of the expected prediction
+error under covariate shift.” *Biometrics*, 79(1), 295-307.
+[doi:10.1111/biom.13583](https://doi.org/10.1111/biom.13583)
+
 ## Bootstrap Standard Errors
 
 For inference, use bootstrap standard errors:
@@ -299,7 +427,7 @@ mse_with_se <- tr_mse(
 
 summary(mse_with_se)
 #> 
-#> Summary: Transportable MSE Estimation
+#> Summary: Counterfactual Transportable MSE Estimation
 #> ======================================================= 
 #> 
 #> Call:
@@ -310,6 +438,7 @@ summary(mse_with_se)
 #>     se_method = "bootstrap", n_boot = 500, stratified_boot = TRUE)
 #> 
 #> Settings:
+#>   Mode: Counterfactual 
 #>   Analysis type: transport 
 #>   Estimator: dr 
 #>   Treatment level: 0 
@@ -405,6 +534,15 @@ Boyer, C. B., Dahabreh, I. J., & Steingrimsson, J. A. (2025).
 “Estimating and evaluating counterfactual prediction models.”
 *Statistics in Medicine*, 44(23-24), e70287.
 [doi:10.1002/sim.70287](https://doi.org/10.1002/sim.70287)
+
+Steingrimsson, J. A., et al. (2023). “Transporting a Prediction Model
+for Use in a New Target Population.” *American Journal of Epidemiology*,
+192(2), 296-304.
+[doi:10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
+
+Li, S., et al. (2023). “Efficient estimation of the expected prediction
+error under covariate shift.” *Biometrics*, 79(1), 295-307.
+[doi:10.1111/biom.13583](https://doi.org/10.1111/biom.13583)
 
 Dahabreh, I. J., Robertson, S. E., Tchetgen, E. J., Stuart, E. A., &
 Hernán, M. A. (2019). “Generalizing causal inferences from randomized

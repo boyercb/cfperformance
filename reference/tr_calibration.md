@@ -1,7 +1,9 @@
-# Estimate (Counterfactual) Calibration in the Target Population
+# Estimate Transportable Calibration in the Target Population
 
 Estimates the calibration of a prediction model in a target population
-using data transported from a source population (typically an RCT).
+using data transported from a source population. Supports both
+**counterfactual** (under hypothetical intervention) and **factual**
+(observational) prediction model transportability.
 
 ## Usage
 
@@ -9,10 +11,10 @@ using data transported from a source population (typically an RCT).
 tr_calibration(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "ipw", "om"),
   selection_model = NULL,
@@ -41,7 +43,9 @@ tr_calibration(
 
 - treatment:
 
-  Numeric vector of treatment indicators (0/1).
+  Numeric vector of treatment indicators (0/1), or `NULL` for factual
+  prediction model transportability (no treatment/intervention). When
+  `NULL`, only the selection model is used for weighting.
 
 - source:
 
@@ -53,7 +57,9 @@ tr_calibration(
 
 - treatment_level:
 
-  The treatment level of interest (default: 0).
+  The treatment level of interest (default: `NULL`). Required when
+  `treatment` is provided; should be `NULL` when `treatment` is `NULL`
+  (factual mode).
 
 - analysis:
 
@@ -189,19 +195,39 @@ An object of class `c("tr_calibration", "tr_performance")` containing:
 
   Number of source observations
 
+- treatment_level:
+
+  Treatment level (NULL for factual mode)
+
 ## Details
 
 This function implements estimators for transporting prediction model
-calibration from a source population (typically an RCT) to a target
+calibration from a source population to a target population. It supports
+two modes:
+
+### Counterfactual Mode (treatment provided)
+
+When `treatment` is specified, estimates calibration for counterfactual
+outcomes under a hypothetical intervention. Requires selection,
+propensity, and outcome models.
+
+### Factual Mode (treatment = NULL)
+
+When `treatment` is `NULL`, estimates calibration for observed outcomes
+in the target population using only the selection model for inverse-odds
+weighting. This is appropriate for factual prediction model
+transportability.
+
+### Analysis Types
+
+**Transportability Analysis** (`analysis = "transport"`): Uses outcome
+data from the source population to estimate calibration in the target
 population.
 
-**Transportability Analysis**: Uses outcome data from the source/RCT
-population to estimate calibration in the target population. The IPW
-estimator weights source observations to represent the target
-population.
+**Joint Analysis** (`analysis = "joint"`): Pools source and target data
+to estimate calibration in the target population.
 
-**Joint Analysis**: Pools source and target data to estimate calibration
-in the target population.
+### Calibration Metrics
 
 The function computes several calibration metrics:
 
@@ -219,6 +245,11 @@ For observational analysis (single population), use
 instead.
 
 ## References
+
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model
+for Use in a New Target Population." *American Journal of Epidemiology*,
+192(2), 296-304.
+[doi:10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
 
 Voter, S. R., et al. (2025). "Transportability of machine learning-based
 counterfactual prediction models with application to CASS." *Diagnostic
@@ -270,7 +301,7 @@ result <- tr_calibration(
 )
 print(result)
 #> 
-#> Transportable CALIBRATION Estimation
+#> Counterfactual Transportable CALIBRATION Estimation
 #> --------------------------------------------- 
 #> Analysis: transport 
 #> Estimator: ipw 

@@ -14,7 +14,7 @@ cf_cv(
   treatment_level = 0,
   nuisance_covariates = NULL,
   metric = c("mse", "auc", "both"),
-  estimator = c("dr", "cl", "ipw", "naive"),
+  estimator = c("dr", "cl", "om", "ipw", "naive"),
   K = 5,
   repeats = 1,
   stratify = TRUE,
@@ -54,8 +54,10 @@ cf_cv(
 
 - estimator:
 
-  Character string specifying the estimator: `"dr"` (default), `"cl"`,
-  `"ipw"`, or `"naive"`.
+  Character string specifying the estimator: `"dr"` (default), `"cl"`
+  (conditional loss, for MSE), `"om"` (outcome model, for AUC), `"ipw"`,
+  or `"naive"`. Note: `"cl"` is automatically mapped to `"om"` for AUC
+  metrics.
 
 - K:
 

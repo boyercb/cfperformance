@@ -12,7 +12,7 @@ cf_calibration(
   treatment,
   covariates,
   treatment_level = 0,
-  estimator = c("dr", "ipw", "cl"),
+  estimator = c("dr", "ipw", "om"),
   propensity_model = NULL,
   outcome_model = NULL,
   smoother = c("loess", "binned"),
@@ -187,11 +187,11 @@ The function implements three estimators:
 receiving the counterfactual treatment. Requires a correctly specified
 propensity score model.
 
-**Conditional Loss (CL) Estimator**: Uses the fitted outcome model
-\\E\[Y \| X, A=a\]\\ to estimate calibration over all observations.
-Requires a correctly specified outcome model.
+**Outcome Model (OM) Estimator**: Uses the fitted outcome model \\E\[Y
+\| X, A=a\]\\ to estimate calibration over all observations. Requires a
+correctly specified outcome model.
 
-**Doubly Robust (DR) Estimator**: Combines CL and IPW approaches.
+**Doubly Robust (DR) Estimator**: Combines OM and IPW approaches.
 Consistent if either the propensity or outcome model is correctly
 specified.
 

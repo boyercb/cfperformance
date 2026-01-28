@@ -3,6 +3,8 @@
 Computes a receiver operating characteristic (ROC) curve in a target
 population using data transported from a source population. Returns
 sensitivity (TPR) and false positive rate (FPR) at multiple thresholds.
+Supports both **counterfactual** and **factual** prediction model
+transportability.
 
 ## Usage
 
@@ -10,10 +12,10 @@ sensitivity (TPR) and false positive rate (FPR) at multiple thresholds.
 tr_roc(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
@@ -38,7 +40,9 @@ tr_roc(
 
 - treatment:
 
-  Numeric vector of treatment indicators (0/1).
+  Numeric vector of treatment indicators (0/1), or `NULL` for factual
+  prediction model transportability (no treatment/intervention). When
+  `NULL`, only the selection model is used for weighting.
 
 - source:
 
@@ -50,7 +54,9 @@ tr_roc(
 
 - treatment_level:
 
-  The treatment level of interest (default: 0).
+  The treatment level of interest (default: `NULL`). Required when
+  `treatment` is provided; should be `NULL` when `treatment` is `NULL`
+  (factual mode).
 
 - analysis:
 
@@ -161,10 +167,25 @@ An object of class `c("tr_roc", "roc_curve")` containing:
 
   Number of target observations
 
+- treatment_level:
+
+  Treatment level (NULL for factual mode)
+
 ## Details
 
 The ROC curve plots sensitivity (true positive rate) against the false
 positive rate (1 - specificity) at various classification thresholds.
+
+### Counterfactual Mode (treatment provided)
+
+When `treatment` is specified, computes the ROC curve for counterfactual
+outcomes under a hypothetical intervention.
+
+### Factual Mode (treatment = NULL)
+
+When `treatment` is `NULL`, computes the ROC curve for observed outcomes
+in the target population using inverse-odds weighting based on the
+selection model only.
 
 This function computes transportable sensitivity and FPR at multiple
 thresholds using the estimators from
@@ -180,6 +201,11 @@ For efficient computation, all thresholds are evaluated in a single pass
 through the data, with nuisance models fitted only once.
 
 ## References
+
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model
+for Use in a New Target Population." *American Journal of Epidemiology*,
+192(2), 296-304.
+[doi:10.1093/aje/kwac128](https://doi.org/10.1093/aje/kwac128)
 
 Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 "Interpretable meta-analysis of model or marker performance." *arXiv
@@ -221,13 +247,13 @@ print(roc)
 #> 
 #> Estimator: DR 
 #> Analysis: transport 
-#> Treatment level: 0 
+#> Treatment level: 1 
 #> N (source): 309 
 #> N (target): 191 
 #> Thresholds evaluated: 51 
 #> 
-#> AUC: 0.6892 
-#> Naive AUC: 0.6504 
+#> AUC: 0.7891 
+#> Naive AUC: 0.7842 
 #> 
 #> Use plot() to visualize the ROC curve.
 #> 

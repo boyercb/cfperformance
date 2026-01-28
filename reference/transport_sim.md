@@ -107,7 +107,7 @@ result <- tr_mse(
 )
 result
 #> 
-#> Transportable MSE Estimation
+#> Counterfactual Transportable MSE Estimation
 #> --------------------------------------------- 
 #> Analysis: transport 
 #> Estimator: dr 

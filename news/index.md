@@ -1,5 +1,89 @@
 # Changelog
 
+## cfperformance 0.5.0
+
+Adds factual (non-counterfactual) prediction model transportability,
+configurable propensity score trimming, improved standard error methods,
+and critical bug fixes.
+
+### New Features
+
+#### Factual Prediction Model Transportability
+
+- All transportability functions
+  ([`tr_mse()`](https://boyercb.github.io/cfperformance/reference/tr_mse.md),
+  [`tr_auc()`](https://boyercb.github.io/cfperformance/reference/tr_auc.md),
+  [`tr_sensitivity()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md),
+  [`tr_specificity()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md),
+  [`tr_fpr()`](https://boyercb.github.io/cfperformance/reference/tr_fpr.md),
+  [`tr_roc()`](https://boyercb.github.io/cfperformance/reference/tr_roc.md),
+  [`tr_calibration()`](https://boyercb.github.io/cfperformance/reference/tr_calibration.md))
+  now support **factual mode** when `treatment = NULL`.
+- Factual mode estimates prediction model performance in the target
+  population for observed (factual) outcomes, without requiring
+  treatment/intervention data.
+- This enables standard prediction model transportability analysis
+  (covariate shift correction) without counterfactual assumptions.
+- Print/summary methods display “Factual” or “Counterfactual” mode
+  labels.
+
+#### Propensity Score Trimming
+
+- New `ps_trim` parameter for all `cf_*` and `tr_*` functions provides
+  configurable propensity score trimming:
+  - `NULL` (default): Absolute bounds `c(0.01, 0.99)`
+  - `"none"`: No trimming
+  - `"quantile"`: Quantile-based trimming
+  - `"absolute"`: Explicit absolute bounds
+  - Numeric vector `c(lower, upper)` for custom bounds
+  - List with `method` and `bounds` for full control
+
+#### Influence Function Standard Errors
+
+- Exposed influence function SE via `se_method = "influence"` for:
+  - [`cf_sensitivity()`](https://boyercb.github.io/cfperformance/reference/cf_sensitivity.md),
+    [`cf_specificity()`](https://boyercb.github.io/cfperformance/reference/cf_specificity.md),
+    [`cf_fpr()`](https://boyercb.github.io/cfperformance/reference/cf_fpr.md)
+  - [`tr_sensitivity()`](https://boyercb.github.io/cfperformance/reference/tr_sensitivity.md),
+    [`tr_specificity()`](https://boyercb.github.io/cfperformance/reference/tr_specificity.md),
+    [`tr_fpr()`](https://boyercb.github.io/cfperformance/reference/tr_fpr.md)
+- Requires `cross_fit = TRUE` for valid inference.
+
+#### Outcome Type Detection
+
+- Added `outcome_type` parameter to transportability MSE functions.
+- Auto-detection of binary vs continuous outcomes.
+- Binary outcomes use efficient transformation; continuous outcomes
+  model loss directly.
+
+#### Cross-Fitting for Transportability
+
+- Extended cross-fitting support to transportability estimators for
+  valid inference with flexible ML methods.
+
+### Bug Fixes
+
+- **Fixed bootstrap confidence interval coverage** for all estimators.
+  Bootstrap now correctly preserves user-specified model formulas (e.g.,
+  with quadratic terms like `I(X^2)`) when refitting models during
+  resampling. Previously, bootstrap used `Y ~ .` which only fit main
+  effects, causing severely undercovered confidence intervals when
+  models included non-linear terms.
+
+### Documentation
+
+- Renamed “Traditional” mode to “Factual” mode throughout documentation
+  and print output. This better reflects the distinction between factual
+  (observed) outcomes and counterfactual outcomes under hypothetical
+  interventions.
+- Added `boot_ci_type` parameter documentation for bootstrap CI method
+  selection.
+- Added comprehensive simulation study script for benchmarking.
+- Added benchmark tests verifying estimators against standard
+  implementations (WeightedROC, pROC).
+
+------------------------------------------------------------------------
+
 ## cfperformance 0.4.0
 
 Adds sensitivity, specificity, and ROC curve functions for both

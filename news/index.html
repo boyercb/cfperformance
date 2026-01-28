@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cfperformance</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,70 @@
       <small>Source: <a href="https://github.com/boyercb/cfperformance/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0" id="cfperformance-050">cfperformance 0.5.0<a class="anchor" aria-label="anchor" href="#cfperformance-050"></a></h2>
+<p>Adds factual (non-counterfactual) prediction model transportability, configurable propensity score trimming, improved standard error methods, and critical bug fixes.</p>
+<div class="section level3">
+<h3 id="new-features-0-5-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-0-5-0"></a></h3>
+<div class="section level4">
+<h4 id="factual-prediction-model-transportability-0-5-0">Factual Prediction Model Transportability<a class="anchor" aria-label="anchor" href="#factual-prediction-model-transportability-0-5-0"></a></h4>
+<ul><li>All transportability functions (<code><a href="../reference/tr_mse.html">tr_mse()</a></code>, <code><a href="../reference/tr_auc.html">tr_auc()</a></code>, <code><a href="../reference/tr_sensitivity.html">tr_sensitivity()</a></code>, <code><a href="../reference/tr_specificity.html">tr_specificity()</a></code>, <code><a href="../reference/tr_fpr.html">tr_fpr()</a></code>, <code><a href="../reference/tr_roc.html">tr_roc()</a></code>, <code><a href="../reference/tr_calibration.html">tr_calibration()</a></code>) now support <strong>factual mode</strong> when <code>treatment = NULL</code>.</li>
+<li>Factual mode estimates prediction model performance in the target population for observed (factual) outcomes, without requiring treatment/intervention data.</li>
+<li>This enables standard prediction model transportability analysis (covariate shift correction) without counterfactual assumptions.</li>
+<li>Print/summary methods display “Factual” or “Counterfactual” mode labels.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="propensity-score-trimming-0-5-0">Propensity Score Trimming<a class="anchor" aria-label="anchor" href="#propensity-score-trimming-0-5-0"></a></h4>
+<ul><li>New <code>ps_trim</code> parameter for all <code>cf_*</code> and <code>tr_*</code> functions provides configurable propensity score trimming:
+<ul><li>
+<code>NULL</code> (default): Absolute bounds <code>c(0.01, 0.99)</code>
+</li>
+<li>
+<code>"none"</code>: No trimming</li>
+<li>
+<code>"quantile"</code>: Quantile-based trimming</li>
+<li>
+<code>"absolute"</code>: Explicit absolute bounds</li>
+<li>Numeric vector <code>c(lower, upper)</code> for custom bounds</li>
+<li>List with <code>method</code> and <code>bounds</code> for full control</li>
+</ul></li>
+</ul></div>
+<div class="section level4">
+<h4 id="influence-function-standard-errors-0-5-0">Influence Function Standard Errors<a class="anchor" aria-label="anchor" href="#influence-function-standard-errors-0-5-0"></a></h4>
+<ul><li>Exposed influence function SE via <code>se_method = "influence"</code> for:
+<ul><li>
+<code><a href="../reference/cf_sensitivity.html">cf_sensitivity()</a></code>, <code><a href="../reference/cf_specificity.html">cf_specificity()</a></code>, <code><a href="../reference/cf_fpr.html">cf_fpr()</a></code>
+</li>
+<li>
+<code><a href="../reference/tr_sensitivity.html">tr_sensitivity()</a></code>, <code><a href="../reference/tr_specificity.html">tr_specificity()</a></code>, <code><a href="../reference/tr_fpr.html">tr_fpr()</a></code>
+</li>
+</ul></li>
+<li>Requires <code>cross_fit = TRUE</code> for valid inference.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="outcome-type-detection-0-5-0">Outcome Type Detection<a class="anchor" aria-label="anchor" href="#outcome-type-detection-0-5-0"></a></h4>
+<ul><li>Added <code>outcome_type</code> parameter to transportability MSE functions.</li>
+<li>Auto-detection of binary vs continuous outcomes.</li>
+<li>Binary outcomes use efficient transformation; continuous outcomes model loss directly.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="cross-fitting-for-transportability-0-5-0">Cross-Fitting for Transportability<a class="anchor" aria-label="anchor" href="#cross-fitting-for-transportability-0-5-0"></a></h4>
+<ul><li>Extended cross-fitting support to transportability estimators for valid inference with flexible ML methods.</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="bug-fixes-0-5-0">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-5-0"></a></h3>
+<ul><li>
+<strong>Fixed bootstrap confidence interval coverage</strong> for all estimators. Bootstrap now correctly preserves user-specified model formulas (e.g., with quadratic terms like <code>I(X^2)</code>) when refitting models during resampling. Previously, bootstrap used <code>Y ~ .</code> which only fit main effects, causing severely undercovered confidence intervals when models included non-linear terms.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-0-5-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-5-0"></a></h3>
+<ul><li>Renamed “Traditional” mode to “Factual” mode throughout documentation and print output. This better reflects the distinction between factual (observed) outcomes and counterfactual outcomes under hypothetical interventions.</li>
+<li>Added <code>boot_ci_type</code> parameter documentation for bootstrap CI method selection.</li>
+<li>Added comprehensive simulation study script for benchmarking.</li>
+<li>Added benchmark tests verifying estimators against standard implementations (WeightedROC, pROC).</li>
+</ul><hr></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.0" id="cfperformance-040">cfperformance 0.4.0<a class="anchor" aria-label="anchor" href="#cfperformance-040"></a></h2>
 <p>Adds sensitivity, specificity, and ROC curve functions for both counterfactual and transportability settings.</p>
