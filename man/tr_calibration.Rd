@@ -2,15 +2,15 @@
 % Please edit documentation in R/tr_calibration.R
 \name{tr_calibration}
 \alias{tr_calibration}
-\title{Estimate (Counterfactual) Calibration in the Target Population}
+\title{Estimate Transportable Calibration in the Target Population}
 \usage{
 tr_calibration(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "ipw", "om"),
   selection_model = NULL,
@@ -31,13 +31,17 @@ tr_calibration(
 
 \item{outcomes}{Numeric vector of observed outcomes (must be binary 0/1).}
 
-\item{treatment}{Numeric vector of treatment indicators (0/1).}
+\item{treatment}{Numeric vector of treatment indicators (0/1), or \code{NULL} for
+factual prediction model transportability (no treatment/intervention).
+When \code{NULL}, only the selection model is used for weighting.}
 
 \item{source}{Numeric vector of population indicators (1=source/RCT, 0=target).}
 
 \item{covariates}{A matrix or data frame of baseline covariates.}
 
-\item{treatment_level}{The treatment level of interest (default: 0).}
+\item{treatment_level}{The treatment level of interest (default: \code{NULL}).
+Required when \code{treatment} is provided; should be \code{NULL} when \code{treatment}
+is \code{NULL} (factual mode).}
 
 \item{analysis}{Character string specifying the type of analysis:
 \itemize{
@@ -102,22 +106,43 @@ An object of class \code{c("tr_calibration", "tr_performance")} containing:
 \item{analysis}{Analysis type}
 \item{n_target}{Number of target observations}
 \item{n_source}{Number of source observations}
+\item{treatment_level}{Treatment level (NULL for factual mode)}
 }
 \description{
 Estimates the calibration of a prediction model in a target population
-using data transported from a source population (typically an RCT).
+using data transported from a source population. Supports both
+\strong{counterfactual} (under hypothetical intervention) and \strong{factual}
+(observational) prediction model transportability.
 }
 \details{
 This function implements estimators for transporting prediction model
-calibration from a source population (typically an RCT) to a target
-population.
+calibration from a source population to a target population. It supports
+two modes:
+\subsection{Counterfactual Mode (treatment provided)}{
 
-\strong{Transportability Analysis}: Uses outcome data from the source/RCT
-population to estimate calibration in the target population. The IPW
-estimator weights source observations to represent the target population.
+When \code{treatment} is specified, estimates calibration for counterfactual
+outcomes under a hypothetical intervention. Requires selection, propensity,
+and outcome models.
+}
 
-\strong{Joint Analysis}: Pools source and target data to estimate calibration
-in the target population.
+\subsection{Factual Mode (treatment = NULL)}{
+
+When \code{treatment} is \code{NULL}, estimates calibration for observed outcomes in
+the target population using only the selection model for inverse-odds
+weighting. This is appropriate for factual prediction model
+transportability.
+}
+
+\subsection{Analysis Types}{
+
+\strong{Transportability Analysis} (\code{analysis = "transport"}): Uses outcome data
+from the source population to estimate calibration in the target population.
+
+\strong{Joint Analysis} (\code{analysis = "joint"}): Pools source and target data
+to estimate calibration in the target population.
+}
+
+\subsection{Calibration Metrics}{
 
 The function computes several calibration metrics:
 \itemize{
@@ -129,6 +154,7 @@ predicted and observed probabilities
 }
 
 For observational analysis (single population), use \code{\link[=cf_calibration]{cf_calibration()}} instead.
+}
 }
 \examples{
 # Generate example data with source (RCT) and target populations
@@ -162,6 +188,10 @@ result <- tr_calibration(
 print(result)
 }
 \references{
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+Use in a New Target Population." \emph{American Journal of Epidemiology},
+192(2), 296-304. \doi{10.1093/aje/kwac128}
+
 Voter, S. R., et al. (2025). "Transportability of machine learning-based
 counterfactual prediction models with application to CASS."
 \emph{Diagnostic and Prognostic Research}, 9(4).

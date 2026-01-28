@@ -13,9 +13,13 @@
   estimator,
   n_boot = 500,
   conf_level = 0.95,
+  boot_ci_type = c("percentile", "normal", "basic"),
   parallel = FALSE,
   ncores = NULL,
   ps_trim = NULL,
+  propensity_model = NULL,
+  outcome_model = NULL,
+  point_estimate = NULL,
   ...
 )
 }

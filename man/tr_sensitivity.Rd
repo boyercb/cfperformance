@@ -3,22 +3,22 @@
 \name{tr_sensitivity}
 \alias{tr_sensitivity}
 \alias{tr_tpr}
-\title{Estimate (Counterfactual) Sensitivity in the Target Population}
+\title{Estimate Transportable Sensitivity in the Target Population}
 \usage{
 tr_sensitivity(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
@@ -33,17 +33,17 @@ tr_sensitivity(
 tr_tpr(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
@@ -60,7 +60,9 @@ tr_tpr(
 
 \item{outcomes}{Numeric vector of observed outcomes.}
 
-\item{treatment}{Numeric vector of treatment indicators (0/1).}
+\item{treatment}{Numeric vector of treatment indicators (0/1), or \code{NULL} for
+factual prediction model transportability (no treatment/intervention).
+When \code{NULL}, only the selection model is used for weighting.}
 
 \item{source}{Numeric vector of population indicators (1=source/RCT, 0=target).}
 
@@ -71,7 +73,9 @@ above this value are classified as positive. Can be a single value or
 a vector for computing sensitivity at multiple thresholds simultaneously.
 Default is 0.5.}
 
-\item{treatment_level}{The treatment level of interest (default: 0).}
+\item{treatment_level}{The treatment level of interest (default: \code{NULL}).
+Required when \code{treatment} is provided; should be \code{NULL} when \code{treatment}
+is \code{NULL} (factual mode).}
 
 \item{analysis}{Character string specifying the type of analysis:
 \itemize{
@@ -150,20 +154,34 @@ An object of class \code{c("tr_sensitivity", "tr_performance")} containing:
 \item{naive_estimate}{Naive sensitivity for comparison}
 \item{n_target}{Number of target observations}
 \item{n_source}{Number of source observations}
-\item{treatment_level}{Treatment level}
+\item{treatment_level}{Treatment level (NULL for factual mode)}
 }
 \description{
 Estimates the sensitivity (true positive rate) of a binary classifier at
 one or more thresholds in a target population using data transported from
-a source population (typically an RCT).
+a source population. Supports both \strong{counterfactual} (under hypothetical
+intervention) and \strong{factual} (observational) prediction model
+transportability.
 }
 \details{
 Sensitivity (also known as true positive rate or recall) is defined as:
 \deqn{Sensitivity(c) = P(\hat{Y} > c | Y = 1)}
+\subsection{Counterfactual Mode (treatment provided)}{
 
-In the transportability setting, we estimate sensitivity in the target
-population using outcome data from the source population. The function
-implements three estimators following Steingrimsson et al. (2024):
+When \code{treatment} is specified, estimates sensitivity for counterfactual
+outcomes under a hypothetical intervention. Requires selection, propensity,
+and outcome models.
+}
+
+\subsection{Factual Mode (treatment = NULL)}{
+
+When \code{treatment} is \code{NULL}, estimates sensitivity for observed outcomes in
+the target population using only the selection model for inverse-odds
+weighting. This is appropriate for factual prediction model
+transportability.
+}
+
+\subsection{Estimators}{
 
 \strong{Outcome Model (OM) Estimator}:
 \deqn{\hat{\psi}_{sens,om} = \frac{\sum_i I(S_i=0) I(\hat{h}(X_i) > c) \hat{m}(X_i)}{\sum_i I(S_i=0) \hat{m}(X_i)}}
@@ -175,6 +193,7 @@ where \eqn{\hat{w}(X) \approx P(R=0|X)/P(R=1|X)}.
 
 \strong{Doubly Robust (DR) Estimator}: Combines OM and IPW for protection against
 misspecification of either model.
+}
 }
 \examples{
 # Generate example data with source (RCT) and target populations
@@ -212,6 +231,10 @@ result_multi <- tr_sensitivity(
 print(result_multi)
 }
 \references{
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+Use in a New Target Population." \emph{American Journal of Epidemiology},
+192(2), 296-304. \doi{10.1093/aje/kwac128}
+
 Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 "Interpretable meta-analysis of model or marker performance."
 \emph{arXiv preprint arXiv:2409.13458}.

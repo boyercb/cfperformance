@@ -7,10 +7,10 @@
 tr_roc(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
@@ -27,13 +27,17 @@ tr_roc(
 
 \item{outcomes}{Numeric vector of observed outcomes.}
 
-\item{treatment}{Numeric vector of treatment indicators (0/1).}
+\item{treatment}{Numeric vector of treatment indicators (0/1), or \code{NULL} for
+factual prediction model transportability (no treatment/intervention).
+When \code{NULL}, only the selection model is used for weighting.}
 
 \item{source}{Numeric vector of population indicators (1=source/RCT, 0=target).}
 
 \item{covariates}{A matrix or data frame of baseline covariates.}
 
-\item{treatment_level}{The treatment level of interest (default: 0).}
+\item{treatment_level}{The treatment level of interest (default: \code{NULL}).
+Required when \code{treatment} is provided; should be \code{NULL} when \code{treatment}
+is \code{NULL} (factual mode).}
 
 \item{analysis}{Character string specifying the type of analysis:
 \itemize{
@@ -85,15 +89,29 @@ An object of class \code{c("tr_roc", "roc_curve")} containing:
 \item{analysis}{Analysis type}
 \item{n_source}{Number of source observations}
 \item{n_target}{Number of target observations}
+\item{treatment_level}{Treatment level (NULL for factual mode)}
 }
 \description{
 Computes a receiver operating characteristic (ROC) curve in a target
 population using data transported from a source population. Returns
 sensitivity (TPR) and false positive rate (FPR) at multiple thresholds.
+Supports both \strong{counterfactual} and \strong{factual} prediction model
+transportability.
 }
 \details{
 The ROC curve plots sensitivity (true positive rate) against the false
 positive rate (1 - specificity) at various classification thresholds.
+\subsection{Counterfactual Mode (treatment provided)}{
+
+When \code{treatment} is specified, computes the ROC curve for counterfactual
+outcomes under a hypothetical intervention.
+}
+
+\subsection{Factual Mode (treatment = NULL)}{
+
+When \code{treatment} is \code{NULL}, computes the ROC curve for observed outcomes
+in the target population using inverse-odds weighting based on the
+selection model only.
 
 This function computes transportable sensitivity and FPR at multiple
 thresholds using the estimators from \code{\link[=tr_sensitivity]{tr_sensitivity()}} and \code{\link[=tr_fpr]{tr_fpr()}}.
@@ -103,6 +121,7 @@ which employs the Wilcoxon-Mann-Whitney statistic.
 
 For efficient computation, all thresholds are evaluated in a single pass
 through the data, with nuisance models fitted only once.
+}
 }
 \examples{
 # Generate example data
@@ -129,6 +148,10 @@ print(roc)
 plot(roc)
 }
 \references{
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+Use in a New Target Population." \emph{American Journal of Epidemiology},
+192(2), 296-304. \doi{10.1093/aje/kwac128}
+
 Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 "Interpretable meta-analysis of model or marker performance."
 \emph{arXiv preprint arXiv:2409.13458}.

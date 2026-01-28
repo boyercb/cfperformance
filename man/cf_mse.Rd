@@ -17,6 +17,7 @@ cf_mse(
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
+  boot_ci_type = c("percentile", "normal", "basic"),
   cross_fit = FALSE,
   n_folds = 5,
   parallel = FALSE,
@@ -69,6 +70,13 @@ continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 \item{n_boot}{Number of bootstrap replications (default: 500).}
 
 \item{conf_level}{Confidence level for intervals (default: 0.95).}
+
+\item{boot_ci_type}{Type of bootstrap confidence interval to compute:
+\itemize{
+\item \code{"percentile"}: Percentile method (default)
+\item \code{"normal"}: Normal approximation using bootstrap SE
+\item \code{"basic"}: Basic bootstrap interval
+}}
 
 \item{cross_fit}{Logical indicating whether to use cross-fitting for
 nuisance model estimation (default: FALSE). Cross-fitting enables

@@ -3,6 +3,8 @@
 #' Computes a receiver operating characteristic (ROC) curve in a target
 #' population using data transported from a source population. Returns
 #' sensitivity (TPR) and false positive rate (FPR) at multiple thresholds.
+#' Supports both **counterfactual** and **factual** prediction model
+#' transportability.
 #'
 #' @inheritParams tr_sensitivity
 #' @param n_thresholds Integer specifying the number of thresholds to evaluate.
@@ -25,10 +27,20 @@
 #'   \item{analysis}{Analysis type}
 #'   \item{n_source}{Number of source observations}
 #'   \item{n_target}{Number of target observations}
+#'   \item{treatment_level}{Treatment level (NULL for factual mode)}
 #'
 #' @details
 #' The ROC curve plots sensitivity (true positive rate) against the false
 #' positive rate (1 - specificity) at various classification thresholds.
+#'
+#' ## Counterfactual Mode (treatment provided)
+#' When `treatment` is specified, computes the ROC curve for counterfactual
+#' outcomes under a hypothetical intervention.
+#'
+#' ## Factual Mode (treatment = NULL)
+#' When `treatment` is `NULL`, computes the ROC curve for observed outcomes
+#' in the target population using inverse-odds weighting based on the
+#' selection model only.
 #'
 #' This function computes transportable sensitivity and FPR at multiple
 #' thresholds using the estimators from [tr_sensitivity()] and [tr_fpr()].
@@ -40,6 +52,10 @@
 #' through the data, with nuisance models fitted only once.
 #'
 #' @references
+#' Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+#' Use in a New Target Population." *American Journal of Epidemiology*,
+#' 192(2), 296-304. \doi{10.1093/aje/kwac128}
+#'
 #' Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 #' "Interpretable meta-analysis of model or marker performance."
 #' *arXiv preprint arXiv:2409.13458*.
@@ -73,10 +89,10 @@
 #' plot(roc)
 tr_roc <- function(predictions,
                    outcomes,
-                   treatment,
+                   treatment = NULL,
                    source,
                    covariates,
-                   treatment_level = 0,
+                   treatment_level = NULL,
                    analysis = c("transport", "joint"),
                    estimator = c("dr", "om", "ipw", "naive"),
                    selection_model = NULL,
@@ -91,7 +107,15 @@ tr_roc <- function(predictions,
   estimator <- match.arg(estimator)
 
   # Validate inputs
-  .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
+  .validate_transport_inputs(predictions, outcomes, treatment, source, covariates, treatment_level)
+  
+  # Determine mode: factual (no treatment) or counterfactual
+  factual_mode <- is.null(treatment)
+  
+  # Default treatment_level to 1 for backward compatibility if treatment is provided
+  if (!factual_mode && is.null(treatment_level)) {
+    treatment_level <- 1
+  }
 
   if (!all(outcomes %in% c(0, 1))) {
     stop("ROC curve requires binary outcomes (0/1)")
@@ -285,7 +309,7 @@ cf_roc <- function(predictions,
                    treatment,
                    covariates,
                    treatment_level = 0,
-                   estimator = c("dr", "cl", "ipw", "naive"),
+                   estimator = c("dr", "om", "ipw", "naive"),
                    propensity_model = NULL,
                    outcome_model = NULL,
                    n_thresholds = 201,
@@ -434,12 +458,18 @@ cf_roc <- function(predictions,
 
 #' @export
 print.tr_roc <- function(x, digits = 4, ...) {
-  cat("\nTransportable ROC Curve\n")
+  # Determine if factual mode (no treatment) or counterfactual mode
+  factual_mode <- is.null(x$treatment_level)
+  mode_label <- if (factual_mode) "Factual " else ""
+
+  cat("\n", mode_label, "Transportable ROC Curve\n", sep = "")
   cat("=======================\n\n")
 
   cat("Estimator:", toupper(x$estimator), "\n")
   cat("Analysis:", x$analysis, "\n")
-  cat("Treatment level:", x$treatment_level, "\n")
+  if (!factual_mode) {
+    cat("Treatment level:", x$treatment_level, "\n")
+  }
   cat("N (source):", x$n_source, "\n")
   cat("N (target):", x$n_target, "\n")
   cat("Thresholds evaluated:", length(x$thresholds), "\n\n")

@@ -39,7 +39,8 @@ NULL
 #' @keywords internal
 .influence_se_mse <- function(predictions, outcomes, treatment, covariates,
                                treatment_level, estimator, propensity_model,
-                               outcome_model, ps_trim_spec = NULL) {
+                               outcome_model, ps_trim_spec = NULL,
+                               outcome_type = "binary") {
 
   n <- length(outcomes)
   loss <- (outcomes - predictions)^2
@@ -65,16 +66,26 @@ NULL
     return(se)
   }
 
-  # Get propensity scores
-  ps <- predict(propensity_model, newdata = covariates, type = "response")
-  if (treatment_level == 0) {
-    ps <- 1 - ps  # P(A = 0 | X)
+  # Get propensity scores (needed for ipw and dr)
+  if (estimator %in% c("ipw", "dr")) {
+    ps <- predict(propensity_model, newdata = covariates, type = "response")
+    if (treatment_level == 0) {
+      ps <- 1 - ps  # P(A = 0 | X)
+    }
+    ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
   }
-  ps <- .trim_propensity(ps, ps_trim_spec$method, ps_trim_spec$bounds)
 
-  # Get conditional loss predictions
-  pY <- predict(outcome_model, newdata = covariates, type = "response")
-  h <- pY - 2 * predictions * pY + predictions^2
+  # Get conditional loss predictions (needed for cl and dr)
+  # For binary outcomes: h = E[(Y-pred)^2|X] = pY - 2*pred*pY + pred^2 (since Y^2 = Y)
+  # For continuous outcomes: outcome model directly predicts E[L|X,A], so h = prediction
+  if (estimator %in% c("cl", "dr")) {
+    pY <- predict(outcome_model, newdata = covariates, type = "response")
+    if (outcome_type == "binary") {
+      h <- pY - 2 * predictions * pY + predictions^2
+    } else {
+      h <- pY
+    }
+  }
 
   if (estimator == "cl") {
     # Conditional loss estimator
@@ -137,11 +148,18 @@ NULL
 #' @keywords internal
 .bootstrap_mse <- function(predictions, outcomes, treatment, covariates,
                            treatment_level, estimator, n_boot = 500,
-                           conf_level = 0.95, parallel = FALSE,
-                           ncores = NULL, ps_trim = NULL, ...) {
+                           conf_level = 0.95, 
+                           boot_ci_type = c("percentile", "normal", "basic"),
+                           parallel = FALSE,
+                           ncores = NULL, ps_trim = NULL,
+                           outcome_type = "binary",
+                           propensity_model = NULL,
+                           outcome_model = NULL,
+                           point_estimate = NULL, ...) {
 
   n <- length(outcomes)
   alpha <- 1 - conf_level
+  boot_ci_type <- match.arg(boot_ci_type)
 
   # Parse propensity score trimming specification
   ps_trim_spec <- .parse_ps_trim(ps_trim)
@@ -149,14 +167,61 @@ NULL
   # Define single bootstrap iteration
   boot_one <- function(idx) {
     # Refit nuisance models on bootstrap sample
-    nuisance_b <- .fit_nuisance_models(
-      treatment = treatment[idx],
-      outcomes = outcomes[idx],
-      covariates = covariates[idx, , drop = FALSE],
-      treatment_level = treatment_level,
-      propensity_model = NULL,
-      outcome_model = NULL
-    )
+    # We create separate data frames for each model to avoid formula expansion
+    # issues with predict() (e.g., "S0 ~ . - A" still needs A in newdata)
+    cov_b <- covariates[idx, , drop = FALSE]
+
+    # Propensity model data: A ~ . (only covariates, no Y)
+    boot_data_ps <- data.frame(A = treatment[idx], cov_b)
+
+    # Outcome model data: Y ~ . or L ~ . (only covariates, no A)
+    boot_data_om <- data.frame(Y = outcomes[idx], cov_b)
+
+    # Refit propensity model on bootstrap sample, preserving user's formula
+    if (estimator %in% c("ipw", "dr")) {
+      if (!is.null(propensity_model) && inherits(propensity_model, "glm")) {
+        # User provided a fitted model - use update() to preserve formula
+        ps_model_b <- tryCatch(
+          update(propensity_model, data = boot_data_ps),
+          error = function(e) glm(A ~ ., data = boot_data_ps, family = binomial())
+        )
+      } else {
+        ps_model_b <- glm(A ~ ., data = boot_data_ps, family = binomial())
+      }
+    } else {
+      ps_model_b <- NULL
+    }
+
+    # Refit outcome model on bootstrap sample (among treated), preserving user's formula
+    if (estimator %in% c("cl", "om", "dr")) {
+      subset_idx <- treatment[idx] == treatment_level
+      subset_om <- boot_data_om[subset_idx, , drop = FALSE]
+      if (outcome_type == "binary") {
+        if (!is.null(outcome_model) && inherits(outcome_model, "glm")) {
+          om_model_b <- tryCatch(
+            update(outcome_model, data = subset_om),
+            error = function(e) glm(Y ~ ., data = subset_om, family = binomial())
+          )
+        } else {
+          om_model_b <- glm(Y ~ ., data = subset_om, family = binomial())
+        }
+      } else {
+        loss_b <- (outcomes[idx] - predictions[idx])^2
+        subset_om$L <- loss_b[subset_idx]
+        # Remove Y for continuous outcome model
+        subset_om$Y <- NULL
+        if (!is.null(outcome_model) && inherits(outcome_model, "glm")) {
+          om_model_b <- tryCatch(
+            update(outcome_model, data = subset_om),
+            error = function(e) glm(L ~ ., data = subset_om, family = gaussian())
+          )
+        } else {
+          om_model_b <- glm(L ~ ., data = subset_om, family = gaussian())
+        }
+      }
+    } else {
+      om_model_b <- NULL
+    }
 
     .compute_mse(
       predictions = predictions[idx],
@@ -165,8 +230,9 @@ NULL
       covariates = covariates[idx, , drop = FALSE],
       treatment_level = treatment_level,
       estimator = estimator,
-      propensity_model = nuisance_b$propensity,
-      outcome_model = nuisance_b$outcome,
+      propensity_model = ps_model_b,
+      outcome_model = om_model_b,
+      outcome_type = outcome_type,
       ps_trim_spec = ps_trim_spec
     )
   }
@@ -188,11 +254,40 @@ NULL
 
   # Remove any NA/NaN values
   boot_estimates <- boot_estimates[is.finite(boot_estimates)]
+  
+  se <- sd(boot_estimates)
+  
+  # Compute confidence intervals based on type
+  if (boot_ci_type == "percentile") {
+    ci_lower <- unname(quantile(boot_estimates, alpha / 2))
+    ci_upper <- unname(quantile(boot_estimates, 1 - alpha / 2))
+  } else if (boot_ci_type == "normal") {
+    # Normal approximation: estimate +/- z * SE
+    z <- qnorm(1 - alpha / 2)
+    if (!is.null(point_estimate)) {
+      ci_lower <- point_estimate - z * se
+      ci_upper <- point_estimate + z * se
+    } else {
+      # Fall back to using mean of bootstrap estimates
+      ci_lower <- mean(boot_estimates) - z * se
+      ci_upper <- mean(boot_estimates) + z * se
+    }
+  } else if (boot_ci_type == "basic") {
+    # Basic bootstrap: 2*estimate - percentile (reverses bias direction)
+    if (!is.null(point_estimate)) {
+      ci_lower <- 2 * point_estimate - unname(quantile(boot_estimates, 1 - alpha / 2))
+      ci_upper <- 2 * point_estimate - unname(quantile(boot_estimates, alpha / 2))
+    } else {
+      # Fall back to percentile
+      ci_lower <- unname(quantile(boot_estimates, alpha / 2))
+      ci_upper <- unname(quantile(boot_estimates, 1 - alpha / 2))
+    }
+  }
 
   list(
-    se = sd(boot_estimates),
-    ci_lower = unname(quantile(boot_estimates, alpha / 2)),
-    ci_upper = unname(quantile(boot_estimates, 1 - alpha / 2)),
+    se = se,
+    ci_lower = ci_lower,
+    ci_upper = ci_upper,
     boot_estimates = boot_estimates
   )
 }
@@ -210,9 +305,15 @@ NULL
 #' @keywords internal
 .bootstrap_auc <- function(predictions, outcomes, treatment, covariates,
                            treatment_level, estimator, n_boot = 500,
-                           conf_level = 0.95, parallel = FALSE,
-                           ncores = NULL, ps_trim = NULL, ...) {
+                           conf_level = 0.95, 
+                           boot_ci_type = c("percentile", "normal", "basic"),
+                           parallel = FALSE,
+                           ncores = NULL, ps_trim = NULL,
+                           propensity_model = NULL,
+                           outcome_model = NULL,
+                           point_estimate = NULL, ...) {
 
+  boot_ci_type <- match.arg(boot_ci_type)
   n <- length(outcomes)
   alpha <- 1 - conf_level
 
@@ -220,14 +321,47 @@ NULL
   ps_trim_spec <- .parse_ps_trim(ps_trim)
 
   boot_one <- function(idx) {
-    nuisance_b <- .fit_nuisance_models(
-      treatment = treatment[idx],
-      outcomes = outcomes[idx],
-      covariates = covariates[idx, , drop = FALSE],
-      treatment_level = treatment_level,
-      propensity_model = NULL,
-      outcome_model = NULL
-    )
+    # Refit nuisance models on bootstrap sample
+    # We create separate data frames for each model to avoid formula expansion
+    # issues with predict() (e.g., "Y ~ . - A" still needs A in newdata)
+    cov_b <- covariates[idx, , drop = FALSE]
+
+    # Propensity model data: A ~ . (only covariates, no Y)
+    boot_data_ps <- data.frame(A = treatment[idx], cov_b)
+
+    # Outcome model data: Y ~ . (only covariates, no A)
+    boot_data_om <- data.frame(Y = outcomes[idx], cov_b)
+
+    # Refit propensity model on bootstrap sample, preserving user's formula
+    if (estimator %in% c("ipw", "dr")) {
+      if (!is.null(propensity_model) && inherits(propensity_model, "glm")) {
+        ps_model_b <- tryCatch(
+          update(propensity_model, data = boot_data_ps),
+          error = function(e) glm(A ~ ., data = boot_data_ps, family = binomial())
+        )
+      } else {
+        ps_model_b <- glm(A ~ ., data = boot_data_ps, family = binomial())
+      }
+    } else {
+      ps_model_b <- NULL
+    }
+
+    # Refit outcome model on bootstrap sample (among treated), preserving user's formula
+    # AUC is only for binary outcomes
+    if (estimator %in% c("cl", "om", "dr")) {
+      subset_idx <- treatment[idx] == treatment_level
+      subset_om <- boot_data_om[subset_idx, , drop = FALSE]
+      if (!is.null(outcome_model) && inherits(outcome_model, "glm")) {
+        om_model_b <- tryCatch(
+          update(outcome_model, data = subset_om),
+          error = function(e) glm(Y ~ ., data = subset_om, family = binomial())
+        )
+      } else {
+        om_model_b <- glm(Y ~ ., data = subset_om, family = binomial())
+      }
+    } else {
+      om_model_b <- NULL
+    }
 
     .compute_auc(
       predictions = predictions[idx],
@@ -236,8 +370,8 @@ NULL
       covariates = covariates[idx, , drop = FALSE],
       treatment_level = treatment_level,
       estimator = estimator,
-      propensity_model = nuisance_b$propensity,
-      outcome_model = nuisance_b$outcome,
+      propensity_model = ps_model_b,
+      outcome_model = om_model_b,
       ps_trim_spec = ps_trim_spec
     )
   }
@@ -256,11 +390,27 @@ NULL
   }
 
   boot_estimates <- boot_estimates[is.finite(boot_estimates)]
+  
+  se <- sd(boot_estimates)
+  
+  # Compute confidence intervals based on specified method
+  if (boot_ci_type == "percentile") {
+    ci_lower <- unname(quantile(boot_estimates, alpha / 2))
+    ci_upper <- unname(quantile(boot_estimates, 1 - alpha / 2))
+  } else if (boot_ci_type == "normal") {
+    z <- qnorm(1 - alpha / 2)
+    ci_lower <- point_estimate - z * se
+    ci_upper <- point_estimate + z * se
+  } else if (boot_ci_type == "basic") {
+    # Basic bootstrap: 2*theta_hat - quantile(1-alpha/2), 2*theta_hat - quantile(alpha/2)
+    ci_lower <- 2 * point_estimate - unname(quantile(boot_estimates, 1 - alpha / 2))
+    ci_upper <- 2 * point_estimate - unname(quantile(boot_estimates, alpha / 2))
+  }
 
   list(
-    se = sd(boot_estimates),
-    ci_lower = unname(quantile(boot_estimates, alpha / 2)),
-    ci_upper = unname(quantile(boot_estimates, 1 - alpha / 2)),
+    se = se,
+    ci_lower = ci_lower,
+    ci_upper = ci_upper,
     boot_estimates = boot_estimates
   )
 }
@@ -381,32 +531,17 @@ NULL
     return(se)
 
   } else if (estimator == "ipw") {
-    # IPW variance
-    auc_hat <- .compute_auc(predictions, outcomes, treatment, covariates,
-                            treatment_level, "ipw", propensity_model,
-                            outcome_model)
-
-    cases <- which(outcomes == 1 & I_a == 1)
-    controls <- which(outcomes == 0 & I_a == 1)
-    n1 <- length(cases)
-    n0 <- length(controls)
-
-    if (n1 < 2 || n0 < 2) {
-      return(NA_real_)
-    }
-
-    phi <- numeric(n)
-    for (i in cases) {
-      for (j in controls) {
-        conc <- as.numeric(predictions[i] > predictions[j]) +
-          0.5 * as.numeric(predictions[i] == predictions[j])
-        phi[i] <- phi[i] + (1/ps[i]) * (conc - auc_hat) / (n1 * n0)
-        phi[j] <- phi[j] + (1/ps[j]) * (conc - auc_hat) / (n1 * n0)
-      }
-    }
-
-    se <- sqrt(var(phi) / n)
-    return(se)
+    # IPW variance estimation for counterfactual AUC
+    # Note: The influence function for IPW AUC is complex due to:
+    # 1. Pairwise nature of the U-statistic
+    # 2. Weighting by inverse propensity scores
+    # 3. Potential extreme weights
+    #
+    # The analytic influence function implementation is not yet validated.
+    # Use bootstrap standard errors for IPW AUC estimation.
+    warning("Influence function SE for IPW AUC is not yet reliably implemented. ",
+            "Use se_method='bootstrap' for IPW AUC estimation.")
+    return(NA_real_)
 
   } else if (estimator == "cl") {
     # Outcome model estimator

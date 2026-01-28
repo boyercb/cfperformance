@@ -1,8 +1,10 @@
-#' Estimate (Counterfactual) Sensitivity in the Target Population
+#' Estimate Transportable Sensitivity in the Target Population
 #'
 #' Estimates the sensitivity (true positive rate) of a binary classifier at
 #' one or more thresholds in a target population using data transported from
-#' a source population (typically an RCT).
+#' a source population. Supports both **counterfactual** (under hypothetical
+#' intervention) and **factual** (observational) prediction model
+#' transportability.
 #'
 #' @inheritParams tr_mse
 #' @param threshold Numeric vector of classification thresholds. Predictions
@@ -21,16 +23,24 @@
 #'   \item{naive_estimate}{Naive sensitivity for comparison}
 #'   \item{n_target}{Number of target observations}
 #'   \item{n_source}{Number of source observations}
-#'   \item{treatment_level}{Treatment level}
+#'   \item{treatment_level}{Treatment level (NULL for factual mode)}
 #'
 #' @details
 #' Sensitivity (also known as true positive rate or recall) is defined as:
 #' \deqn{Sensitivity(c) = P(\hat{Y} > c | Y = 1)}
 #'
-#' In the transportability setting, we estimate sensitivity in the target
-#' population using outcome data from the source population. The function
-#' implements three estimators following Steingrimsson et al. (2024):
+#' ## Counterfactual Mode (treatment provided)
+#' When `treatment` is specified, estimates sensitivity for counterfactual
+#' outcomes under a hypothetical intervention. Requires selection, propensity,
+#' and outcome models.
 #'
+#' ## Factual Mode (treatment = NULL)
+#' When `treatment` is `NULL`, estimates sensitivity for observed outcomes in
+#' the target population using only the selection model for inverse-odds
+#' weighting. This is appropriate for factual prediction model
+#' transportability.
+#'
+#' ## Estimators
 #' **Outcome Model (OM) Estimator**:
 #' \deqn{\hat{\psi}_{sens,om} = \frac{\sum_i I(S_i=0) I(\hat{h}(X_i) > c) \hat{m}(X_i)}{\sum_i I(S_i=0) \hat{m}(X_i)}}
 #' where \eqn{\hat{m}(X) \approx P(Y=1|X, R=1)}.
@@ -43,6 +53,10 @@
 #' misspecification of either model.
 #'
 #' @references
+#' Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+#' Use in a New Target Population." *American Journal of Epidemiology*,
+#' 192(2), 296-304. \doi{10.1093/aje/kwac128}
+#'
 #' Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 #' "Interpretable meta-analysis of model or marker performance."
 #' *arXiv preprint arXiv:2409.13458*.
@@ -92,11 +106,11 @@
 #' print(result_multi)
 tr_sensitivity <- function(predictions,
                            outcomes,
-                           treatment,
+                           treatment = NULL,
                            source,
                            covariates,
                            threshold = 0.5,
-                           treatment_level = 0,
+                           treatment_level = NULL,
                            analysis = c("transport", "joint"),
                            estimator = c("dr", "om", "ipw", "naive"),
                            selection_model = NULL,
@@ -126,7 +140,15 @@ tr_sensitivity <- function(predictions,
   # Parse propensity score trimming specification
   ps_trim_spec <- .parse_ps_trim(ps_trim)
 
-  .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
+  .validate_transport_inputs(predictions, outcomes, treatment, source, covariates, treatment_level)
+  
+  # Determine mode: factual (no treatment) or counterfactual
+  factual_mode <- is.null(treatment)
+  
+  # Default treatment_level to 1 for backward compatibility if treatment is provided
+  if (!factual_mode && is.null(treatment_level)) {
+    treatment_level <- 1
+  }
 
   # Check binary outcomes
   if (!all(outcomes %in% c(0, 1))) {
@@ -307,6 +329,9 @@ tr_sensitivity <- function(predictions,
       ps_trim_spec = ps_trim_spec,
       parallel = parallel,
       ncores = ncores,
+      selection_model = nuisance$selection,
+      propensity_model = nuisance$propensity,
+      outcome_model = nuisance$outcome,
       ...
     )
     se <- boot_result$se
@@ -341,11 +366,13 @@ tr_sensitivity <- function(predictions,
 }
 
 
-#' Estimate (Counterfactual) Specificity in the Target Population
+#' Estimate Transportable Specificity in the Target Population
 #'
 #' Estimates the specificity (true negative rate) of a binary classifier at
 #' one or more thresholds in a target population using data transported from
-#' a source population (typically an RCT).
+#' a source population. Supports both **counterfactual** (under hypothetical
+#' intervention) and **factual** (observational) prediction model
+#' transportability.
 #'
 #' @inheritParams tr_sensitivity
 #'
@@ -360,17 +387,21 @@ tr_sensitivity <- function(predictions,
 #'   \item{naive_estimate}{Naive specificity for comparison}
 #'   \item{n_target}{Number of target observations}
 #'   \item{n_source}{Number of source observations}
-#'   \item{treatment_level}{Treatment level}
+#'   \item{treatment_level}{Treatment level (NULL for factual mode)}
 #'
 #' @details
 #' Specificity (also known as true negative rate) is defined as:
 #' \deqn{Specificity(c) = P(\hat{Y} \le c | Y = 0)}
 #'
-#' In the transportability setting, we estimate specificity in the target
-#' population using outcome data from the source population. The estimators
-#' mirror those for sensitivity (see [tr_sensitivity()]).
+#' See [tr_sensitivity()] for details on counterfactual vs factual modes
+#' and the available estimators. The estimators for specificity mirror those
+#' for sensitivity.
 #'
 #' @references
+#' Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+#' Use in a New Target Population." *American Journal of Epidemiology*,
+#' 192(2), 296-304. \doi{10.1093/aje/kwac128}
+#'
 #' Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 #' "Interpretable meta-analysis of model or marker performance."
 #' *arXiv preprint arXiv:2409.13458*.
@@ -403,11 +434,11 @@ tr_sensitivity <- function(predictions,
 #' print(result)
 tr_specificity <- function(predictions,
                            outcomes,
-                           treatment,
+                           treatment = NULL,
                            source,
                            covariates,
                            threshold = 0.5,
-                           treatment_level = 0,
+                           treatment_level = NULL,
                            analysis = c("transport", "joint"),
                            estimator = c("dr", "om", "ipw", "naive"),
                            selection_model = NULL,
@@ -437,7 +468,15 @@ tr_specificity <- function(predictions,
   # Parse ps_trim specification
   ps_trim_spec <- .parse_ps_trim(ps_trim)
 
-  .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
+  .validate_transport_inputs(predictions, outcomes, treatment, source, covariates, treatment_level)
+  
+  # Determine mode: factual (no treatment) or counterfactual
+  factual_mode <- is.null(treatment)
+  
+  # Default treatment_level to 1 for backward compatibility if treatment is provided
+  if (!factual_mode && is.null(treatment_level)) {
+    treatment_level <- 1
+  }
 
   # Check binary outcomes
   if (!all(outcomes %in% c(0, 1))) {
@@ -618,6 +657,9 @@ tr_specificity <- function(predictions,
       ps_trim_spec = ps_trim_spec,
       parallel = parallel,
       ncores = ncores,
+      selection_model = nuisance$selection,
+      propensity_model = nuisance$propensity,
+      outcome_model = nuisance$outcome,
       ...
     )
     se <- boot_result$se
@@ -664,10 +706,11 @@ tr_tpr <- tr_sensitivity
 #' @export
 tr_tnr <- tr_specificity
 
-#' Estimate (Counterfactual) False Positive Rate in the Target Population
+#' Estimate Transportable False Positive Rate in the Target Population
 #'
 #' Estimates the false positive rate (1 - specificity) of a binary classifier.
-#' This is a convenience wrapper around [tr_specificity()].
+#' This is a convenience wrapper around [tr_specificity()]. Supports both
+#' **counterfactual** and **factual** prediction model transportability.
 #'
 #' @inheritParams tr_specificity
 #'
@@ -695,11 +738,11 @@ tr_tnr <- tr_specificity
 #' print(result)
 tr_fpr <- function(predictions,
                    outcomes,
-                   treatment,
+                   treatment = NULL,
                    source,
                    covariates,
                    threshold = 0.5,
-                   treatment_level = 0,
+                   treatment_level = NULL,
                    analysis = c("transport", "joint"),
                    estimator = c("dr", "om", "ipw", "naive"),
                    selection_model = NULL,
@@ -1090,12 +1133,23 @@ tr_fpr <- function(predictions,
                                                selection_model, propensity_model,
                                                outcome_model) {
 
-  df <- cbind(
-    Y = outcomes,
-    A = treatment,
-    S = source,
-    as.data.frame(covariates)
-  )
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+  
+  if (factual_mode) {
+    df <- cbind(
+      Y = outcomes,
+      S = source,
+      as.data.frame(covariates)
+    )
+  } else {
+    df <- cbind(
+      Y = outcomes,
+      A = treatment,
+      S = source,
+      as.data.frame(covariates)
+    )
+  }
   covariate_names <- names(as.data.frame(covariates))
 
 
@@ -1107,8 +1161,11 @@ tr_fpr <- function(predictions,
     selection_model <- glm(selection_formula, data = df, family = binomial())
   }
 
-  # Propensity model: P(A=a|X, S=1)
-  if (is.null(propensity_model)) {
+  # Propensity model: P(A=a|X, S=1) - only needed for counterfactual mode
+  if (factual_mode) {
+    # No propensity model needed for factual mode
+    propensity_model <- NULL
+  } else if (is.null(propensity_model)) {
     if (analysis == "transport") {
       propensity_formula <- as.formula(
         paste("A ~", paste(covariate_names, collapse = " + "))
@@ -1126,21 +1183,32 @@ tr_fpr <- function(predictions,
 
   # Outcome model: E[Y|X, A=a, S=1] = P(Y=1|X, A=a, S=1)
   # This is m_hat(X) in the Steingrimsson paper
+  # For factual mode: E[Y|X, S=1] = P(Y=1|X, S=1)
   if (is.null(outcome_model)) {
     outcome_formula <- as.formula(
       paste("Y ~", paste(covariate_names, collapse = " + "))
     )
 
-    if (analysis == "transport") {
-      subset_data <- df[df$S == 1 & df$A == treatment_level, ]
-      if (nrow(subset_data) < 5) {
-        warning("Very few observations for outcome model fitting")
+    if (factual_mode) {
+      # Factual mode: use all source data (no treatment conditioning)
+      if (analysis == "transport") {
+        subset_data <- df[df$S == 1, ]
+      } else {
+        subset_data <- df
       }
-      outcome_model <- glm(outcome_formula, data = subset_data, family = binomial())
     } else {
-      subset_data <- df[df$A == treatment_level, ]
-      outcome_model <- glm(outcome_formula, data = subset_data, family = binomial())
+      # Counterfactual mode: condition on treatment level
+      if (analysis == "transport") {
+        subset_data <- df[df$S == 1 & df$A == treatment_level, ]
+      } else {
+        subset_data <- df[df$A == treatment_level, ]
+      }
     }
+    
+    if (nrow(subset_data) < 5) {
+      warning("Very few observations for outcome model fitting")
+    }
+    outcome_model <- glm(outcome_formula, data = subset_data, family = binomial())
   }
 
   list(
@@ -1169,8 +1237,17 @@ tr_fpr <- function(predictions,
     ))
   }
 
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+
   # Refit nuisance models if they are NULL (e.g., in bootstrap)
-  if (is.null(selection_model) || is.null(propensity_model) || is.null(outcome_model)) {
+  # For factual mode, propensity is NULL and that's okay
+  needs_refit <- is.null(selection_model) || is.null(outcome_model)
+  if (!factual_mode) {
+    needs_refit <- needs_refit || is.null(propensity_model)
+  }
+  
+  if (needs_refit) {
     models <- .fit_transport_nuisance_sens_spec(
       treatment = treatment,
       outcomes = outcomes,
@@ -1235,8 +1312,17 @@ tr_fpr <- function(predictions,
     ))
   }
 
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+
   # Refit nuisance models if they are NULL (e.g., in bootstrap)
-  if (is.null(selection_model) || is.null(propensity_model) || is.null(outcome_model)) {
+  # For factual mode, propensity is NULL and that's okay
+  needs_refit <- is.null(selection_model) || is.null(outcome_model)
+  if (!factual_mode) {
+    needs_refit <- needs_refit || is.null(propensity_model)
+  }
+  
+  if (needs_refit) {
     models <- .fit_transport_nuisance_sens_spec(
       treatment = treatment,
       outcomes = outcomes,
@@ -1292,12 +1378,25 @@ tr_fpr <- function(predictions,
 .compute_tr_sens_spec_naive <- function(predictions, outcomes, treatment, source,
                                          threshold, treatment_level, analysis,
                                          metric) {
-  # For transport: use source data with treatment level
-  # For joint: use all data with treatment level
-  if (analysis == "transport") {
-    idx <- source == 1 & treatment == treatment_level
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+  
+  # For transport: use source data (with treatment level if counterfactual)
+  # For joint: use all data (with treatment level if counterfactual)
+  if (factual_mode) {
+    # Factual mode: no treatment conditioning
+    if (analysis == "transport") {
+      idx <- source == 1
+    } else {
+      idx <- rep(TRUE, length(outcomes))
+    }
   } else {
-    idx <- treatment == treatment_level
+    # Counterfactual mode: condition on treatment level
+    if (analysis == "transport") {
+      idx <- source == 1 & treatment == treatment_level
+    } else {
+      idx <- treatment == treatment_level
+    }
   }
 
   preds_subset <- predictions[idx]
@@ -1331,23 +1430,39 @@ tr_fpr <- function(predictions,
                                 metric) {
 
   n <- length(outcomes)
-  df <- cbind(Y = outcomes, A = treatment, S = source, as.data.frame(covariates))
+  
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+  
+  if (factual_mode) {
+    df <- cbind(Y = outcomes, S = source, as.data.frame(covariates))
+  } else {
+    df <- cbind(Y = outcomes, A = treatment, S = source, as.data.frame(covariates))
+  }
 
   # Get selection probabilities P(S=0|X)
   pi_s0 <- predict(selection_model, newdata = df, type = "response")
   pi_s1 <- 1 - pi_s0
 
-  # Get propensity scores P(A=a|X, S=1)
-  ps_s1 <- predict(propensity_model, newdata = df, type = "response")
-  if (treatment_level == 0) {
-    ps_s1 <- 1 - ps_s1
+  # Get propensity scores P(A=a|X, S=1) - only for counterfactual mode
+  if (factual_mode) {
+    ps_s1 <- rep(1, n)  # No propensity needed
+  } else {
+    ps_s1 <- predict(propensity_model, newdata = df, type = "response")
+    if (treatment_level == 0) {
+      ps_s1 <- 1 - ps_s1
+    }
   }
 
-  # Get outcome probabilities m_hat = P(Y=1|X, A=a, S=1)
+  # Get outcome probabilities m_hat = P(Y=1|X, S=1)
   m_hat <- predict(outcome_model, newdata = df, type = "response")
 
   # Indicators
-  I_a <- as.numeric(treatment == treatment_level)
+  if (factual_mode) {
+    I_a <- rep(1, n)  # All observations count in factual mode
+  } else {
+    I_a <- as.numeric(treatment == treatment_level)
+  }
   I_s1 <- as.numeric(source == 1)
   I_s0 <- as.numeric(source == 0)
 
@@ -1359,7 +1474,6 @@ tr_fpr <- function(predictions,
   w_hat <- pi_s0 / pi_s1
 
   # For sensitivity: condition on Y=1
-
   # For specificity: condition on Y=0
   if (metric == "sensitivity") {
     I_outcome <- as.numeric(outcomes == 1)
@@ -1381,9 +1495,14 @@ tr_fpr <- function(predictions,
     return(num / denom)
 
   } else if (estimator == "ipw") {
-    # IPW estimator (equation 6 in Steingrimsson et al.)
-    # Weight source observations by w(X) and condition on outcome
-    ipw_weight <- I_s1 * I_a * w_hat / ps_s1
+    # IPW estimator
+    # For factual mode: weight = w(X) = P(S=0|X) / P(S=1|X)
+    # For counterfactual mode: weight = w(X) * I_a / ps
+    if (factual_mode) {
+      ipw_weight <- I_s1 * w_hat
+    } else {
+      ipw_weight <- I_s1 * I_a * w_hat / ps_s1
+    }
     # Clip extreme weights
     ipw_weight <- pmin(ipw_weight, quantile(ipw_weight[ipw_weight > 0], 0.99, na.rm = TRUE))
     ipw_weight[!is.finite(ipw_weight)] <- 0
@@ -1398,7 +1517,12 @@ tr_fpr <- function(predictions,
     # Doubly robust estimator (from influence function derivation)
     # Combines OM and IPW with augmentation term
 
-    ipw_weight <- I_s1 * I_a * w_hat / ps_s1
+    # IPW weights differ by mode
+    if (factual_mode) {
+      ipw_weight <- I_s1 * w_hat
+    } else {
+      ipw_weight <- I_s1 * I_a * w_hat / ps_s1
+    }
     ipw_weight <- pmin(ipw_weight, quantile(ipw_weight[ipw_weight > 0], 0.99, na.rm = TRUE))
     ipw_weight[!is.finite(ipw_weight)] <- 0
 
@@ -1432,22 +1556,38 @@ tr_fpr <- function(predictions,
                             metric) {
 
   n <- length(outcomes)
-  df <- cbind(Y = outcomes, A = treatment, S = source, as.data.frame(covariates))
+  
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+  
+  if (factual_mode) {
+    df <- cbind(Y = outcomes, S = source, as.data.frame(covariates))
+  } else {
+    df <- cbind(Y = outcomes, A = treatment, S = source, as.data.frame(covariates))
+  }
 
   # Get selection probabilities P(S=0|X)
   pi_s0 <- predict(selection_model, newdata = df, type = "response")
 
-  # Get propensity scores P(A=a|X)
-  ps <- predict(propensity_model, newdata = df, type = "response")
-  if (treatment_level == 0) {
-    ps <- 1 - ps
+  # Get propensity scores P(A=a|X) - only for counterfactual mode
+  if (factual_mode) {
+    ps <- rep(1, n)  # No propensity needed
+  } else {
+    ps <- predict(propensity_model, newdata = df, type = "response")
+    if (treatment_level == 0) {
+      ps <- 1 - ps
+    }
   }
 
-  # Get outcome probabilities m_hat = P(Y=1|X, A=a)
+  # Get outcome probabilities m_hat = P(Y=1|X)
   m_hat <- predict(outcome_model, newdata = df, type = "response")
 
   # Indicators
-  I_a <- as.numeric(treatment == treatment_level)
+  if (factual_mode) {
+    I_a <- rep(1, n)  # All observations count in factual mode
+  } else {
+    I_a <- as.numeric(treatment == treatment_level)
+  }
 
   # Classifier predictions
   I_pos <- as.numeric(predictions > threshold)
@@ -1476,8 +1616,12 @@ tr_fpr <- function(predictions,
     return(num / denom)
 
   } else if (estimator == "ipw") {
-    # IPW: weight by selection and propensity
-    ipw_weight <- I_a * pi_s0 / ((1 - pi_s0) * ps)
+    # IPW: weight by selection (and propensity for counterfactual)
+    if (factual_mode) {
+      ipw_weight <- pi_s0 / (1 - pi_s0)
+    } else {
+      ipw_weight <- I_a * pi_s0 / ((1 - pi_s0) * ps)
+    }
     ipw_weight <- pmin(ipw_weight, quantile(ipw_weight[ipw_weight > 0], 0.99, na.rm = TRUE))
     ipw_weight[!is.finite(ipw_weight)] <- 0
 
@@ -1489,7 +1633,11 @@ tr_fpr <- function(predictions,
 
   } else if (estimator == "dr") {
     # Doubly robust
-    ipw_weight <- I_a * pi_s0 / ((1 - pi_s0) * ps)
+    if (factual_mode) {
+      ipw_weight <- pi_s0 / (1 - pi_s0)
+    } else {
+      ipw_weight <- I_a * pi_s0 / ((1 - pi_s0) * ps)
+    }
     ipw_weight <- pmin(ipw_weight, quantile(ipw_weight[ipw_weight > 0], 0.99, na.rm = TRUE))
     ipw_weight[!is.finite(ipw_weight)] <- 0
 
@@ -1521,44 +1669,112 @@ tr_fpr <- function(predictions,
 .bootstrap_tr_sens_spec <- function(predictions, outcomes, treatment, source,
                                      covariates, threshold, treatment_level,
                                      analysis, estimator, metric, n_boot,
-                                     conf_level, stratified, parallel, ncores, ...) {
+                                     conf_level, stratified, parallel, ncores,
+                                     selection_model = NULL,
+                                     propensity_model = NULL,
+                                     outcome_model = NULL, ...) {
 
   n <- length(outcomes)
   n_thresholds <- length(threshold)
   alpha <- 1 - conf_level
+  
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
 
   # Bootstrap function for single replicate
   boot_fn <- function(idx) {
+    # For propensity and outcome models, subset appropriately
+    I_s1 <- source[idx] == 1
+    
+    # Handle treatment indicator for factual vs counterfactual mode
+    if (factual_mode) {
+      I_a <- rep(TRUE, length(idx))
+      boot_treatment <- NULL
+    } else {
+      I_a <- treatment[idx] == treatment_level
+      boot_treatment <- treatment[idx]
+    }
+
+    # Prepare bootstrap data for selection model (no A or Y columns)
+    # Selection model: P(S=0|X) - only needs covariates
+    boot_data_sel <- data.frame(
+      S0 = as.integer(source[idx] == 0),
+      covariates[idx, , drop = FALSE]
+    )
+
+    # Prepare propensity and outcome model data based on analysis and mode
+    if (factual_mode) {
+      # Factual mode: no propensity model needed
+      boot_data_ps <- NULL
+      if (analysis == "transport") {
+        boot_data_om <- data.frame(Y = outcomes[idx], covariates[idx, , drop = FALSE])[I_s1, , drop = FALSE]
+      } else {
+        boot_data_om <- data.frame(Y = outcomes[idx], covariates[idx, , drop = FALSE])
+      }
+    } else {
+      # Counterfactual mode: need propensity model
+      if (analysis == "transport") {
+        boot_data_ps <- data.frame(A = treatment[idx], covariates[idx, , drop = FALSE])[I_s1, , drop = FALSE]
+        boot_data_om <- data.frame(Y = outcomes[idx], covariates[idx, , drop = FALSE])[I_s1 & I_a, , drop = FALSE]
+      } else {
+        boot_data_ps <- data.frame(A = treatment[idx], covariates[idx, , drop = FALSE])
+        boot_data_om <- data.frame(Y = outcomes[idx], covariates[idx, , drop = FALSE])[I_a, , drop = FALSE]
+      }
+    }
+
+    # Refit nuisance models with standardized formulas
+    # Fit models based on estimator requirements, not on what was passed
+    sel_model_b <- NULL
+    ps_model_b <- NULL
+    out_model_b <- NULL
+
+    # Selection model needed for all estimators except naive
+    if (estimator != "naive") {
+      sel_model_b <- glm(S0 ~ ., data = boot_data_sel, family = binomial())
+    }
+
+    # Propensity model needed for IPW and DR (only in counterfactual mode)
+    if (!factual_mode && estimator %in% c("ipw", "dr") && !is.null(boot_data_ps)) {
+      ps_model_b <- glm(A ~ ., data = boot_data_ps, family = binomial())
+    }
+
+    # Outcome model needed for reg and DR (for sensitivity/specificity, outcomes are binary)
+    if (estimator %in% c("reg", "dr") && nrow(boot_data_om) > 0) {
+      out_model_b <- glm(Y ~ ., data = boot_data_om, family = binomial())
+    }
+
+    nuisance_b <- list(selection = sel_model_b, propensity = ps_model_b, outcome = out_model_b)
+
     sapply(threshold, function(c) {
       if (metric == "sensitivity") {
         .compute_tr_sensitivity(
           predictions = predictions[idx],
           outcomes = outcomes[idx],
-          treatment = treatment[idx],
+          treatment = boot_treatment,
           source = source[idx],
           covariates = covariates[idx, , drop = FALSE],
           threshold = c,
           treatment_level = treatment_level,
           analysis = analysis,
           estimator = estimator,
-          selection_model = NULL,  # Refit in each bootstrap
-          propensity_model = NULL,
-          outcome_model = NULL
+          selection_model = nuisance_b$selection,
+          propensity_model = nuisance_b$propensity,
+          outcome_model = nuisance_b$outcome
         )
       } else {
         .compute_tr_specificity(
           predictions = predictions[idx],
           outcomes = outcomes[idx],
-          treatment = treatment[idx],
+          treatment = boot_treatment,
           source = source[idx],
           covariates = covariates[idx, , drop = FALSE],
           threshold = c,
           treatment_level = treatment_level,
           analysis = analysis,
           estimator = estimator,
-          selection_model = NULL,
-          propensity_model = NULL,
-          outcome_model = NULL
+          selection_model = nuisance_b$selection,
+          propensity_model = nuisance_b$propensity,
+          outcome_model = nuisance_b$outcome
         )
       }
     })
@@ -1615,12 +1831,18 @@ tr_fpr <- function(predictions,
 
 #' @export
 print.tr_sensitivity <- function(x, digits = 4, ...) {
-  cat("\nTransportable Sensitivity Estimate\n")
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(x$treatment_level)
+  mode_label <- if (factual_mode) "Factual " else ""
+
+  cat("\n", mode_label, "Transportable Sensitivity Estimate\n", sep = "")
   cat("===================================\n\n")
 
   cat("Estimator:", toupper(x$estimator), "\n")
   cat("Analysis:", x$analysis, "\n")
-  cat("Treatment level:", x$treatment_level, "\n")
+  if (!factual_mode) {
+    cat("Treatment level:", x$treatment_level, "\n")
+  }
   cat("N (source):", x$n_source, "\n")
   cat("N (target):", x$n_target, "\n\n")
 
@@ -1654,12 +1876,18 @@ print.tr_sensitivity <- function(x, digits = 4, ...) {
 
 #' @export
 print.tr_specificity <- function(x, digits = 4, ...) {
-  cat("\nTransportable Specificity Estimate\n")
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(x$treatment_level)
+  mode_label <- if (factual_mode) "Factual " else ""
+
+  cat("\n", mode_label, "Transportable Specificity Estimate\n", sep = "")
   cat("===================================\n\n")
 
   cat("Estimator:", toupper(x$estimator), "\n")
   cat("Analysis:", x$analysis, "\n")
-  cat("Treatment level:", x$treatment_level, "\n")
+  if (!factual_mode) {
+    cat("Treatment level:", x$treatment_level, "\n")
+  }
   cat("N (source):", x$n_source, "\n")
   cat("N (target):", x$n_target, "\n\n")
 
@@ -1693,12 +1921,18 @@ print.tr_specificity <- function(x, digits = 4, ...) {
 
 #' @export
 print.tr_fpr <- function(x, digits = 4, ...) {
-  cat("\nTransportable False Positive Rate Estimate\n")
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(x$treatment_level)
+  mode_label <- if (factual_mode) "Factual " else ""
+
+  cat("\n", mode_label, "Transportable False Positive Rate Estimate\n", sep = "")
   cat("==========================================\n\n")
 
   cat("Estimator:", toupper(x$estimator), "\n")
   cat("Analysis:", x$analysis, "\n")
-  cat("Treatment level:", x$treatment_level, "\n")
+  if (!factual_mode) {
+    cat("Treatment level:", x$treatment_level, "\n")
+  }
   cat("N (source):", x$n_source, "\n")
   cat("N (target):", x$n_target, "\n\n")
 

@@ -2,15 +2,15 @@
 % Please edit documentation in R/tr_mse.R
 \name{tr_mse}
 \alias{tr_mse}
-\title{Estimate (Counterfactual) Mean Squared Error in the Target Population}
+\title{Estimate Transportable Mean Squared Error in the Target Population}
 \usage{
 tr_mse(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
@@ -20,6 +20,7 @@ tr_mse(
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
+  boot_ci_type = c("percentile", "normal", "basic"),
   stratified_boot = TRUE,
   cross_fit = FALSE,
   n_folds = 5,
@@ -34,13 +35,17 @@ tr_mse(
 
 \item{outcomes}{Numeric vector of observed outcomes.}
 
-\item{treatment}{Numeric vector of treatment indicators (0/1).}
+\item{treatment}{Numeric vector of treatment indicators (0/1), or \code{NULL} for
+factual prediction model transportability (no treatment/intervention).
+When \code{NULL}, only the selection model is used for weighting.}
 
 \item{source}{Numeric vector of population indicators (1=source/RCT, 0=target).}
 
 \item{covariates}{A matrix or data frame of baseline covariates.}
 
-\item{treatment_level}{The treatment level of interest (default: 0).}
+\item{treatment_level}{The treatment level of interest (default: \code{NULL}).
+Required when \code{treatment} is provided; should be \code{NULL} when \code{treatment}
+is \code{NULL} (factual mode).}
 
 \item{analysis}{Character string specifying the type of analysis:
 \itemize{
@@ -85,6 +90,13 @@ continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 
 \item{conf_level}{Confidence level for intervals (default: 0.95).}
 
+\item{boot_ci_type}{Type of bootstrap confidence interval to compute:
+\itemize{
+\item \code{"percentile"}: Percentile method (default)
+\item \code{"normal"}: Normal approximation using bootstrap SE
+\item \code{"basic"}: Basic bootstrap interval
+}}
+
 \item{stratified_boot}{Logical indicating whether to use stratified bootstrap
 that preserves the source/target ratio (default: TRUE). Recommended for
 transportability analysis.}
@@ -125,30 +137,51 @@ An object of class \code{c("tr_mse", "tr_performance")} containing:
 \item{naive_estimate}{Naive MSE for comparison}
 \item{n_target}{Number of target observations}
 \item{n_source}{Number of source observations}
-\item{treatment_level}{Treatment level}
+\item{treatment_level}{Treatment level (NULL for factual mode)}
 }
 \description{
 Estimates the mean squared error (MSE) of a prediction model in a target
-population using data transported from a source population (typically an RCT).
+population using data transported from a source population. Supports both
+\strong{counterfactual} (under hypothetical intervention) and \strong{factual}
+(observational) prediction model transportability.
 }
 \details{
 This function implements estimators for transporting prediction model
-performance from a source population (typically an RCT) to a target
-population.
+performance from a source population to a target population. It supports
+two modes:
+\subsection{Counterfactual Mode (treatment provided)}{
 
-\strong{Transportability Analysis}: Uses outcome data from the source/RCT
-population to estimate performance in the target population. Requires:
+When \code{treatment} is specified, estimates the counterfactual MSE under a
+hypothetical intervention, E\link{L(Y^a, g(X)) | S=0}. This requires:
 \itemize{
 \item Selection model: P(S=0|X)
-\item Propensity model in source: P(A=1|X, S=1)
+\item Propensity model in source: P(A=a|X, S=1)
 \item Outcome model trained on source data
 }
+}
 
-\strong{Joint Analysis}: Pools source and target data to estimate performance
-in the target population. More efficient when both populations have
-outcome data.
+\subsection{Factual Mode (treatment = NULL)}{
+
+When \code{treatment} is \code{NULL}, estimates the MSE of observed outcomes,
+E\link{L(Y, g(X)) | S=0}. This is appropriate for factual prediction model
+transportability (no causal/counterfactual interpretation). Only requires:
+\itemize{
+\item Selection model: P(S=0|X)
+\item Outcome model trained on source data
+}
+}
+
+\subsection{Analysis Types}{
+
+\strong{Transportability Analysis} (\code{analysis = "transport"}): Uses outcome data
+from the source population to estimate performance in the target population.
+
+\strong{Joint Analysis} (\code{analysis = "joint"}): Pools source and target data to
+estimate performance in the target population. More efficient when both
+populations have outcome data.
 
 For observational analysis (single population), use \code{\link[=cf_mse]{cf_mse()}} instead.
+}
 }
 \examples{
 # Generate example data with source (RCT) and target populations
@@ -180,8 +213,27 @@ result <- tr_mse(
   se_method = "none"  # Skip SE for speed
 )
 print(result)
+
+# Factual prediction model transportability (no treatment)
+result_trad <- tr_mse(
+  predictions = pred,
+  outcomes = y,
+  source = s,
+  covariates = data.frame(x = x),
+  analysis = "transport",
+  estimator = "dr",
+  se_method = "none"
+)
 }
 \references{
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+Use in a New Target Population." \emph{American Journal of Epidemiology},
+192(2), 296-304. \doi{10.1093/aje/kwac128}
+
+Li, S., et al. (2023). "Efficient estimation of the expected prediction
+error under covariate shift." \emph{Biometrics}, 79(1), 295-307.
+\doi{10.1111/biom.13583}
+
 Voter, S. R., et al. (2025). "Transportability of machine learning-based
 counterfactual prediction models with application to CASS."
 \emph{Diagnostic and Prognostic Research}, 9(4).

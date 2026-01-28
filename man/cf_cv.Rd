@@ -11,7 +11,7 @@ cf_cv(
   treatment_level = 0,
   nuisance_covariates = NULL,
   metric = c("mse", "auc", "both"),
-  estimator = c("dr", "cl", "ipw", "naive"),
+  estimator = c("dr", "cl", "om", "ipw", "naive"),
   K = 5,
   repeats = 1,
   stratify = TRUE,
@@ -36,7 +36,8 @@ models. If NULL, uses all predictors from the formula.}
 \code{"mse"} (default), \code{"auc"}, or \code{"both"}.}
 
 \item{estimator}{Character string specifying the estimator:
-\code{"dr"} (default), \code{"cl"}, \code{"ipw"}, or \code{"naive"}.}
+\code{"dr"} (default), \code{"cl"} (conditional loss, for MSE), \code{"om"} (outcome model, for AUC),
+\code{"ipw"}, or \code{"naive"}. Note: \code{"cl"} is automatically mapped to \code{"om"} for AUC metrics.}
 
 \item{K}{Number of folds (default: 5).}
 

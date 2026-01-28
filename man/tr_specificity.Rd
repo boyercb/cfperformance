@@ -3,22 +3,22 @@
 \name{tr_specificity}
 \alias{tr_specificity}
 \alias{tr_tnr}
-\title{Estimate (Counterfactual) Specificity in the Target Population}
+\title{Estimate Transportable Specificity in the Target Population}
 \usage{
 tr_specificity(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
@@ -33,17 +33,17 @@ tr_specificity(
 tr_tnr(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
@@ -60,7 +60,9 @@ tr_tnr(
 
 \item{outcomes}{Numeric vector of observed outcomes.}
 
-\item{treatment}{Numeric vector of treatment indicators (0/1).}
+\item{treatment}{Numeric vector of treatment indicators (0/1), or \code{NULL} for
+factual prediction model transportability (no treatment/intervention).
+When \code{NULL}, only the selection model is used for weighting.}
 
 \item{source}{Numeric vector of population indicators (1=source/RCT, 0=target).}
 
@@ -71,7 +73,9 @@ above this value are classified as positive. Can be a single value or
 a vector for computing sensitivity at multiple thresholds simultaneously.
 Default is 0.5.}
 
-\item{treatment_level}{The treatment level of interest (default: 0).}
+\item{treatment_level}{The treatment level of interest (default: \code{NULL}).
+Required when \code{treatment} is provided; should be \code{NULL} when \code{treatment}
+is \code{NULL} (factual mode).}
 
 \item{analysis}{Character string specifying the type of analysis:
 \itemize{
@@ -150,20 +154,22 @@ An object of class \code{c("tr_specificity", "tr_performance")} containing:
 \item{naive_estimate}{Naive specificity for comparison}
 \item{n_target}{Number of target observations}
 \item{n_source}{Number of source observations}
-\item{treatment_level}{Treatment level}
+\item{treatment_level}{Treatment level (NULL for factual mode)}
 }
 \description{
 Estimates the specificity (true negative rate) of a binary classifier at
 one or more thresholds in a target population using data transported from
-a source population (typically an RCT).
+a source population. Supports both \strong{counterfactual} (under hypothetical
+intervention) and \strong{factual} (observational) prediction model
+transportability.
 }
 \details{
 Specificity (also known as true negative rate) is defined as:
 \deqn{Specificity(c) = P(\hat{Y} \le c | Y = 0)}
 
-In the transportability setting, we estimate specificity in the target
-population using outcome data from the source population. The estimators
-mirror those for sensitivity (see \code{\link[=tr_sensitivity]{tr_sensitivity()}}).
+See \code{\link[=tr_sensitivity]{tr_sensitivity()}} for details on counterfactual vs factual modes
+and the available estimators. The estimators for specificity mirror those
+for sensitivity.
 }
 \examples{
 # Generate example data
@@ -189,6 +195,10 @@ result <- tr_specificity(
 print(result)
 }
 \references{
+Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+Use in a New Target Population." \emph{American Journal of Epidemiology},
+192(2), 296-304. \doi{10.1093/aje/kwac128}
+
 Steingrimsson, J. A., Wen, L., Voter, S., & Dahabreh, I. J. (2024).
 "Interpretable meta-analysis of model or marker performance."
 \emph{arXiv preprint arXiv:2409.13458}.

@@ -11,7 +11,7 @@ cf_compare(
   treatment_level = 0,
   nuisance_covariates = NULL,
   metric = c("mse", "auc", "both"),
-  estimator = c("dr", "cl", "ipw", "naive"),
+  estimator = c("dr", "cl", "om", "ipw", "naive"),
   method = c("cv", "holdout"),
   K = 5,
   test_prop = 0.2,

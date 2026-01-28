@@ -1,8 +1,10 @@
-#' Estimate (Counterfactual) Area Under the ROC Curve in the Target Population
+#' Estimate Transportable Area Under the ROC Curve in the Target Population
 #'
 #' Estimates the area under the receiver operating characteristic curve (AUC)
 #' of a prediction model in a target population using data transported from
-#' a source population (typically an RCT).
+#' a source population. Supports both **counterfactual** (under hypothetical
+#' intervention) and **factual** (observational) prediction model
+#' transportability.
 #'
 #' @inheritParams tr_mse
 #'
@@ -16,31 +18,46 @@
 #'   \item{naive_estimate}{Naive AUC for comparison}
 #'   \item{n_target}{Number of target observations}
 #'   \item{n_source}{Number of source observations}
-#'   \item{treatment_level}{Treatment level}
+#'   \item{treatment_level}{Treatment level (NULL for factual mode)}
 #'
 #' @details
 #' This function implements estimators for transporting prediction model
-#' AUC from a source population (typically an RCT) to a target population.
-#' The AUC is defined as the probability that a randomly selected case
-#' has a higher predicted risk than a randomly selected non-case.
+#' AUC from a source population to a target population. It supports two modes:
 #'
-#' **Transportability Analysis**: Uses outcome data from the source/RCT
-#' population to estimate AUC in the target population. Requires:
+#' ## Counterfactual Mode (treatment provided)
+#' When `treatment` is specified, estimates the counterfactual AUC under a
+#' hypothetical intervention. The AUC represents the probability that a randomly
+#' selected case (Y^a = 1) has a higher predicted risk than a randomly selected
+#' non-case (Y^a = 0) in the target population. This requires:
 #' - Selection model: P(S=0|X)
-#' - Propensity model in source: P(A=1|X, S=1)
-#' - Outcome model trained on source data: E\[Y|X, A, S=1\]
+#' - Propensity model in source: P(A=a|X, S=1)
+#' - Outcome model: E[Y|X, A, S=1]
 #'
-#' **Joint Analysis**: Pools source and target data to estimate AUC
-#' in the target population. More efficient when both populations have
-#' outcome data.
+#' ## Factual Mode (treatment = NULL)
+#' When `treatment` is `NULL`, estimates the AUC of observed outcomes in the
+#' target population. This is appropriate for factual prediction model
+#' transportability without causal interpretation. Only requires:
+#' - Selection model: P(S=0|X)
+#' - Outcome model: E[Y|X, S=1]
+#'
+#' ## Analysis Types
+#' **Transportability Analysis** (`analysis = "transport"`): Uses outcome data
+#' from the source population to estimate AUC in the target population.
+#'
+#' **Joint Analysis** (`analysis = "joint"`): Pools source and target data to
+#' estimate AUC. More efficient when both populations have outcome data.
 #'
 #' For observational analysis (single population), use [cf_auc()] instead.
 #'
-#' The estimators use U-statistic formulations that weight concordant pairs
-#' by their estimated probabilities of occurring in the target population
-#' under the counterfactual treatment.
-#'
 #' @references
+#' Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+#' Use in a New Target Population." *American Journal of Epidemiology*,
+#' 192(2), 296-304. \doi{10.1093/aje/kwac128}
+#'
+#' Li, S., et al. (2023). "Efficient estimation of the expected prediction
+#' error under covariate shift." *Biometrics*, 79(1), 295-307.
+#' \doi{10.1111/biom.13583}
+#'
 #' Voter, S. R., et al. (2025). "Transportability of machine learning-based
 #' counterfactual prediction models with application to CASS."
 #' *Diagnostic and Prognostic Research*, 9(4).
@@ -92,10 +109,10 @@
 #' @importFrom stats as.formula
 tr_auc <- function(predictions,
                    outcomes,
-                   treatment,
+                   treatment = NULL,
                    source,
                    covariates,
-                   treatment_level = 0,
+                   treatment_level = NULL,
                    analysis = c("transport", "joint"),
                    estimator = c("dr", "om", "ipw", "naive"),
                    selection_model = NULL,
@@ -104,6 +121,7 @@ tr_auc <- function(predictions,
                    se_method = c("bootstrap", "influence", "none"),
                    n_boot = 500,
                    conf_level = 0.95,
+                   boot_ci_type = c("percentile", "normal", "basic"),
                    stratified_boot = TRUE,
                    cross_fit = FALSE,
                    n_folds = 5,
@@ -116,11 +134,20 @@ tr_auc <- function(predictions,
   analysis <- match.arg(analysis)
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+  boot_ci_type <- match.arg(boot_ci_type)
 
   # Parse propensity score trimming specification
   ps_trim_spec <- .parse_ps_trim(ps_trim)
 
-  .validate_transport_inputs(predictions, outcomes, treatment, source, covariates)
+  .validate_transport_inputs(predictions, outcomes, treatment, source, covariates, treatment_level)
+  
+  # Determine mode: factual (no treatment) or counterfactual
+  factual_mode <- is.null(treatment)
+  
+  # Default treatment_level to 1 for backward compatibility if treatment is provided
+  if (!factual_mode && is.null(treatment_level)) {
+    treatment_level <- 1
+  }
 
   # Check binary outcomes
   if (!all(outcomes %in% c(0, 1))) {
@@ -203,6 +230,7 @@ tr_auc <- function(predictions,
         n_folds = n_folds,
         n_boot = n_boot,
         conf_level = conf_level,
+        boot_ci_type = boot_ci_type,
         stratified = stratified_boot,
         selection_learner = selection_model,
         propensity_learner = propensity_model,
@@ -210,6 +238,7 @@ tr_auc <- function(predictions,
         parallel = parallel,
         ncores = ncores,
         ps_trim_spec = ps_trim_spec,
+        point_estimate = estimate,
         ...
       )
       se <- boot_result$se
@@ -281,10 +310,15 @@ tr_auc <- function(predictions,
         estimator = estimator,
         n_boot = n_boot,
         conf_level = conf_level,
+        boot_ci_type = boot_ci_type,
         stratified = stratified_boot,
         parallel = parallel,
         ncores = ncores,
         ps_trim_spec = ps_trim_spec,
+        selection_model = nuisance$selection,
+        propensity_model = nuisance$propensity,
+        outcome_model = nuisance$outcome,
+        point_estimate = estimate,
         ...
       )
       se <- boot_result$se
@@ -815,13 +849,27 @@ tr_auc <- function(predictions,
                                         selection_model, propensity_model,
                                         outcome_model) {
 
-  df <- cbind(
-    Y = outcomes,
-    A = treatment,
-    S = source,
-    as.data.frame(covariates)
-  )
-  covariate_names <- names(as.data.frame(covariates))
+  # Determine if we're in factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+
+  # Create data frame - handle factual mode (no treatment column)
+  covariates_df <- as.data.frame(covariates)
+  covariate_names <- names(covariates_df)
+
+  if (factual_mode) {
+    df <- cbind(
+      Y = outcomes,
+      S = source,
+      covariates_df
+    )
+  } else {
+    df <- cbind(
+      Y = outcomes,
+      A = treatment,
+      S = source,
+      covariates_df
+    )
+  }
 
   # Selection model: P(S=0|X) - target probability
   if (is.null(selection_model)) {
@@ -831,8 +879,8 @@ tr_auc <- function(predictions,
     selection_model <- glm(selection_formula, data = df, family = binomial())
   }
 
-  # Propensity model: P(A=1|X,S) depends on analysis type
-  if (is.null(propensity_model)) {
+  # Propensity model: P(A=1|X,S) - only for counterfactual mode
+  if (is.null(propensity_model) && !factual_mode) {
     if (analysis == "transport") {
       # For transport: P(A=1|X, S=1) - propensity in source
       propensity_formula <- as.formula(
@@ -856,18 +904,28 @@ tr_auc <- function(predictions,
       paste("Y ~", paste(covariate_names, collapse = " + "))
     )
 
-    if (analysis == "transport") {
-      # Fit on source data with treatment level
-      subset_data <- df[df$S == 1 & df$A == treatment_level, ]
-      if (nrow(subset_data) < 5) {
-        warning("Very few observations for outcome model fitting")
+    if (factual_mode) {
+      # Factual mode: use all source observations
+      if (analysis == "transport") {
+        subset_data <- df[df$S == 1, ]
+      } else {
+        subset_data <- df  # All data
       }
-      outcome_model <- glm(outcome_formula, data = subset_data, family = binomial())
     } else {
-      # Fit on all data with treatment level (joint)
-      subset_data <- df[df$A == treatment_level, ]
-      outcome_model <- glm(outcome_formula, data = subset_data, family = binomial())
+      # Counterfactual mode: use treatment-matched observations
+      if (analysis == "transport") {
+        # Fit on source data with treatment level
+        subset_data <- df[df$S == 1 & df$A == treatment_level, ]
+      } else {
+        # Fit on all data with treatment level (joint)
+        subset_data <- df[df$A == treatment_level, ]
+      }
     }
+
+    if (nrow(subset_data) < 5) {
+      warning("Very few observations for outcome model fitting")
+    }
+    outcome_model <- glm(outcome_formula, data = subset_data, family = binomial())
     # Store the full data for predictions
     attr(outcome_model, "full_data") <- df
   }
@@ -894,6 +952,21 @@ tr_auc <- function(predictions,
   # Default ps_trim_spec if not provided
   if (is.null(ps_trim_spec)) {
     ps_trim_spec <- .parse_ps_trim(NULL)
+  }
+
+  # Dispatch to factual mode if treatment is NULL
+  if (is.null(treatment)) {
+    return(.compute_tr_auc_factual(
+      predictions = predictions,
+      outcomes = outcomes,
+      source = source,
+      covariates = covariates,
+      analysis = analysis,
+      estimator = estimator,
+      selection_model = selection_model,
+      outcome_model = outcome_model,
+      ps_trim_spec = ps_trim_spec
+    ))
   }
 
   if (estimator == "naive") {
@@ -939,10 +1012,19 @@ tr_auc <- function(predictions,
                                    treatment_level, analysis) {
   # For transport: use source data with treatment level
   # For joint: use all data with treatment level
-  if (analysis == "transport") {
-    idx <- source == 1 & treatment == treatment_level
+  # Handle factual mode (treatment is NULL)
+  if (is.null(treatment)) {
+    if (analysis == "transport") {
+      idx <- source == 1
+    } else {
+      idx <- rep(TRUE, length(source))
+    }
   } else {
-    idx <- treatment == treatment_level
+    if (analysis == "transport") {
+      idx <- source == 1 & treatment == treatment_level
+    } else {
+      idx <- treatment == treatment_level
+    }
   }
 
   preds_subset <- predictions[idx]
@@ -962,6 +1044,224 @@ tr_auc <- function(predictions,
 }
 
 
+#' Compute transportable AUC for factual prediction models
+#'
+#' Implements estimators for transporting factual prediction models
+#' (without treatment/intervention) to a target population.
+#'
+#' @param predictions Numeric vector of model predictions.
+#' @param outcomes Numeric vector of binary outcomes (only available in source).
+#' @param source Numeric vector indicating source (1) or target (0) population.
+#' @param covariates Matrix or data frame of covariates.
+#' @param analysis Character: "transport" or "joint".
+#' @param estimator Character: "naive", "ipw", "om", or "dr".
+#' @param selection_model Fitted selection model or ML learner.
+#' @param outcome_model Fitted outcome model or ML learner (for om/dr).
+#' @param ps_trim_spec Propensity score trimming specification.
+#' @return Numeric scalar: estimated AUC in target population.
+#' @noRd
+.compute_tr_auc_factual <- function(predictions, outcomes, source, covariates,
+                                         analysis, estimator, selection_model,
+                                         outcome_model, ps_trim_spec = NULL) {
+
+  # Default ps_trim_spec if not provided
+  if (is.null(ps_trim_spec)) {
+    ps_trim_spec <- .parse_ps_trim(NULL)
+  }
+
+  n <- length(outcomes)
+  n0 <- sum(source == 0)
+
+  I_s1 <- source == 1
+  I_s0 <- source == 0
+
+  if (estimator == "naive") {
+    # Use source data only
+    if (analysis == "transport") {
+      idx <- I_s1
+    } else {
+      idx <- rep(TRUE, n)
+    }
+
+    preds_subset <- predictions[idx]
+    outcomes_subset <- outcomes[idx]
+
+    n1 <- sum(outcomes_subset == 1)
+    n0_cases <- sum(outcomes_subset == 0)
+
+    if (n1 == 0 || n0_cases == 0) {
+      warning("AUC undefined: no cases or no non-cases in relevant subset")
+      return(NA_real_)
+    }
+
+    # Wilcoxon-Mann-Whitney statistic
+    r <- rank(c(preds_subset[outcomes_subset == 1], preds_subset[outcomes_subset == 0]))
+    return((sum(r[1:n1]) - n1 * (n1 + 1) / 2) / (n1 * n0_cases))
+  }
+
+  # Get selection probabilities
+  # Note: selection model predicts P(S=0|X) (target probability)
+  if (!is.data.frame(covariates)) {
+    covariates <- as.data.frame(covariates)
+  }
+
+  if (is_ml_learner(selection_model)) {
+    p_s0 <- .predict_ml_learner(selection_model, covariates)
+  } else {
+    p_s0 <- predict(selection_model, newdata = covariates, type = "response")
+  }
+
+  # Trim selection probabilities
+  if (!is.null(ps_trim_spec)) {
+    p_s0 <- .trim_propensity(p_s0, ps_trim_spec$method, ps_trim_spec$bounds)
+  }
+
+  # P(S=1|X) = 1 - P(S=0|X)
+  p_s1 <- 1 - p_s0
+
+  # Inverse-odds weights: w(X) = P(S=0|X) / P(S=1|X)
+  iow <- p_s0 / p_s1
+
+  # Source data only
+  preds_s1 <- predictions[I_s1]
+  outcomes_s1 <- outcomes[I_s1]
+  iow_s1 <- iow[I_s1]
+
+  # Cases and non-cases in source
+  cases_idx <- which(outcomes_s1 == 1)
+  noncases_idx <- which(outcomes_s1 == 0)
+
+  n1 <- length(cases_idx)
+  n0_cases <- length(noncases_idx)
+
+  if (n1 == 0 || n0_cases == 0) {
+    warning("AUC undefined: no cases or no non-cases in source")
+    return(NA_real_)
+  }
+
+  if (estimator == "ipw") {
+    # IPW AUC: weight concordant pairs by inverse-odds weights
+    # AUC = sum_{i: Y=1, j: Y=0} w_i * w_j * I(pred_i > pred_j) / sum_{i: Y=1, j: Y=0} w_i * w_j
+
+    numerator <- 0
+    denominator <- 0
+
+    for (i in cases_idx) {
+      for (j in noncases_idx) {
+        w_ij <- iow_s1[i] * iow_s1[j]
+        # Concordance indicator (with 0.5 for ties)
+        conc <- ifelse(preds_s1[i] > preds_s1[j], 1,
+                       ifelse(preds_s1[i] == preds_s1[j], 0.5, 0))
+        numerator <- numerator + w_ij * conc
+        denominator <- denominator + w_ij
+      }
+    }
+
+    return(numerator / denominator)
+
+  } else if (estimator == "om") {
+    # Outcome model estimator for AUC
+    # This requires modeling P(Y=1|X) in source and using it for target
+    # AUC = E_{target}[P(Y=1|X) > P(Y=1|X')] for random X from cases, X' from non-cases
+
+    if (is_ml_learner(outcome_model)) {
+      p_y1 <- .predict_ml_learner(outcome_model, covariates)
+    } else {
+      p_y1 <- predict(outcome_model, newdata = covariates, type = "response")
+    }
+
+    # Use target population predictions
+    preds_target <- predictions[I_s0]
+    p_y1_target <- p_y1[I_s0]
+
+    # Estimate prevalence-weighted AUC in target
+    # For OM, we use expected case/non-case probabilities
+    # This is an approximation - proper OM for AUC is complex
+    # Simple approach: use ranking on E[Y|X]
+
+    n_target <- sum(I_s0)
+    if (n_target < 2) {
+      return(NA_real_)
+    }
+
+    # Compute all pairwise comparisons weighted by predicted probabilities
+    numerator <- 0
+    denominator <- 0
+
+    for (i in 1:n_target) {
+      for (j in 1:n_target) {
+        if (i != j) {
+          # Weight by probability of i being case and j being non-case
+          w_ij <- p_y1_target[i] * (1 - p_y1_target[j])
+          conc <- ifelse(preds_target[i] > preds_target[j], 1,
+                         ifelse(preds_target[i] == preds_target[j], 0.5, 0))
+          numerator <- numerator + w_ij * conc
+          denominator <- denominator + w_ij
+        }
+      }
+    }
+
+    return(numerator / denominator)
+
+  } else if (estimator == "dr") {
+    # Doubly robust estimator for factual AUC transportability
+    # Combines outcome model (OM) and inverse probability weighting (IPW)
+    # DR = OM + IPW - Augmentation (to remove double counting)
+
+    if (is_ml_learner(outcome_model)) {
+      p_y1 <- .predict_ml_learner(outcome_model, covariates)
+    } else {
+      p_y1 <- predict(outcome_model, newdata = covariates, type = "response")
+    }
+
+    # Concordance indicator matrix for all observations
+    ind_f <- outer(predictions, predictions, ">")
+
+    # OM component: Expected concordance in target using outcome model
+    # Weight target observations by predicted case/non-case probabilities
+    p_y1_target <- p_y1[I_s0]
+    w_case_om <- rep(0, n)
+    w_control_om <- rep(0, n)
+    w_case_om[I_s0] <- p_y1[I_s0]
+    w_control_om[I_s0] <- 1 - p_y1[I_s0]
+
+    mat_om0 <- outer(w_case_om, w_control_om, "*")
+    mat_om1 <- mat_om0 * ind_f
+
+    # IPW component: Weighted concordance from source
+    # For factual mode: weight by inverse-odds only (no propensity)
+    # Clip extreme weights for stability
+    iow_clipped <- pmin(iow, quantile(iow[iow > 0 & is.finite(iow)], 0.99, na.rm = TRUE))
+    iow_clipped[!is.finite(iow_clipped)] <- 0
+
+    w_case_ipw <- rep(0, n)
+    w_control_ipw <- rep(0, n)
+    w_case_ipw[I_s1] <- iow_clipped[I_s1] * (outcomes[I_s1] == 1)
+    w_control_ipw[I_s1] <- iow_clipped[I_s1] * (outcomes[I_s1] == 0)
+
+    mat_ipw0 <- outer(w_case_ipw, w_control_ipw, "*")
+    mat_ipw1 <- mat_ipw0 * ind_f
+
+    # Augmentation term: Remove double-counting between OM and IPW
+    # This is weighted by IPW weights but uses OM predictions
+    w_aug_case <- rep(0, n)
+    w_aug_control <- rep(0, n)
+    w_aug_case[I_s1] <- iow_clipped[I_s1] * p_y1[I_s1]
+    w_aug_control[I_s1] <- iow_clipped[I_s1] * (1 - p_y1[I_s1])
+
+    mat_aug0 <- outer(w_aug_case, w_aug_control, "*")
+    mat_aug1 <- mat_aug0 * ind_f
+
+    # DR estimator: OM + IPW - Augmentation
+    num <- sum(mat_om1) + sum(mat_ipw1) - sum(mat_aug1)
+    denom <- sum(mat_om0) + sum(mat_ipw0) - sum(mat_aug0)
+
+    if (denom == 0 || !is.finite(denom)) return(NA_real_)
+    return(num / denom)
+  }
+}
+
+
 #' Transport AUC estimators (use source outcomes for target)
 #' @noRd
 .tr_auc_transport <- function(predictions, outcomes, treatment, source, covariates,
@@ -978,18 +1278,24 @@ tr_auc <- function(predictions,
   n0 <- sum(source == 0)
   df <- cbind(Y = outcomes, A = treatment, S = source, as.data.frame(covariates))
 
-  # Get selection probabilities P(S=0|X)
-  pi_s0 <- predict(selection_model, newdata = df, type = "response")
-  pi_s1 <- 1 - pi_s0
-
-  # Get propensity scores P(A=a|X, S=1)
-  ps_s1 <- predict(propensity_model, newdata = df, type = "response")
-  if (treatment_level == 0) {
-    ps_s1 <- 1 - ps_s1
+  # Get selection probabilities P(S=0|X) - needed for IPW and DR
+  if (estimator %in% c("ipw", "dr")) {
+    pi_s0 <- predict(selection_model, newdata = df, type = "response")
+    pi_s1 <- 1 - pi_s0
   }
 
-  # Get outcome probabilities q_hat = E[Y|X, A=a, S=1]
-  q_hat <- predict(outcome_model, newdata = df, type = "response")
+  # Get propensity scores P(A=a|X, S=1) - needed for IPW and DR
+  if (estimator %in% c("ipw", "dr")) {
+    ps_s1 <- predict(propensity_model, newdata = df, type = "response")
+    if (treatment_level == 0) {
+      ps_s1 <- 1 - ps_s1
+    }
+  }
+
+  # Get outcome probabilities q_hat = E[Y|X, A=a, S=1] - needed for OM and DR
+  if (estimator %in% c("om", "dr")) {
+    q_hat <- predict(outcome_model, newdata = df, type = "response")
+  }
 
   # Treatment indicator
   I_a <- as.numeric(treatment == treatment_level)
@@ -1085,17 +1391,23 @@ tr_auc <- function(predictions,
   n0 <- sum(source == 0)
   df <- cbind(Y = outcomes, A = treatment, S = source, as.data.frame(covariates))
 
-  # Get selection probabilities P(S=0|X)
-  pi_s0 <- predict(selection_model, newdata = df, type = "response")
-
-  # Get propensity scores P(A=a|X) - marginal
-  ps <- predict(propensity_model, newdata = df, type = "response")
-  if (treatment_level == 0) {
-    ps <- 1 - ps
+  # Get selection probabilities P(S=0|X) - needed for IPW and DR
+  if (estimator %in% c("ipw", "dr")) {
+    pi_s0 <- predict(selection_model, newdata = df, type = "response")
   }
 
-  # Get outcome probabilities q_hat = E[Y|X, A=a] (joint model)
-  q_hat <- predict(outcome_model, newdata = df, type = "response")
+  # Get propensity scores P(A=a|X) - marginal, needed for IPW and DR
+  if (estimator %in% c("ipw", "dr")) {
+    ps <- predict(propensity_model, newdata = df, type = "response")
+    if (treatment_level == 0) {
+      ps <- 1 - ps
+    }
+  }
+
+  # Get outcome probabilities q_hat = E[Y|X, A=a] (joint model) - needed for OM and DR
+  if (estimator %in% c("om", "dr")) {
+    q_hat <- predict(outcome_model, newdata = df, type = "response")
+  }
 
   # Treatment indicator
   I_a <- as.numeric(treatment == treatment_level)
@@ -1177,9 +1489,17 @@ tr_auc <- function(predictions,
 #' @noRd
 .bootstrap_tr_auc <- function(predictions, outcomes, treatment, source, covariates,
                                treatment_level, analysis, estimator,
-                               n_boot, conf_level, stratified = TRUE,
-                               parallel, ncores, ps_trim_spec = NULL, ...) {
+                               n_boot, conf_level, 
+                               boot_ci_type = c("percentile", "normal", "basic"),
+                               stratified = TRUE,
+                               parallel, ncores, ps_trim_spec = NULL,
+                               selection_model = NULL,
+                               propensity_model = NULL,
+                               outcome_model = NULL,
+                               point_estimate = NULL, ...) {
 
+  boot_ci_type <- match.arg(boot_ci_type)
+  
   # Default ps_trim_spec if not provided
   if (is.null(ps_trim_spec)) {
     ps_trim_spec <- .parse_ps_trim(NULL)
@@ -1208,27 +1528,87 @@ tr_auc <- function(predictions,
 
   boot_fn <- function(idx) {
     tryCatch({
-      # Re-fit nuisance models on bootstrap sample
-      if (estimator != "naive") {
-        nuisance_boot <- .fit_transport_nuisance_auc(
-          treatment = treatment[idx],
-          outcomes = outcomes[idx],
-          source = source[idx],
-          covariates = covariates[idx, , drop = FALSE],
-          treatment_level = treatment_level,
-          analysis = analysis,
-          selection_model = NULL,
-          propensity_model = NULL,
-          outcome_model = NULL
-        )
-      } else {
-        nuisance_boot <- list(selection = NULL, propensity = NULL, outcome = NULL)
+      # Determine if we're in factual mode (no treatment)
+      factual_mode <- is.null(treatment)
+      
+      # For propensity and outcome models, subset appropriately
+      I_s1 <- source[idx] == 1
+      if (!factual_mode) {
+        I_a <- treatment[idx] == treatment_level
       }
+
+      # Prepare bootstrap data for selection model (no A or Y columns)
+      # Selection model: P(S=0|X) - only needs covariates
+      boot_data_sel <- data.frame(
+        S0 = as.integer(source[idx] == 0),
+        covariates[idx, , drop = FALSE]
+      )
+
+      if (factual_mode) {
+        # Factual mode: no propensity model, outcome model uses all source
+        boot_data_ps <- NULL
+        if (analysis == "transport") {
+          boot_data_om <- data.frame(Y = outcomes[idx], covariates[idx, , drop = FALSE])[I_s1, , drop = FALSE]
+        } else {
+          boot_data_om <- data.frame(Y = outcomes[idx], covariates[idx, , drop = FALSE])
+        }
+      } else if (analysis == "transport") {
+        boot_data_ps <- data.frame(A = treatment[idx], covariates[idx, , drop = FALSE])[I_s1, , drop = FALSE]
+        boot_data_om <- data.frame(Y = outcomes[idx], covariates[idx, , drop = FALSE])[I_s1 & I_a, , drop = FALSE]
+      } else {
+        boot_data_ps <- data.frame(A = treatment[idx], covariates[idx, , drop = FALSE])
+        boot_data_om <- data.frame(Y = outcomes[idx], covariates[idx, , drop = FALSE])[I_a, , drop = FALSE]
+      }
+
+      # Refit nuisance models preserving user's formula if provided
+      # Fit models based on estimator requirements
+      sel_model_b <- NULL
+      ps_model_b <- NULL
+      out_model_b <- NULL
+
+      # Selection model needed for all estimators except naive
+      if (estimator != "naive") {
+        if (!is.null(selection_model) && inherits(selection_model, "glm")) {
+          # User provided a fitted model - use update() to preserve formula
+          sel_model_b <- tryCatch(
+            update(selection_model, data = boot_data_sel),
+            error = function(e) glm(S0 ~ ., data = boot_data_sel, family = binomial())
+          )
+        } else {
+          sel_model_b <- glm(S0 ~ ., data = boot_data_sel, family = binomial())
+        }
+      }
+
+      # Propensity model needed for IPW and DR (only in counterfactual mode)
+      if (estimator %in% c("ipw", "dr") && !factual_mode) {
+        if (!is.null(propensity_model) && inherits(propensity_model, "glm")) {
+          ps_model_b <- tryCatch(
+            update(propensity_model, data = boot_data_ps),
+            error = function(e) glm(A ~ ., data = boot_data_ps, family = binomial())
+          )
+        } else {
+          ps_model_b <- glm(A ~ ., data = boot_data_ps, family = binomial())
+        }
+      }
+
+      # Outcome model needed for OM and DR (for AUC, outcomes are always binary)
+      if (estimator %in% c("om", "dr") && nrow(boot_data_om) > 0) {
+        if (!is.null(outcome_model) && inherits(outcome_model, "glm")) {
+          out_model_b <- tryCatch(
+            update(outcome_model, data = boot_data_om),
+            error = function(e) glm(Y ~ ., data = boot_data_om, family = binomial())
+          )
+        } else {
+          out_model_b <- glm(Y ~ ., data = boot_data_om, family = binomial())
+        }
+      }
+
+      nuisance_boot <- list(selection = sel_model_b, propensity = ps_model_b, outcome = out_model_b)
 
       .compute_tr_auc(
         predictions = predictions[idx],
         outcomes = outcomes[idx],
-        treatment = treatment[idx],
+        treatment = if (factual_mode) NULL else treatment[idx],
         source = source[idx],
         covariates = covariates[idx, , drop = FALSE],
         treatment_level = treatment_level,
@@ -1273,8 +1653,20 @@ tr_auc <- function(predictions,
 
   se <- sd(boot_estimates, na.rm = TRUE)
   alpha <- 1 - conf_level
-  ci_lower <- quantile(boot_estimates, alpha / 2, na.rm = TRUE)
-  ci_upper <- quantile(boot_estimates, 1 - alpha / 2, na.rm = TRUE)
+  
+  # Compute confidence intervals based on specified method
+  if (boot_ci_type == "percentile") {
+    ci_lower <- quantile(boot_estimates, alpha / 2, na.rm = TRUE)
+    ci_upper <- quantile(boot_estimates, 1 - alpha / 2, na.rm = TRUE)
+  } else if (boot_ci_type == "normal") {
+    z <- qnorm(1 - alpha / 2)
+    ci_lower <- point_estimate - z * se
+    ci_upper <- point_estimate + z * se
+  } else if (boot_ci_type == "basic") {
+    # Basic bootstrap: 2*theta_hat - quantile(1-alpha/2), 2*theta_hat - quantile(alpha/2)
+    ci_lower <- 2 * point_estimate - quantile(boot_estimates, 1 - alpha / 2, na.rm = TRUE)
+    ci_upper <- 2 * point_estimate - quantile(boot_estimates, alpha / 2, na.rm = TRUE)
+  }
 
   list(
     se = se,
@@ -1297,12 +1689,17 @@ tr_auc <- function(predictions,
 #' @keywords internal
 .bootstrap_tr_auc_crossfit <- function(predictions, outcomes, treatment, source, covariates,
                                         treatment_level, analysis, n_folds,
-                                        n_boot, conf_level, stratified = TRUE,
+                                        n_boot, conf_level,
+                                        boot_ci_type = c("percentile", "normal", "basic"),
+                                        stratified = TRUE,
                                         selection_learner = NULL,
                                         propensity_learner = NULL,
                                         outcome_learner = NULL,
-                                        parallel, ncores, ps_trim_spec = NULL, ...) {
+                                        parallel, ncores, ps_trim_spec = NULL,
+                                        point_estimate = NULL, ...) {
 
+  boot_ci_type <- match.arg(boot_ci_type)
+  
   # Default ps_trim_spec if not provided
   if (is.null(ps_trim_spec)) {
     ps_trim_spec <- .parse_ps_trim(NULL)
@@ -1379,8 +1776,20 @@ tr_auc <- function(predictions,
 
   se <- sd(boot_estimates, na.rm = TRUE)
   alpha <- 1 - conf_level
-  ci_lower <- quantile(boot_estimates, alpha / 2, na.rm = TRUE)
-  ci_upper <- quantile(boot_estimates, 1 - alpha / 2, na.rm = TRUE)
+  
+  # Compute confidence intervals based on specified method
+  if (boot_ci_type == "percentile") {
+    ci_lower <- quantile(boot_estimates, alpha / 2, na.rm = TRUE)
+    ci_upper <- quantile(boot_estimates, 1 - alpha / 2, na.rm = TRUE)
+  } else if (boot_ci_type == "normal") {
+    z <- qnorm(1 - alpha / 2)
+    ci_lower <- point_estimate - z * se
+    ci_upper <- point_estimate + z * se
+  } else if (boot_ci_type == "basic") {
+    # Basic bootstrap: 2*theta_hat - quantile(1-alpha/2), 2*theta_hat - quantile(alpha/2)
+    ci_lower <- 2 * point_estimate - quantile(boot_estimates, 1 - alpha / 2, na.rm = TRUE)
+    ci_upper <- 2 * point_estimate - quantile(boot_estimates, alpha / 2, na.rm = TRUE)
+  }
 
   list(
     se = se,

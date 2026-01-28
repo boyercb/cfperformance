@@ -38,11 +38,11 @@
 #' receiving the counterfactual treatment. Requires a correctly specified
 #' propensity score model.
 #'
-#' **Conditional Loss (CL) Estimator**: Uses the fitted outcome model
+#' **Outcome Model (OM) Estimator**: Uses the fitted outcome model
 #' \eqn{E[Y | X, A=a]} to estimate calibration over all observations. Requires a
 #' correctly specified outcome model.
 #'
-#' **Doubly Robust (DR) Estimator**: Combines CL and IPW approaches. Consistent
+#' **Doubly Robust (DR) Estimator**: Combines OM and IPW approaches. Consistent
 #' if either the propensity or outcome model is correctly specified.
 #'
 #' @references
@@ -100,7 +100,7 @@ cf_calibration <- function(predictions,
                            treatment,
                            covariates,
                            treatment_level = 0,
-                           estimator = c("dr", "ipw", "cl"),
+                           estimator = c("dr", "ipw", "om"),
                            propensity_model = NULL,
                            outcome_model = NULL,
                            smoother = c("loess", "binned"),
@@ -139,8 +139,8 @@ cf_calibration <- function(predictions,
     propensity_model <- glm(A ~ ., data = ps_data, family = binomial())
   }
 
-  # Fit outcome model if needed for CL or DR
-  if (estimator %in% c("cl", "dr") && is.null(outcome_model)) {
+  # Fit outcome model if needed for OM or DR
+  if (estimator %in% c("om", "dr") && is.null(outcome_model)) {
     subset_idx <- treatment == treatment_level
     outcome_data <- cbind(Y = outcomes, covariates)[subset_idx, ]
     outcome_model <- glm(Y ~ ., data = outcome_data, family = binomial())
@@ -157,7 +157,7 @@ cf_calibration <- function(predictions,
   }
 
   # Get outcome model predictions E[Y|X, A=a]
-  if (estimator %in% c("cl", "dr")) {
+  if (estimator %in% c("om", "dr")) {
     mu_hat <- .predict_nuisance(outcome_model, covariates, type = "response")
   }
 
@@ -174,8 +174,8 @@ cf_calibration <- function(predictions,
     # Normalize weights
     weights <- weights / mean(weights)
 
-  } else if (estimator == "cl") {
-    # CL: use outcome model predictions for all observations
+  } else if (estimator == "om") {
+    # OM: use outcome model predictions for all observations
     pred_use <- predictions
     pseudo_outcomes <- mu_hat
     weights <- rep(1, n)

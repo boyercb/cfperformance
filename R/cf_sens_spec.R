@@ -29,16 +29,16 @@
 #'
 #' The function implements three estimators following Coston et al. (2020):
 #'
-#' **Conditional Loss (CL) Estimator**: Weights by the predicted probability of
+#' **Outcome Model (OM) Estimator**: Weights by the predicted probability of
 #' being a case under the counterfactual:
-#' \deqn{\hat{\psi}_{sens,cl} = \frac{\sum_i I(\hat{h}(X_i) > c) \hat{m}(X_i)}{\sum_i \hat{m}(X_i)}}
+#' \deqn{\hat{\psi}_{sens,om} = \frac{\sum_i I(\hat{h}(X_i) > c) \hat{m}(X_i)}{\sum_i \hat{m}(X_i)}}
 #' where \eqn{\hat{m}(X) = P(Y=1|X, A=a)}.
 #'
 #' **IPW Estimator**: Weights by the inverse probability of treatment:
 #' \deqn{\hat{\psi}_{sens,ipw} = \frac{\sum_i I(\hat{h}(X_i) > c, Y_i=1, A_i=a) / \hat{e}(X_i)}{\sum_i I(Y_i=1, A_i=a) / \hat{e}(X_i)}}
 #' where \eqn{\hat{e}(X) = P(A=a|X)}.
 #'
-#' **Doubly Robust (DR) Estimator**: Combines CL and IPW for protection against
+#' **Doubly Robust (DR) Estimator**: Combines OM and IPW for protection against
 #' misspecification of either model.
 #'
 #' @references
@@ -92,7 +92,7 @@ cf_sensitivity <- function(predictions,
                            covariates,
                            threshold = 0.5,
                            treatment_level = 0,
-                           estimator = c("dr", "cl", "ipw", "naive"),
+                           estimator = c("dr", "om", "ipw", "naive"),
                            propensity_model = NULL,
                            outcome_model = NULL,
                            se_method = c("none", "bootstrap", "influence"),
@@ -268,7 +268,9 @@ cf_sensitivity <- function(predictions,
         n_boot = n_boot,
         conf_level = conf_level,
         parallel = parallel,
-        ncores = ncores
+        ncores = ncores,
+        propensity_model = nuisance$propensity,
+        outcome_model = nuisance$outcome
       )
       se <- boot_result$se
       ci_lower <- boot_result$ci_lower
@@ -363,7 +365,7 @@ cf_specificity <- function(predictions,
                            covariates,
                            threshold = 0.5,
                            treatment_level = 0,
-                           estimator = c("dr", "cl", "ipw", "naive"),
+                           estimator = c("dr", "om", "ipw", "naive"),
                            propensity_model = NULL,
                            outcome_model = NULL,
                            se_method = c("none", "bootstrap", "influence"),
@@ -539,7 +541,9 @@ cf_specificity <- function(predictions,
         n_boot = n_boot,
         conf_level = conf_level,
         parallel = parallel,
-        ncores = ncores
+        ncores = ncores,
+        propensity_model = nuisance$propensity,
+        outcome_model = nuisance$outcome
       )
       se <- boot_result$se
       ci_lower <- boot_result$ci_lower
@@ -621,7 +625,7 @@ cf_fpr <- function(predictions,
                    covariates,
                    threshold = 0.5,
                    treatment_level = 0,
-                   estimator = c("dr", "cl", "ipw", "naive"),
+                   estimator = c("dr", "om", "ipw", "naive"),
                    propensity_model = NULL,
                    outcome_model = NULL,
                    se_method = c("none", "bootstrap", "influence"),
@@ -1022,7 +1026,8 @@ cf_tnr <- cf_specificity
       covariates = covariates,
       treatment_level = treatment_level,
       propensity_model = propensity_model,
-      outcome_model = outcome_model
+      outcome_model = outcome_model,
+      estimator = estimator
     )
     propensity_model <- nuisance$propensity
     outcome_model <- nuisance$outcome
@@ -1052,8 +1057,8 @@ cf_tnr <- cf_specificity
   I_pos <- as.numeric(predictions > threshold)
   I_case <- as.numeric(outcomes == 1)
 
-  if (estimator == "cl") {
-    # Conditional loss estimator
+  if (estimator == "om") {
+    # Outcome model estimator
     # Sens = E[I(pred > c) * m(X)] / E[m(X)]
     num <- mean(I_pos * m_hat)
     denom <- mean(m_hat)
@@ -1115,7 +1120,8 @@ cf_tnr <- cf_specificity
       covariates = covariates,
       treatment_level = treatment_level,
       propensity_model = propensity_model,
-      outcome_model = outcome_model
+      outcome_model = outcome_model,
+      estimator = estimator
     )
     propensity_model <- nuisance$propensity
     outcome_model <- nuisance$outcome
@@ -1146,8 +1152,8 @@ cf_tnr <- cf_specificity
   I_neg <- as.numeric(predictions <= threshold)
   I_control <- as.numeric(outcomes == 0)
 
-  if (estimator == "cl") {
-    # Conditional loss estimator
+  if (estimator == "om") {
+    # Outcome model estimator
     # Spec = E[I(pred <= c) * (1 - m(X))] / E[1 - m(X)]
     num <- mean(I_neg * m_hat_neg)
     denom <- mean(m_hat_neg)
@@ -1213,7 +1219,9 @@ cf_tnr <- cf_specificity
 #' @noRd
 .bootstrap_cf_sens_spec <- function(predictions, outcomes, treatment, covariates,
                                      threshold, treatment_level, estimator,
-                                     metric, n_boot, conf_level, parallel, ncores) {
+                                     metric, n_boot, conf_level, parallel, ncores,
+                                     propensity_model = NULL,
+                                     outcome_model = NULL) {
 
   n <- length(outcomes)
   n_thresholds <- length(threshold)
@@ -1221,6 +1229,37 @@ cf_tnr <- cf_specificity
 
   # Bootstrap function for single replicate
   boot_fn <- function(idx) {
+    # Refit nuisance models on bootstrap sample
+    # We create separate data frames for each model to avoid formula expansion
+    # issues with predict() (e.g., "Y ~ . - A" still needs A in newdata)
+    cov_b <- covariates[idx, , drop = FALSE]
+
+    # Propensity model data: A ~ . (only covariates, no Y)
+    boot_data_ps <- data.frame(A = treatment[idx], cov_b)
+
+    # Outcome model data: Y ~ . (only covariates, no A)
+    boot_data_om <- data.frame(Y = outcomes[idx], cov_b)
+
+    # Subset for outcome model (among treated)
+    subset_idx <- treatment[idx] == treatment_level
+    subset_om <- boot_data_om[subset_idx, , drop = FALSE]
+
+    # Refit nuisance models with standardized formulas
+    ps_model_b <- NULL
+    out_model_b <- NULL
+
+    # Propensity model: A ~ . (no Y in formula)
+    if (estimator %in% c("ipw", "dr")) {
+      ps_model_b <- glm(A ~ ., data = boot_data_ps, family = binomial())
+    }
+
+    # Outcome model: Y ~ . (no A in formula, for sensitivity/specificity outcomes are binary)
+    if (estimator %in% c("reg", "dr") && nrow(subset_om) > 0) {
+      out_model_b <- glm(Y ~ ., data = subset_om, family = binomial())
+    }
+
+    nuisance_b <- list(propensity = ps_model_b, outcome = out_model_b)
+
     sapply(threshold, function(c) {
       if (metric == "sensitivity") {
         .compute_cf_sensitivity(
@@ -1231,8 +1270,8 @@ cf_tnr <- cf_specificity
           threshold = c,
           treatment_level = treatment_level,
           estimator = estimator,
-          propensity_model = NULL,  # Refit in each bootstrap
-          outcome_model = NULL
+          propensity_model = nuisance_b$propensity,
+          outcome_model = nuisance_b$outcome
         )
       } else {
         .compute_cf_specificity(
@@ -1243,8 +1282,8 @@ cf_tnr <- cf_specificity
           threshold = c,
           treatment_level = treatment_level,
           estimator = estimator,
-          propensity_model = NULL,
-          outcome_model = NULL
+          propensity_model = nuisance_b$propensity,
+          outcome_model = nuisance_b$outcome
         )
       }
     })

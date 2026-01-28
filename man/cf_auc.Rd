@@ -10,12 +10,13 @@ cf_auc(
   treatment,
   covariates,
   treatment_level = 0,
-  estimator = c("dr", "cl", "ipw", "naive"),
+  estimator = c("dr", "om", "ipw", "naive"),
   propensity_model = NULL,
   outcome_model = NULL,
   se_method = c("bootstrap", "influence", "none"),
   n_boot = 500,
   conf_level = 0.95,
+  boot_ci_type = c("percentile", "normal", "basic"),
   cross_fit = FALSE,
   n_folds = 5,
   parallel = FALSE,
@@ -61,6 +62,13 @@ continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 \item{n_boot}{Number of bootstrap replications (default: 500).}
 
 \item{conf_level}{Confidence level for intervals (default: 0.95).}
+
+\item{boot_ci_type}{Type of bootstrap confidence interval to compute:
+\itemize{
+\item \code{"percentile"}: Percentile method (default)
+\item \code{"normal"}: Normal approximation using bootstrap SE
+\item \code{"basic"}: Basic bootstrap interval
+}}
 
 \item{cross_fit}{Logical indicating whether to use cross-fitting for
 nuisance model estimation (default: FALSE). Cross-fitting enables
@@ -112,7 +120,7 @@ the outcome.
 
 The function implements three estimators:
 
-\strong{Outcome Model (OM/CL) Estimator}: Weights concordant pairs by the
+\strong{Outcome Model (OM) Estimator}: Weights concordant pairs by the
 predicted probability of case/non-case status under the counterfactual.
 
 \strong{IPW Estimator}: Weights concordant pairs by the inverse probability

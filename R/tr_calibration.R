@@ -1,14 +1,20 @@
-#' Estimate (Counterfactual) Calibration in the Target Population
+#' Estimate Transportable Calibration in the Target Population
 #'
 #' Estimates the calibration of a prediction model in a target population
-#' using data transported from a source population (typically an RCT).
+#' using data transported from a source population. Supports both
+#' **counterfactual** (under hypothetical intervention) and **factual**
+#' (observational) prediction model transportability.
 #'
 #' @param predictions Numeric vector of model predictions (typically probabilities).
 #' @param outcomes Numeric vector of observed outcomes (must be binary 0/1).
-#' @param treatment Numeric vector of treatment indicators (0/1).
+#' @param treatment Numeric vector of treatment indicators (0/1), or `NULL` for
+#'   factual prediction model transportability (no treatment/intervention).
+#'   When `NULL`, only the selection model is used for weighting.
 #' @param source Numeric vector of population indicators (1=source/RCT, 0=target).
 #' @param covariates A matrix or data frame of baseline covariates.
-#' @param treatment_level The treatment level of interest (default: 0).
+#' @param treatment_level The treatment level of interest (default: `NULL`).
+#'   Required when `treatment` is provided; should be `NULL` when `treatment`
+#'   is `NULL` (factual mode).
 #' @param analysis Character string specifying the type of analysis:
 #'   - `"transport"`: Use source outcomes for target estimation (default)
 #'   - `"joint"`: Pool source and target data
@@ -51,19 +57,32 @@
 #'   \item{analysis}{Analysis type}
 #'   \item{n_target}{Number of target observations}
 #'   \item{n_source}{Number of source observations}
+#'   \item{treatment_level}{Treatment level (NULL for factual mode)}
 #'
 #' @details
 #' This function implements estimators for transporting prediction model
-#' calibration from a source population (typically an RCT) to a target
-#' population.
+#' calibration from a source population to a target population. It supports
+#' two modes:
 #'
-#' **Transportability Analysis**: Uses outcome data from the source/RCT
-#' population to estimate calibration in the target population. The IPW
-#' estimator weights source observations to represent the target population.
+#' ## Counterfactual Mode (treatment provided)
+#' When `treatment` is specified, estimates calibration for counterfactual
+#' outcomes under a hypothetical intervention. Requires selection, propensity,
+#' and outcome models.
 #'
-#' **Joint Analysis**: Pools source and target data to estimate calibration
-#' in the target population.
+#' ## Factual Mode (treatment = NULL)
+#' When `treatment` is `NULL`, estimates calibration for observed outcomes in
+#' the target population using only the selection model for inverse-odds
+#' weighting. This is appropriate for factual prediction model
+#' transportability.
 #'
+#' ## Analysis Types
+#' **Transportability Analysis** (`analysis = "transport"`): Uses outcome data
+#' from the source population to estimate calibration in the target population.
+#'
+#' **Joint Analysis** (`analysis = "joint"`): Pools source and target data
+#' to estimate calibration in the target population.
+#'
+#' ## Calibration Metrics
 #' The function computes several calibration metrics:
 #' - **ICI** (Integrated Calibration Index): Mean absolute difference between
 #'   predicted and observed probabilities
@@ -74,6 +93,10 @@
 #' For observational analysis (single population), use [cf_calibration()] instead.
 #'
 #' @references
+#' Steingrimsson, J. A., et al. (2023). "Transporting a Prediction Model for
+#' Use in a New Target Population." *American Journal of Epidemiology*,
+#' 192(2), 296-304. \doi{10.1093/aje/kwac128}
+#'
 #' Voter, S. R., et al. (2025). "Transportability of machine learning-based
 #' counterfactual prediction models with application to CASS."
 #' *Diagnostic and Prognostic Research*, 9(4).
@@ -120,10 +143,10 @@
 #' print(result)
 tr_calibration <- function(predictions,
                            outcomes,
-                           treatment,
+                           treatment = NULL,
                            source,
                            covariates,
-                           treatment_level = 0,
+                           treatment_level = NULL,
                            analysis = c("transport", "joint"),
                            estimator = c("dr", "ipw", "om"),
                            selection_model = NULL,
@@ -145,7 +168,15 @@ tr_calibration <- function(predictions,
   se_method <- match.arg(se_method)
 
   # Validate inputs
-  .validate_tr_calibration_inputs(predictions, outcomes, treatment, source, covariates)
+  .validate_tr_calibration_inputs(predictions, outcomes, treatment, source, covariates, treatment_level)
+  
+  # Determine mode: factual (no treatment) or counterfactual
+  factual_mode <- is.null(treatment)
+  
+  # Default treatment_level to 1 for backward compatibility if treatment is provided
+  if (!factual_mode && is.null(treatment_level)) {
+    treatment_level <- 1
+  }
 
   # Compute calibration
   result <- .compute_tr_calibration(
@@ -237,15 +268,12 @@ tr_calibration <- function(predictions,
 #' @keywords internal
 #' @noRd
 .validate_tr_calibration_inputs <- function(predictions, outcomes, treatment,
-                                            source, covariates) {
+                                            source, covariates, treatment_level = NULL) {
   n <- length(outcomes)
 
   # Check lengths match
   if (length(predictions) != n) {
     stop("'predictions' must have the same length as 'outcomes'")
-  }
-  if (length(treatment) != n) {
-    stop("'treatment' must have the same length as 'outcomes'")
   }
   if (length(source) != n) {
     stop("'source' must have the same length as 'outcomes'")
@@ -263,10 +291,21 @@ tr_calibration <- function(predictions,
   if (!all(source %in% c(0, 1))) {
     stop("'source' must be a binary indicator (0=target, 1=source)")
   }
-
-  # Check treatment indicator
-  if (!all(treatment %in% c(0, 1))) {
-    stop("'treatment' must be a binary indicator (0/1)")
+  
+  # Factual mode validation: both treatment and treatment_level should be NULL
+  # Counterfactual mode: treatment must be provided, treatment_level can default to 1
+  if (is.null(treatment) && !is.null(treatment_level)) {
+    stop("If treatment is NULL (factual mode), treatment_level must also be NULL")
+  }
+  
+  # If treatment provided, validate it
+  if (!is.null(treatment)) {
+    if (length(treatment) != n) {
+      stop("'treatment' must have the same length as 'outcomes'")
+    }
+    if (!all(treatment %in% c(0, 1))) {
+      stop("'treatment' must be a binary indicator (0/1)")
+    }
   }
 
   # Check predictions are probabilities
@@ -301,8 +340,15 @@ tr_calibration <- function(predictions,
   n_source <- sum(source == 1)
   n_target <- sum(source == 0)
 
-  # Indicator for treatment level
-  I_a <- treatment == treatment_level
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+  
+  # Indicator for treatment level (or all observations in factual mode)
+  if (factual_mode) {
+    I_a <- rep(TRUE, n)
+  } else {
+    I_a <- treatment == treatment_level
+  }
 
   # Fit nuisance models
   nuisance <- .fit_calibration_nuisance(
@@ -392,6 +438,9 @@ tr_calibration <- function(predictions,
 
   n <- length(outcomes)
   cov_df <- as.data.frame(covariates)
+  
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
 
   # Selection model: P(S=0|X)
   if (is.null(selection_model)) {
@@ -403,45 +452,66 @@ tr_calibration <- function(predictions,
   p_s0 <- predict(selection_model, newdata = cov_df, type = "response")
   p_s1 <- 1 - p_s0
 
-  # Propensity model
-  if (is.null(propensity_model)) {
-    if (analysis == "transport") {
-      # P(A=1|X, S=1) using source data only
-      source_idx <- source == 1
-      ps_data <- cbind(A = treatment[source_idx], cov_df[source_idx, , drop = FALSE])
-      propensity_model <- glm(A ~ ., data = ps_data, family = binomial())
-    } else {
-      # P(A=1|X) using all data
-      ps_data <- cbind(A = treatment, cov_df)
-      propensity_model <- glm(A ~ ., data = ps_data, family = binomial())
+  # Propensity model - only needed for counterfactual mode
+  if (factual_mode) {
+    propensity_model <- NULL
+    ps <- rep(1, n)  # No propensity needed
+  } else {
+    if (is.null(propensity_model)) {
+      if (analysis == "transport") {
+        # P(A=1|X, S=1) using source data only
+        source_idx <- source == 1
+        ps_data <- cbind(A = treatment[source_idx], cov_df[source_idx, , drop = FALSE])
+        propensity_model <- glm(A ~ ., data = ps_data, family = binomial())
+      } else {
+        # P(A=1|X) using all data
+        ps_data <- cbind(A = treatment, cov_df)
+        propensity_model <- glm(A ~ ., data = ps_data, family = binomial())
+      }
     }
-  }
-
-  # Get propensity scores
-  ps <- predict(propensity_model, newdata = cov_df, type = "response")
-  if (treatment_level == 0) {
-    ps <- 1 - ps
+    
+    # Get propensity scores
+    ps <- predict(propensity_model, newdata = cov_df, type = "response")
+    if (treatment_level == 0) {
+      ps <- 1 - ps
+    }
   }
 
   # Outcome model for OM and DR estimators
   if (estimator %in% c("om", "dr") && is.null(outcome_model)) {
-    if (analysis == "transport") {
-      # E[Y|X, A=a, S=1] using source data
-      source_a_idx <- source == 1 & treatment == treatment_level
-      if (sum(source_a_idx) > 5) {
-        om_data <- cbind(Y = outcomes[source_a_idx],
-                         pred = predictions[source_a_idx],
-                         cov_df[source_a_idx, , drop = FALSE])
+    if (factual_mode) {
+      # Factual mode: E[Y|X, S=1] using all source data
+      if (analysis == "transport") {
+        source_idx <- source == 1
+      } else {
+        source_idx <- rep(TRUE, n)
+      }
+      if (sum(source_idx) > 5) {
+        om_data <- cbind(Y = outcomes[source_idx],
+                         pred = predictions[source_idx],
+                         cov_df[source_idx, , drop = FALSE])
         outcome_model <- glm(Y ~ pred, data = om_data, family = binomial())
       }
     } else {
-      # E[Y|X, A=a] using all data with A=a
-      a_idx <- treatment == treatment_level
-      if (sum(a_idx) > 5) {
-        om_data <- cbind(Y = outcomes[a_idx],
-                         pred = predictions[a_idx],
-                         cov_df[a_idx, , drop = FALSE])
-        outcome_model <- glm(Y ~ pred, data = om_data, family = binomial())
+      # Counterfactual mode: E[Y|X, A=a, S=1]
+      if (analysis == "transport") {
+        # E[Y|X, A=a, S=1] using source data
+        source_a_idx <- source == 1 & treatment == treatment_level
+        if (sum(source_a_idx) > 5) {
+          om_data <- cbind(Y = outcomes[source_a_idx],
+                           pred = predictions[source_a_idx],
+                           cov_df[source_a_idx, , drop = FALSE])
+          outcome_model <- glm(Y ~ pred, data = om_data, family = binomial())
+        }
+      } else {
+        # E[Y|X, A=a] using all data with A=a
+        a_idx <- treatment == treatment_level
+        if (sum(a_idx) > 5) {
+          om_data <- cbind(Y = outcomes[a_idx],
+                           pred = predictions[a_idx],
+                           cov_df[a_idx, , drop = FALSE])
+          outcome_model <- glm(Y ~ pred, data = om_data, family = binomial())
+        }
       }
     }
   }
@@ -467,19 +537,31 @@ tr_calibration <- function(predictions,
   n <- length(outcomes)
   n_target <- sum(source == 0)
 
-  # Indicator for treatment level in source
-  I_a <- treatment == treatment_level
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+  
+  # Indicator for treatment level in source (or all source in factual mode)
+  if (factual_mode) {
+    I_a <- rep(TRUE, n)
+  } else {
+    I_a <- treatment == treatment_level
+  }
   I_source <- source == 1
   I_target <- source == 0
 
   if (estimator == "ipw") {
     # IPW weights: P(S=0|X) / [P(S=1|X) * P(A=a|X,S=1)]
-    # Applied to source observations with A=a
+    # For factual mode: P(S=0|X) / P(S=1|X)
+    # Applied to source observations (with A=a for counterfactual)
     weights <- rep(0, n)
     idx <- I_source & I_a
 
     # Avoid division by very small numbers
-    denom <- nuisance$p_s1[idx] * nuisance$ps[idx]
+    if (factual_mode) {
+      denom <- nuisance$p_s1[idx]
+    } else {
+      denom <- nuisance$p_s1[idx] * nuisance$ps[idx]
+    }
     denom <- pmax(denom, 1e-10)
 
     weights[idx] <- nuisance$p_s0[idx] / denom
@@ -508,7 +590,7 @@ tr_calibration <- function(predictions,
       stop("Outcome model fitting failed - insufficient data")
     }
 
-    # Predict E[Y|X, pred, A=a, S=1] for target population
+    # Predict E[Y|X, pred] for target population
     target_df <- data.frame(pred = predictions[I_target])
     h_a <- predict(nuisance$outcome_model, newdata = target_df, type = "response")
 
@@ -535,9 +617,13 @@ tr_calibration <- function(predictions,
     all_df <- data.frame(pred = predictions)
     mu_hat <- predict(nuisance$outcome_model, newdata = all_df, type = "response")
 
-    # IPW weights for source observations with A=a
+    # IPW weights for source observations (with A=a for counterfactual)
     idx <- I_source & I_a
-    denom <- nuisance$p_s1[idx] * nuisance$ps[idx]
+    if (factual_mode) {
+      denom <- nuisance$p_s1[idx]
+    } else {
+      denom <- nuisance$p_s1[idx] * nuisance$ps[idx]
+    }
     denom <- pmax(denom, 1e-10)
     ipw_weight <- nuisance$p_s0[idx] / denom
 
@@ -577,21 +663,33 @@ tr_calibration <- function(predictions,
   n <- length(outcomes)
   n_target <- sum(source == 0)
 
-  # Indicator for treatment level
-  I_a <- treatment == treatment_level
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+
+  # Indicator for treatment level (or all observations in factual mode)
+  if (factual_mode) {
+    I_a <- rep(TRUE, n)
+  } else {
+    I_a <- treatment == treatment_level
+  }
   I_target <- source == 0
 
   if (estimator == "ipw") {
     # IPW weights: P(S=0|X) / P(A=a|X)
-    # Applied to all observations with A=a
+    # For factual mode: Just use P(S=0|X) as weight
+    # Applied to all observations (with A=a for counterfactual)
     weights <- rep(0, n)
     idx <- I_a
 
-    # Avoid division by very small numbers
-    denom <- nuisance$ps[idx]
-    denom <- pmax(denom, 1e-10)
-
-    weights[idx] <- nuisance$p_s0[idx] / denom
+    if (factual_mode) {
+      # In factual mode for joint, we use all data weighted by P(S=0|X)
+      weights[idx] <- nuisance$p_s0[idx]
+    } else {
+      # Avoid division by very small numbers
+      denom <- nuisance$ps[idx]
+      denom <- pmax(denom, 1e-10)
+      weights[idx] <- nuisance$p_s0[idx] / denom
+    }
 
     # Subset to treatment level
     pred_sub <- predictions[idx]
@@ -644,10 +742,15 @@ tr_calibration <- function(predictions,
     mu_hat <- predict(nuisance$outcome_model, newdata = all_df, type = "response")
 
     # IPW weights: P(S=0|X) / P(A=a|X) for all observations with A=a
+    # For factual mode: just P(S=0|X) as weight
     idx <- I_a
-    denom <- nuisance$ps[idx]
-    denom <- pmax(denom, 1e-10)
-    ipw_weight <- nuisance$p_s0[idx] / denom
+    if (factual_mode) {
+      ipw_weight <- nuisance$p_s0[idx]
+    } else {
+      denom <- nuisance$ps[idx]
+      denom <- pmax(denom, 1e-10)
+      ipw_weight <- nuisance$p_s0[idx] / denom
+    }
 
     # Augmented pseudo-outcomes
     augmentation <- ipw_weight * (outcomes[idx] - mu_hat[idx])
@@ -734,8 +837,16 @@ tr_calibration <- function(predictions,
 .naive_calibration_source <- function(predictions, outcomes, treatment, source,
                                       treatment_level, smoother, n_bins, span) {
 
+  # Determine if factual mode (no treatment)
+  factual_mode <- is.null(treatment)
+  
   # Source observations with treatment level (no weighting)
-  idx <- source == 1 & treatment == treatment_level
+  # For factual mode, use all source data
+  if (factual_mode) {
+    idx <- source == 1
+  } else {
+    idx <- source == 1 & treatment == treatment_level
+  }
 
   pred_sub <- predictions[idx]
   out_sub <- outcomes[idx]
@@ -790,10 +901,13 @@ tr_calibration <- function(predictions,
     boot_idx <- get_boot_idx()
 
     tryCatch({
+      # Handle NULL treatment for factual mode
+      boot_treatment <- if (is.null(treatment)) NULL else treatment[boot_idx]
+      
       boot_result <- .compute_tr_calibration(
         predictions = predictions[boot_idx],
         outcomes = outcomes[boot_idx],
-        treatment = treatment[boot_idx],
+        treatment = boot_treatment,
         source = source[boot_idx],
         covariates = covariates[boot_idx, , drop = FALSE],
         treatment_level = treatment_level,

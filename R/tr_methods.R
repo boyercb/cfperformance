@@ -9,13 +9,19 @@
 #' @export
 print.tr_performance <- function(x, digits = 4, ...) {
 
+  # Determine if factual mode (no treatment) or counterfactual mode
+  factual_mode <- is.null(x$treatment_level)
+  mode_label <- if (factual_mode) "Factual" else "Counterfactual"
+
   cat("\n")
-  cat("Transportable", toupper(x$metric), "Estimation\n")
+  cat(mode_label, "Transportable", toupper(x$metric), "Estimation\n")
   cat(paste(rep("-", 45), collapse = ""), "\n")
 
   cat("Analysis:", x$analysis, "\n")
   cat("Estimator:", x$estimator, "\n")
-  cat("Treatment level:", x$treatment_level, "\n")
+  if (!factual_mode) {
+    cat("Treatment level:", x$treatment_level, "\n")
+  }
   cat("N target:", x$n_target, " | N source:", x$n_source, "\n")
   cat("\n")
 
@@ -59,8 +65,12 @@ print.tr_performance <- function(x, digits = 4, ...) {
 #'
 #' @export
 summary.tr_performance <- function(object, ...) {
+  # Determine if factual mode (no treatment) or counterfactual mode
+  factual_mode <- is.null(object$treatment_level)
+  mode_label <- if (factual_mode) "Factual" else "Counterfactual"
+
   cat("\n")
-  cat("Summary: Transportable", toupper(object$metric), "Estimation\n")
+  cat("Summary:", mode_label, "Transportable", toupper(object$metric), "Estimation\n")
   cat(paste(rep("=", 55), collapse = ""), "\n\n")
 
   cat("Call:\n")
@@ -68,9 +78,12 @@ summary.tr_performance <- function(object, ...) {
   cat("\n")
 
   cat("Settings:\n")
+  cat("  Mode:", mode_label, "\n")
   cat("  Analysis type:", object$analysis, "\n")
   cat("  Estimator:", object$estimator, "\n")
-  cat("  Treatment level:", object$treatment_level, "\n")
+  if (!factual_mode) {
+    cat("  Treatment level:", object$treatment_level, "\n")
+  }
   cat("  Target sample size:", object$n_target, "\n")
   cat("  Source sample size:", object$n_source, "\n")
   cat("\n")

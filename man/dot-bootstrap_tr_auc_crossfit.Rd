@@ -15,6 +15,7 @@
   n_folds,
   n_boot,
   conf_level,
+  boot_ci_type = c("percentile", "normal", "basic"),
   stratified = TRUE,
   selection_learner = NULL,
   propensity_learner = NULL,
@@ -22,6 +23,7 @@
   parallel,
   ncores,
   ps_trim_spec = NULL,
+  point_estimate = NULL,
   ...
 )
 }

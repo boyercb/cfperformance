@@ -23,7 +23,7 @@
 )
 }
 \arguments{
-\item{treatment}{Numeric vector of treatment indicators.}
+\item{treatment}{Numeric vector of treatment indicators (NULL for factual mode).}
 
 \item{outcomes}{Numeric vector of observed outcomes.}
 
@@ -33,7 +33,7 @@
 
 \item{predictions}{Numeric vector of model predictions.}
 
-\item{treatment_level}{Counterfactual treatment level.}
+\item{treatment_level}{Counterfactual treatment level (NULL for factual mode).}
 
 \item{analysis}{Either "transport" or "joint".}
 
@@ -41,7 +41,7 @@
 
 \item{selection_learner}{Optional ml_learner for selection model.}
 
-\item{propensity_learner}{Optional ml_learner for propensity model.}
+\item{propensity_learner}{Optional ml_learner for propensity model (ignored in factual mode).}
 
 \item{outcome_learner}{Optional ml_learner for outcome model.}
 
@@ -58,6 +58,7 @@ List containing cross-fitted nuisance function predictions.
 }
 \description{
 Implements K-fold cross-fitting for nuisance model estimation in
-transportability settings.
+transportability settings. Supports both counterfactual mode (with treatment)
+and factual mode (without treatment).
 }
 \keyword{internal}

@@ -2,25 +2,27 @@
 % Please edit documentation in R/tr_sens_spec.R
 \name{tr_fpr}
 \alias{tr_fpr}
-\title{Estimate (Counterfactual) False Positive Rate in the Target Population}
+\title{Estimate Transportable False Positive Rate in the Target Population}
 \usage{
 tr_fpr(
   predictions,
   outcomes,
-  treatment,
+  treatment = NULL,
   source,
   covariates,
   threshold = 0.5,
-  treatment_level = 0,
+  treatment_level = NULL,
   analysis = c("transport", "joint"),
   estimator = c("dr", "om", "ipw", "naive"),
   selection_model = NULL,
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   stratified_boot = TRUE,
+  cross_fit = FALSE,
+  n_folds = 5,
   ps_trim = NULL,
   parallel = FALSE,
   ncores = NULL,
@@ -32,7 +34,9 @@ tr_fpr(
 
 \item{outcomes}{Numeric vector of observed outcomes.}
 
-\item{treatment}{Numeric vector of treatment indicators (0/1).}
+\item{treatment}{Numeric vector of treatment indicators (0/1), or \code{NULL} for
+factual prediction model transportability (no treatment/intervention).
+When \code{NULL}, only the selection model is used for weighting.}
 
 \item{source}{Numeric vector of population indicators (1=source/RCT, 0=target).}
 
@@ -43,7 +47,9 @@ above this value are classified as positive. Can be a single value or
 a vector for computing sensitivity at multiple thresholds simultaneously.
 Default is 0.5.}
 
-\item{treatment_level}{The treatment level of interest (default: 0).}
+\item{treatment_level}{The treatment level of interest (default: \code{NULL}).
+Required when \code{treatment} is provided; should be \code{NULL} when \code{treatment}
+is \code{NULL} (factual mode).}
 
 \item{analysis}{Character string specifying the type of analysis:
 \itemize{
@@ -85,6 +91,11 @@ continuous outcomes, this should be a model for E[L|X,A] (gaussian family).}
 that preserves the source/target ratio (default: TRUE). Recommended for
 transportability analysis.}
 
+\item{cross_fit}{Logical indicating whether to use cross-fitting for
+nuisance model estimation (default: FALSE).}
+
+\item{n_folds}{Number of folds for cross-fitting (default: 5).}
+
 \item{ps_trim}{Propensity score trimming specification. Controls how
 extreme propensity scores are handled. Can be:
 \itemize{
@@ -111,7 +122,8 @@ structure as \code{\link[=tr_specificity]{tr_specificity()}}, but with \code{est
 }
 \description{
 Estimates the false positive rate (1 - specificity) of a binary classifier.
-This is a convenience wrapper around \code{\link[=tr_specificity]{tr_specificity()}}.
+This is a convenience wrapper around \code{\link[=tr_specificity]{tr_specificity()}}. Supports both
+\strong{counterfactual} and \strong{factual} prediction model transportability.
 }
 \examples{
 set.seed(123)

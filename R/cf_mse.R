@@ -29,6 +29,10 @@
 #'   - `"none"`: No standard error estimation
 #' @param n_boot Number of bootstrap replications (default: 500).
 #' @param conf_level Confidence level for intervals (default: 0.95).
+#' @param boot_ci_type Type of bootstrap confidence interval to compute:
+#'   - `"percentile"`: Percentile method (default)
+#'   - `"normal"`: Normal approximation using bootstrap SE
+#'   - `"basic"`: Basic bootstrap interval
 #' @param cross_fit Logical indicating whether to use cross-fitting for
 #'   nuisance model estimation (default: FALSE). Cross-fitting enables
 #'   valid inference when using flexible machine learning estimators.
@@ -118,6 +122,7 @@ cf_mse <- function(predictions,
                    se_method = c("bootstrap", "influence", "none"),
                    n_boot = 500,
                    conf_level = 0.95,
+                   boot_ci_type = c("percentile", "normal", "basic"),
                    cross_fit = FALSE,
                    n_folds = 5,
                    parallel = FALSE,
@@ -129,6 +134,7 @@ cf_mse <- function(predictions,
   # Input validation
   estimator <- match.arg(estimator)
   se_method <- match.arg(se_method)
+  boot_ci_type <- match.arg(boot_ci_type)
 
   outcome_type <- match.arg(outcome_type)
 
@@ -245,9 +251,14 @@ cf_mse <- function(predictions,
       estimator = estimator,
       n_boot = n_boot,
       conf_level = conf_level,
+      boot_ci_type = boot_ci_type,
       parallel = parallel,
       ncores = ncores,
       ps_trim = ps_trim,
+      outcome_type = outcome_type,
+      propensity_model = nuisance$propensity,
+      outcome_model = nuisance$outcome,
+      point_estimate = estimate,
       ...
     )
     se <- boot_result$se
@@ -265,7 +276,8 @@ cf_mse <- function(predictions,
         estimator = estimator,
         propensity_model = nuisance$propensity,
         outcome_model = nuisance$outcome,
-        ps_trim_spec = ps_trim_spec
+        ps_trim_spec = ps_trim_spec,
+        outcome_type = outcome_type
       )
       z <- qnorm(1 - (1 - conf_level) / 2)
       ci_lower <- estimate - z * se
@@ -389,10 +401,10 @@ cf_mse <- function(predictions,
                                          data = ps_data, family = "binomial")
   }
 
-  # Fit outcome model if not provided (needed for cl and dr only)
+  # Fit outcome model if not provided (needed for cl/om and dr only)
   # For binary outcomes: model E[Y | X, A=a] and transform to loss later
   # For continuous outcomes: model E[L | X, A=a] directly
-  if (estimator %in% c("cl", "dr") && is.null(outcome_model)) {
+  if (estimator %in% c("cl", "om", "dr") && is.null(outcome_model)) {
     subset_idx <- treatment == treatment_level
 
     if (outcome_type == "binary") {

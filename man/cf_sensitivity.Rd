@@ -12,10 +12,10 @@ cf_sensitivity(
   covariates,
   threshold = 0.5,
   treatment_level = 0,
-  estimator = c("dr", "cl", "ipw", "naive"),
+  estimator = c("dr", "om", "ipw", "naive"),
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   cross_fit = FALSE,
@@ -33,10 +33,10 @@ cf_tpr(
   covariates,
   threshold = 0.5,
   treatment_level = 0,
-  estimator = c("dr", "cl", "ipw", "naive"),
+  estimator = c("dr", "om", "ipw", "naive"),
   propensity_model = NULL,
   outcome_model = NULL,
-  se_method = c("none", "bootstrap"),
+  se_method = c("none", "bootstrap", "influence"),
   n_boot = 200,
   conf_level = 0.95,
   cross_fit = FALSE,
@@ -141,16 +141,16 @@ where \eqn{Y^{(a)}} is the potential outcome under treatment level \eqn{a}.
 
 The function implements three estimators following Coston et al. (2020):
 
-\strong{Conditional Loss (CL) Estimator}: Weights by the predicted probability of
+\strong{Outcome Model (OM) Estimator}: Weights by the predicted probability of
 being a case under the counterfactual:
-\deqn{\hat{\psi}_{sens,cl} = \frac{\sum_i I(\hat{h}(X_i) > c) \hat{m}(X_i)}{\sum_i \hat{m}(X_i)}}
+\deqn{\hat{\psi}_{sens,om} = \frac{\sum_i I(\hat{h}(X_i) > c) \hat{m}(X_i)}{\sum_i \hat{m}(X_i)}}
 where \eqn{\hat{m}(X) = P(Y=1|X, A=a)}.
 
 \strong{IPW Estimator}: Weights by the inverse probability of treatment:
 \deqn{\hat{\psi}_{sens,ipw} = \frac{\sum_i I(\hat{h}(X_i) > c, Y_i=1, A_i=a) / \hat{e}(X_i)}{\sum_i I(Y_i=1, A_i=a) / \hat{e}(X_i)}}
 where \eqn{\hat{e}(X) = P(A=a|X)}.
 
-\strong{Doubly Robust (DR) Estimator}: Combines CL and IPW for protection against
+\strong{Doubly Robust (DR) Estimator}: Combines OM and IPW for protection against
 misspecification of either model.
 }
 \examples{

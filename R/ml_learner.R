@@ -312,6 +312,10 @@ print.ml_learner <- function(x, ...) {
   y <- model.response(mf)
   x <- model.matrix(formula, data = data)[, -1, drop = FALSE]
 
+  # Check for explicit model specification
+  explicit_model <- args$model
+  args$model <- NULL  # Remove from args before passing to grf
+
   default_args <- list(
     X = x,
     Y = y,
@@ -321,8 +325,17 @@ print.ml_learner <- function(x, ...) {
   # Merge user args
   call_args <- modifyList(default_args, args)
 
-  # Use probability_forest for binary outcomes
-  if (family == "binomial") {
+  # Determine which grf model to use:
+  # 1. If user explicitly specified model, use that
+  # 2. Otherwise, use probability_forest for binomial, regression_forest for gaussian
+  use_probability_forest <- FALSE
+  if (!is.null(explicit_model)) {
+    use_probability_forest <- explicit_model == "probability_forest"
+  } else {
+    use_probability_forest <- family == "binomial"
+  }
+
+  if (use_probability_forest) {
     # Convert to factor for probability_forest
     call_args$Y <- as.factor(y)
     fit <- do.call(grf::probability_forest, call_args)

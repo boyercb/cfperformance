@@ -14,7 +14,8 @@
 #' @param metric Character string specifying the performance metric:
 #'   `"mse"` (default), `"auc"`, or `"both"`.
 #' @param estimator Character string specifying the estimator:
-#'   `"dr"` (default), `"cl"`, `"ipw"`, or `"naive"`.
+#'   `"dr"` (default), `"cl"` (conditional loss, for MSE), `"om"` (outcome model, for AUC),
+#'   `"ipw"`, or `"naive"`. Note: `"cl"` is automatically mapped to `"om"` for AUC metrics.
 #' @param K Number of folds (default: 5).
 #' @param repeats Number of times to repeat K-fold CV (default: 1).
 #' @param stratify Logical indicating whether to stratify folds by outcome
@@ -79,7 +80,7 @@ cf_cv <- function(formula,
                   treatment_level = 0,
                   nuisance_covariates = NULL,
                   metric = c("mse", "auc", "both"),
-                  estimator = c("dr", "cl", "ipw", "naive"),
+                  estimator = c("dr", "cl", "om", "ipw", "naive"),
                   K = 5,
                   repeats = 1,
                   stratify = TRUE,
@@ -176,13 +177,15 @@ cf_cv <- function(formula,
       }
 
       if (metric %in% c("auc", "both")) {
+        # Map "cl" to "om" for AUC (cf_auc uses "om" for outcome model estimator)
+        auc_estimator <- if (estimator == "cl") "om" else estimator
         auc_result <- cf_auc(
           predictions = predictions,
           outcomes = test_outcomes,
           treatment = test_treatment,
           covariates = test_covariates,
           treatment_level = treatment_level,
-          estimator = estimator,
+          estimator = auc_estimator,
           se_method = "none"
         )
         result_row$auc <- auc_result$estimate
@@ -278,7 +281,7 @@ cf_compare <- function(models,
                        treatment_level = 0,
                        nuisance_covariates = NULL,
                        metric = c("mse", "auc", "both"),
-                       estimator = c("dr", "cl", "ipw", "naive"),
+                       estimator = c("dr", "cl", "om", "ipw", "naive"),
                        method = c("cv", "holdout"),
                        K = 5,
                        test_prop = 0.2,
@@ -399,13 +402,15 @@ cf_compare <- function(models,
       }
 
       if (metric %in% c("auc", "both")) {
+        # Map "cl" to "om" for AUC (cf_auc uses "om" for outcome model estimator)
+        auc_estimator <- if (estimator == "cl") "om" else estimator
         auc_result <- cf_auc(
           predictions = predictions,
           outcomes = test_data[[outcome_var]],
           treatment = test_data[[treatment]],
           covariates = test_covariates,
           treatment_level = treatment_level,
-          estimator = estimator,
+          estimator = auc_estimator,
           se_method = "influence"
         )
         model_result$auc_mean <- auc_result$estimate
